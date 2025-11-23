@@ -63,8 +63,9 @@ app.get("/api/health", async (req, res) => {
 });
 
 // API routers
-// These files will live in the /server folder and keep the file tree small and clear
+// These files live in the /server folder and keep the file tree small and clear
 try {
+  app.use("/api/home", require("./server/home.routes"));
   app.use("/api/auth", require("./server/auth.routes"));
   app.use("/api/prayers", require("./server/prayers.routes"));
   app.use("/api/saints", require("./server/saints.routes"));
@@ -76,7 +77,7 @@ try {
 } catch (err) {
   // During early development some route files may not exist yet.
   // The server can still boot so Railway builds are not blocked.
-  // Once all routes are added this catch will become a safeguard only.
+  // Once all routes are added this catch is only a safeguard.
   console.warn(
     "[Via Fidei] API routes not fully loaded yet. This is expected until all server/*.routes.js files exist."
   );
