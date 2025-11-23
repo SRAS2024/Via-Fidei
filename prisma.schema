@@ -1,0 +1,376 @@
+// prisma.schema
+// Via Fidei · PostgreSQL data model
+// Content entities are language aware, tagged, and metadata rich.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  firstName String
+  lastName  String
+  email     String   @unique
+  passwordHash String
+
+  themePreference   String?  // "light", "dark", "system"
+  languageOverride  String?  // "en", "es", "pt", etc
+  profilePictureUrl String?
+
+  journals        JournalEntry[]
+  goals           Goal[]
+  milestones      Milestone[]
+  savedPrayers    SavedPrayer[]
+  savedSaints     SavedSaint[]
+  savedApparitions SavedApparition[]
+}
+
+model JournalEntry {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  title     String
+  body      String
+  isFavorite Boolean @default(false)
+}
+
+model Prayer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Localization
+  language String    // "en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"
+  slug     String
+
+  title   String
+  content String
+
+  category PrayerCategory
+  tags    String[]
+
+  // Metadata
+  source             String?
+  sourceUrl          String?
+  sourceAttribution  String?
+  isActive           Boolean @default(true)
+
+  savedBy SavedPrayer[]
+
+  @@unique([slug, language])
+}
+
+enum PrayerCategory {
+  MARIAN
+  CHRIST_CENTERED
+  ANGELIC
+  SACRAMENTAL
+  SEASONAL
+  DEVOTION
+  DAILY
+}
+
+model SavedPrayer {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  prayer   Prayer @relation(fields: [prayerId], references: [id], onDelete: Cascade)
+  prayerId String
+
+  @@unique([userId, prayerId])
+}
+
+model Saint {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  language String
+  slug     String
+
+  name      String
+  feastDay  DateTime?
+  patronages String[]
+  biography  String
+  canonizationStatus String?
+  officialPrayer     String?
+  imageUrl           String?
+
+  tags   String[]
+  source String?
+  sourceUrl String?
+  sourceAttribution String?
+  isActive Boolean @default(true)
+
+  savedBy SavedSaint[]
+
+  @@unique([slug, language])
+}
+
+model SavedSaint {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  saint   Saint @relation(fields: [saintId], references: [id], onDelete: Cascade)
+  saintId String
+
+  @@unique([userId, saintId])
+}
+
+model Apparition {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  language String
+  slug     String
+
+  title       String
+  location    String?
+  firstYear   Int?
+  feastDay    DateTime?
+  approvalNote String?  // short Church approval context
+  story       String
+  officialPrayer String?
+  imageUrl       String?
+
+  tags   String[]
+  source String?
+  sourceUrl String?
+  sourceAttribution String?
+  isActive Boolean @default(true)
+
+  savedBy SavedApparition[]
+
+  @@unique([slug, language])
+}
+
+model SavedApparition {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  apparition   Apparition @relation(fields: [apparitionId], references: [id], onDelete: Cascade)
+  apparitionId String
+
+  @@unique([userId, apparitionId])
+}
+
+model Sacrament {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  language String
+  slug     String
+
+  name   String
+  iconKey String?
+
+  meaning           String
+  biblicalFoundation String
+  preparation       String
+  whatToExpect      String
+  commonQuestions   String
+
+  tags   String[]
+  source String?
+  sourceUrl String?
+  sourceAttribution String?
+  isActive Boolean @default(true)
+
+  milestones Milestone[]
+
+  @@unique([slug, language])
+}
+
+model HistorySection {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  language String
+  slug     String   // "apostolic-age", "early-church", etc
+
+  title   String
+  summary String
+  body    String
+
+  // Simple timeline data as JSON to keep the schema compact
+  timeline Json?
+
+  tags   String[]
+  source String?
+  sourceUrl String?
+  sourceAttribution String?
+  isActive Boolean @default(true)
+
+  @@unique([slug, language])
+}
+
+model Guide {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  language String
+  slug     String
+
+  title   String
+  summary String
+  body    String
+
+  guideType GuideType
+
+  // Checklist templates and structured steps
+  checklistTemplate Json? // [{label: string, required: bool}, ...]
+
+  tags   String[]
+  source String?
+  sourceUrl String?
+  sourceAttribution String?
+  isActive Boolean @default(true)
+
+  @@unique([slug, language])
+}
+
+enum GuideType {
+  OCIA
+  CONFESSION
+  ROSARY
+  ADORATION
+  CONSECRATION
+  VOCATION
+  GENERAL
+}
+
+model Goal {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  title       String
+  description String
+
+  goalType GoalType
+  status   GoalStatus @default(ACTIVE)
+
+  dueDate     DateTime?
+  completedAt DateTime?
+
+  checklist Json? // [{label, done}, ...]
+
+  // When completed, a Personal Milestone will reference this goal
+  personalMilestone Milestone?
+
+  @@index([userId, status])
+}
+
+enum GoalType {
+  TEMPLATE_NOVENA
+  TEMPLATE_OCIA
+  TEMPLATE_CONSECRATION
+  TEMPLATE_VOCATION
+  CUSTOM
+}
+
+enum GoalStatus {
+  ACTIVE
+  COMPLETED
+  OVERDUE
+}
+
+model Milestone {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  title       String
+  description String?
+
+  milestoneType MilestoneType
+
+  // Sacrament milestones
+  sacrament   Sacrament? @relation(fields: [sacramentId], references: [id])
+  sacramentId String?
+
+  // Spiritual milestones such as consecrations or retreats from a predefined list
+  spiritualKey String? // for example "ST_LOUIS_CONSECRATION", "ST_JOSEPH_CONSECRATION", etc
+
+  // Personal milestones linked to completed goals
+  goal   Goal?   @relation(fields: [goalId], references: [id])
+  goalId String?
+
+  completedAt DateTime?
+
+  @@index([userId, milestoneType])
+  @@unique([userId, sacramentId], map: "unique_user_sacrament_milestone")
+  @@unique([userId, spiritualKey], map: "unique_user_spiritual_milestone")
+}
+
+enum MilestoneType {
+  SACRAMENT
+  SPIRITUAL
+  PERSONAL
+}
+
+model Notice {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  language String
+
+  title String
+  body  String
+
+  displayOrder Int   @default(0)
+  isActive     Boolean @default(true)
+}
+
+model SiteContent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  language String
+  key      SiteContentKey
+
+  // Flexible payload for mission statement, About Via Fidei,
+  // and optional photo collage configuration
+  content Json
+
+  @@unique([language, key])
+}
+
+enum SiteContentKey {
+  MISSION
+  ABOUT
+  PHOTO_COLLAGE
+}
