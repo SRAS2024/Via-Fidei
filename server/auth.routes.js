@@ -10,33 +10,6 @@ const router = express.Router();
 const SESSION_COOKIE_NAME = "vf_session";
 
 // Helpers
-function buildCookieOptions(req) {
-  const isProduction = (process.env.NODE_ENV || "development") === "production";
-
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: "strict",
-    path: "/",
-    maxAge: (req.sessionConfig?.ttlSeconds || 5000) * 1000
-  };
-}
-
-function signToken(req, user) {
-  const secret = req.sessionConfig?.jwtSecret || "via-fidei-dev-secret";
-  const ttlSeconds = req.sessionConfig?.ttlSeconds || 5000;
-
-  return jwt.sign(
-    {
-      sub: user.id,
-      email: user.email,
-      theme: user.themePreference || null,
-      language: user.languageOverride || null
-    },
-    secret,
-    { expiresIn: ttlSeconds }
-  );
-}
 
 function getPrisma(req) {
   if (!req.prisma) {
@@ -45,98 +18,151 @@ function getPrisma(req) {
   return req.prisma;
 }
 
-// Middleware to extract user from cookie if present
-async function attachUser(req, res, next) {
+function getJwtSecret(req) {
+  return (
+    req.sessionConfig?.jwtSecret ||
+    process.env.JWT_SECRET ||
+    "via-fidei-dev-secret"
+  );
+}
+
+function getSessionTtlSeconds(req) {
+  const fromReq = req.sessionConfig?.ttlSeconds;
+  if (typeof fromReq === "number" && Number.isFinite(fromReq) && fromReq > 0) {
+    return fromReq;
+  }
+  const fromEnv = Number(process.env.SESSION_TOKEN_TTL || 5000);
+  return Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : 5000;
+}
+
+function buildCookieOptions() {
+  const isProduction = (process.env.NODE_ENV || "development") === "production";
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProduction,
+    path: "/"
+  };
+}
+
+function issueSession(res, req, userId) {
+  const secret = getJwtSecret(req);
+  const ttl = getSessionTtlSeconds(req);
+  const now = Math.floor(Date.now() / 1000);
+
+  const token = jwt.sign(
+    {
+      sub: userId,
+      iat: now,
+      exp: now + ttl
+    },
+    secret
+  );
+
+  res.cookie(SESSION_COOKIE_NAME, token, {
+    ...buildCookieOptions(),
+    maxAge: ttl * 1000
+  });
+}
+
+function clearSession(res) {
+  res.clearCookie(SESSION_COOKIE_NAME, {
+    ...buildCookieOptions(),
+    maxAge: 0
+  });
+}
+
+// Middleware for protected routes
+
+async function requireAuth(req, res, next) {
+  const prisma = getPrisma(req);
   const token = req.cookies?.[SESSION_COOKIE_NAME];
+
   if (!token) {
-    req.user = null;
-    return next();
+    return res.status(401).json({ error: "Authentication required" });
   }
 
   try {
-    const secret = req.sessionConfig?.jwtSecret || "via-fidei-dev-secret";
-    const payload = jwt.verify(token, secret);
-    const prisma = getPrisma(req);
-
+    const payload = jwt.verify(token, getJwtSecret(req));
     const user = await prisma.user.findUnique({
       where: { id: payload.sub }
     });
 
-    req.user = user || null;
+    if (!user) {
+      clearSession(res);
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    req.user = user;
+    return next();
   } catch (err) {
-    req.user = null;
-  }
-
-  next();
-}
-
-// Middleware to enforce login
-function requireAuth(req, res, next) {
-  if (!req.user) {
+    console.error("[Via Fidei] Auth token verify failed", err);
+    clearSession(res);
     return res.status(401).json({ error: "Authentication required" });
   }
-  next();
 }
 
-router.use(attachUser);
+// Routes
 
-// Shape user for client
-function publicUser(user) {
-  if (!user) return null;
-  return {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    themePreference: user.themePreference,
-    languageOverride: user.languageOverride,
-    profilePictureUrl: user.profilePictureUrl
-  };
-}
-
-// Register
+// POST /api/auth/register
 router.post("/register", async (req, res) => {
   const prisma = getPrisma(req);
-  const { firstName, lastName, email, password, reenterPassword } = req.body || {};
+  const { firstName, lastName, email, password, passwordConfirm } = req.body || {};
 
-  if (!firstName || !lastName || !email || !password || !reenterPassword) {
+  if (!firstName || !lastName || !email || !password || !passwordConfirm) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
-  if (password !== reenterPassword) {
+  if (password !== passwordConfirm) {
     return res.status(400).json({ error: "Passwords do not match" });
   }
 
+  const normalizedEmail = String(email).trim().toLowerCase();
+
   try {
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const existing = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
     if (existing) {
-      return res.status(409).json({ error: "User with that email already exists" });
+      return res.status(409).json({ error: "Email is already registered" });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
       data: {
-        firstName,
-        lastName,
-        email,
-        passwordHash
+        firstName: String(firstName).trim(),
+        lastName: String(lastName).trim(),
+        email: normalizedEmail,
+        passwordHash,
+        themePreference: null,
+        languageOverride: null,
+        profilePictureUrl: null
       }
     });
 
-    const token = signToken(req, user);
+    issueSession(res, req, user.id);
 
-    res
-      .cookie(SESSION_COOKIE_NAME, token, buildCookieOptions(req))
-      .status(201)
-      .json({ user: publicUser(user) });
+    res.status(201).json({
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        themePreference: user.themePreference,
+        languageOverride: user.languageOverride,
+        profilePictureUrl: user.profilePictureUrl,
+        createdAt: user.createdAt
+      }
+    });
   } catch (error) {
     console.error("[Via Fidei] Register error", error);
     res.status(500).json({ error: "Failed to create account" });
   }
 });
 
-// Login
+// POST /api/auth/login
 router.post("/login", async (req, res) => {
   const prisma = getPrisma(req);
   const { email, password } = req.body || {};
@@ -145,84 +171,139 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Email and password are required" });
   }
 
+  const normalizedEmail = String(email).trim().toLowerCase();
+
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
     if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) {
-      return res.status(401).json({ error: "Invalid credentials" });
+      return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const token = signToken(req, user);
+    issueSession(res, req, user.id);
 
-    res
-      .cookie(SESSION_COOKIE_NAME, token, buildCookieOptions(req))
-      .json({ user: publicUser(user) });
+    res.json({
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        themePreference: user.themePreference,
+        languageOverride: user.languageOverride,
+        profilePictureUrl: user.profilePictureUrl,
+        createdAt: user.createdAt
+      }
+    });
   } catch (error) {
     console.error("[Via Fidei] Login error", error);
     res.status(500).json({ error: "Failed to login" });
   }
 });
 
-// Logout
-router.post("/logout", (req, res) => {
-  res
-    .clearCookie(SESSION_COOKIE_NAME, {
-      httpOnly: true,
-      secure: (process.env.NODE_ENV || "development") === "production",
-      sameSite: "strict",
-      path: "/"
-    })
-    .json({ ok: true });
+// POST /api/auth/logout
+router.post("/logout", async (req, res) => {
+  clearSession(res);
+  res.json({ ok: true });
 });
 
-// Current user
-router.get("/me", (req, res) => {
-  if (!req.user) {
-    return res.status(200).json({ user: null });
+// GET /api/auth/me
+router.get("/me", async (req, res) => {
+  const prisma = getPrisma(req);
+  const token = req.cookies?.[SESSION_COOKIE_NAME];
+
+  if (!token) {
+    return res.json({ user: null });
   }
-  res.json({ user: publicUser(req.user) });
+
+  try {
+    const payload = jwt.verify(token, getJwtSecret(req));
+    const user = await prisma.user.findUnique({
+      where: { id: payload.sub }
+    });
+
+    if (!user) {
+      clearSession(res);
+      return res.json({ user: null });
+    }
+
+    // Optionally refresh cookie lifetime
+    issueSession(res, req, user.id);
+
+    res.json({
+      user: {
+        id: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        themePreference: user.themePreference,
+        languageOverride: user.languageOverride,
+        profilePictureUrl: user.profilePictureUrl,
+        createdAt: user.createdAt
+      }
+    });
+  } catch (error) {
+    console.error("[Via Fidei] /me token error", error);
+    clearSession(res);
+    res.json({ user: null });
+  }
 });
 
-// Reset password (no email service)
-// Fields: email, firstName, lastName, newPassword, reenterNewPassword
-router.post("/reset", async (req, res) => {
+// POST /api/auth/reset-password
+// No email service: validate email + firstName + lastName, then reset
+router.post("/reset-password", async (req, res) => {
   const prisma = getPrisma(req);
   const {
     email,
     firstName,
     lastName,
     newPassword,
-    reenterNewPassword
+    newPasswordConfirm
   } = req.body || {};
 
-  if (!email || !firstName || !lastName || !newPassword || !reenterNewPassword) {
+  if (
+    !email ||
+    !firstName ||
+    !lastName ||
+    !newPassword ||
+    !newPasswordConfirm
+  ) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
-  if (newPassword !== reenterNewPassword) {
-    return res.status(400).json({ error: "Passwords do not match" });
+  if (newPassword !== newPasswordConfirm) {
+    return res
+      .status(400)
+      .json({ error: "New password fields do not match" });
   }
 
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const normalizedFirst = String(firstName).trim();
+  const normalizedLast = String(lastName).trim();
+
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) {
-      return res.status(404).json({ error: "User not found" });
-    }
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
 
     if (
-      user.firstName.trim().toLowerCase() !== firstName.trim().toLowerCase() ||
-      user.lastName.trim().toLowerCase() !== lastName.trim().toLowerCase()
+      !user ||
+      user.firstName.trim() !== normalizedFirst ||
+      user.lastName.trim() !== normalizedLast
     ) {
-      return res.status(400).json({
-        error: "Provided name does not match our records for that email"
+      return res.status(404).json({
+        error:
+          "No user found with the provided email, first name, and last name"
       });
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, 12);
 
     await prisma.user.update({
       where: { id: user.id },
