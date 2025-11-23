@@ -1,10 +1,12 @@
 // server/profile.routes.js
-// Profile, My Prayers, Journal, Goals, Milestones, and Settings
+// Profile, My Prayers, Journal, Goals, Milestones, and settings
 
 const express = require("express");
 const { requireAuth } = require("./auth.routes");
 
 const router = express.Router();
+
+const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
 
 function getPrisma(req) {
   if (!req.prisma) {
@@ -13,325 +15,173 @@ function getPrisma(req) {
   return req.prisma;
 }
 
-// Utility to mark overdue goals on the fly
-async function refreshOverdueGoals(prisma, userId) {
+function normalizeTheme(value) {
+  if (!value) return null;
+  const v = String(value).toLowerCase();
+  if (v === "light" || v === "dark" || v === "system") return v;
+  return null;
+}
+
+function normalizeLanguage(value) {
+  if (!value) return null;
+  const v = String(value).toLowerCase();
+  if (SUPPORTED_LANGS.includes(v)) return v;
+  return null;
+}
+
+// Small helper for status update on overdue goals
+async function refreshGoalStatuses(prisma, userId) {
   const now = new Date();
   await prisma.goal.updateMany({
     where: {
       userId,
       status: "ACTIVE",
-      dueDate: { lt: now }
+      dueDate: { lt: now },
+      completedAt: null
     },
     data: { status: "OVERDUE" }
   });
 }
 
-// Basic profile info
+// Shape user for client
+function publicUser(u) {
+  return {
+    id: u.id,
+    firstName: u.firstName,
+    lastName: u.lastName,
+    email: u.email,
+    themePreference: u.themePreference,
+    languageOverride: u.languageOverride,
+    profilePictureUrl: u.profilePictureUrl,
+    createdAt: u.createdAt,
+    updatedAt: u.updatedAt
+  };
+}
+
+// Overview of profile
 router.get("/", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
 
   try {
-    const [user, counts] = await Promise.all([
-      prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          firstName: true,
-          lastName: true,
-          email: true,
-          themePreference: true,
-          languageOverride: true,
-          profilePictureUrl: true,
-          createdAt: true
-        }
-      }),
-      prisma.$transaction([
-        prisma.savedPrayer.count({ where: { userId } }),
-        prisma.savedSaint.count({ where: { userId } }),
-        prisma.savedApparition.count({ where: { userId } }),
-        prisma.journalEntry.count({ where: { userId } }),
-        prisma.goal.count({ where: { userId } }),
-        prisma.milestone.count({ where: { userId } })
-      ])
-    ]);
-
-    const [
-      savedPrayersCount,
-      savedSaintsCount,
-      savedApparitionsCount,
-      journalCount,
-      goalsCount,
-      milestonesCount
-    ] = counts;
+    const [savedPrayersCount, journalCount, goalsCount, milestonesCount] =
+      await Promise.all([
+        prisma.savedPrayer.count({ where: { userId: user.id } }),
+        prisma.journalEntry.count({ where: { userId: user.id } }),
+        prisma.goal.count({ where: { userId: user.id } }),
+        prisma.milestone.count({ where: { userId: user.id } })
+      ]);
 
     res.json({
-      user,
-      summary: {
+      user: publicUser(user),
+      overview: {
         savedPrayersCount,
-        savedSaintsCount,
-        savedApparitionsCount,
         journalCount,
         goalsCount,
         milestonesCount
       }
     });
   } catch (error) {
-    console.error("[Via Fidei] Profile load error", error);
+    console.error("[Via Fidei] Profile overview error", error);
     res.status(500).json({ error: "Failed to load profile" });
   }
 });
 
-// Settings
-
-router.get("/settings", requireAuth, async (req, res) => {
-  res.json({
-    themePreference: req.user.themePreference || "light",
-    languageOverride: req.user.languageOverride || null,
-    profilePictureUrl: req.user.profilePictureUrl || null
-  });
-});
-
+// Settings: theme, language, privacy overview later
 router.put("/settings", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { themePreference, languageOverride, profilePictureUrl } = req.body || {};
+  const user = req.user;
+  const { themePreference, languageOverride } = req.body || {};
+
+  const nextTheme = normalizeTheme(themePreference);
+  const nextLang = normalizeLanguage(languageOverride);
 
   try {
-    const user = await prisma.user.update({
-      where: { id: userId },
+    const updated = await prisma.user.update({
+      where: { id: user.id },
       data: {
-        ...(themePreference ? { themePreference } : {}),
-        ...(languageOverride ? { languageOverride } : {}),
-        ...(profilePictureUrl != null ? { profilePictureUrl } : {})
-      },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        email: true,
-        themePreference: true,
-        languageOverride: true,
-        profilePictureUrl: true
+        themePreference: nextTheme,
+        languageOverride: nextLang
       }
     });
 
-    res.json({ user });
+    res.json({ user: publicUser(updated) });
   } catch (error) {
-    console.error("[Via Fidei] Settings update error", error);
+    console.error("[Via Fidei] Update settings error", error);
     res.status(500).json({ error: "Failed to update settings" });
+  }
+});
+
+// Profile picture editing (URL based, file upload can be added later)
+router.put("/avatar", requireAuth, async (req, res) => {
+  const prisma = getPrisma(req);
+  const user = req.user;
+  const { profilePictureUrl } = req.body || {};
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: user.id },
+      data: { profilePictureUrl: profilePictureUrl || null }
+    });
+
+    res.json({ user: publicUser(updated) });
+  } catch (error) {
+    console.error("[Via Fidei] Update avatar error", error);
+    res.status(500).json({ error: "Failed to update profile picture" });
   }
 });
 
 // My Prayers
 
-router.get("/prayers", requireAuth, async (req, res) => {
+router.get("/my-prayers", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
 
   try {
     const saved = await prisma.savedPrayer.findMany({
-      where: { userId },
-      include: {
-        prayer: {
-          select: {
-            id: true,
-            title: true,
-            content: true,
-            language: true,
-            category: true
-          }
-        }
-      },
-      orderBy: { createdAt: "desc" }
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      include: { prayer: true }
     });
 
-    res.json({
-      items: saved.map((row) => ({
-        id: row.id,
-        prayerId: row.prayer.id,
-        title: row.prayer.title,
-        content: row.prayer.content,
-        language: row.prayer.language,
-        category: row.prayer.category
-      }))
-    });
+    const items = saved
+      .filter((s) => s.prayer && s.prayer.isActive)
+      .map((s) => ({
+        id: s.id,
+        prayerId: s.prayerId,
+        savedAt: s.createdAt,
+        prayer: {
+          id: s.prayer.id,
+          language: s.prayer.language,
+          slug: s.prayer.slug,
+          title: s.prayer.title,
+          content: s.prayer.content,
+          category: s.prayer.category,
+          tags: s.prayer.tags
+        }
+      }));
+
+    res.json({ items });
   } catch (error) {
-    console.error("[Via Fidei] My Prayers load error", error);
+    console.error("[Via Fidei] My prayers load error", error);
     res.status(500).json({ error: "Failed to load saved prayers" });
   }
 });
 
-// Add to My Prayers
-router.post("/prayers/:prayerId", requireAuth, async (req, res) => {
+router.delete("/my-prayers/:prayerId", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
   const { prayerId } = req.params;
 
   try {
-    const saved = await prisma.savedPrayer.upsert({
-      where: {
-        userId_prayerId: { userId, prayerId }
-      },
-      create: { userId, prayerId },
-      update: {}
+    await prisma.savedPrayer.deleteMany({
+      where: { userId: user.id, prayerId }
     });
 
-    res.status(201).json({ saved });
-  } catch (error) {
-    console.error("[Via Fidei] Add My Prayer error", error);
-    res.status(500).json({ error: "Failed to save prayer" });
-  }
-});
-
-// Remove from My Prayers
-router.delete("/prayers/:prayerId", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { prayerId } = req.params;
-
-  try {
-    await prisma.savedPrayer.delete({
-      where: { userId_prayerId: { userId, prayerId } }
-    });
     res.json({ ok: true });
   } catch (error) {
-    console.error("[Via Fidei] Remove My Prayer error", error);
-    res.status(500).json({ error: "Failed to remove prayer" });
-  }
-});
-
-// Saved Saints and Our Lady
-
-router.get("/saints", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-
-  try {
-    const [saints, apparitions] = await Promise.all([
-      prisma.savedSaint.findMany({
-        where: { userId },
-        include: {
-          saint: {
-            select: {
-              id: true,
-              name: true,
-              language: true,
-              officialPrayer: true,
-              imageUrl: true
-            }
-          }
-        },
-        orderBy: { createdAt: "desc" }
-      }),
-      prisma.savedApparition.findMany({
-        where: { userId },
-        include: {
-          apparition: {
-            select: {
-              id: true,
-              title: true,
-              language: true,
-              officialPrayer: true,
-              imageUrl: true
-            }
-          }
-        },
-        orderBy: { createdAt: "desc" }
-      })
-    ]);
-
-    res.json({
-      saints: saints.map((row) => ({
-        id: row.id,
-        saintId: row.saint.id,
-        name: row.saint.name,
-        language: row.saint.language,
-        imageUrl: row.saint.imageUrl,
-        prayer: row.saint.officialPrayer
-      })),
-      apparitions: apparitions.map((row) => ({
-        id: row.id,
-        apparitionId: row.apparition.id,
-        title: row.apparition.title,
-        language: row.apparition.language,
-        imageUrl: row.apparition.imageUrl,
-        prayer: row.apparition.officialPrayer
-      }))
-    });
-  } catch (error) {
-    console.error("[Via Fidei] Saved saints load error", error);
-    res.status(500).json({ error: "Failed to load saved saints and apparitions" });
-  }
-});
-
-router.post("/saints/:saintId", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { saintId } = req.params;
-
-  try {
-    const saved = await prisma.savedSaint.upsert({
-      where: { userId_saintId: { userId, saintId } },
-      create: { userId, saintId },
-      update: {}
-    });
-
-    res.status(201).json({ saved });
-  } catch (error) {
-    console.error("[Via Fidei] Save saint error", error);
-    res.status(500).json({ error: "Failed to save saint" });
-  }
-});
-
-router.delete("/saints/:saintId", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { saintId } = req.params;
-
-  try {
-    await prisma.savedSaint.delete({
-      where: { userId_saintId: { userId, saintId } }
-    });
-    res.json({ ok: true });
-  } catch (error) {
-    console.error("[Via Fidei] Remove saint error", error);
-    res.status(500).json({ error: "Failed to remove saint" });
-  }
-});
-
-router.post("/apparitions/:apparitionId", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { apparitionId } = req.params;
-
-  try {
-    const saved = await prisma.savedApparition.upsert({
-      where: { userId_apparitionId: { userId, apparitionId } },
-      create: { userId, apparitionId },
-      update: {}
-    });
-
-    res.status(201).json({ saved });
-  } catch (error) {
-    console.error("[Via Fidei] Save apparition error", error);
-    res.status(500).json({ error: "Failed to save apparition" });
-  }
-});
-
-router.delete("/apparitions/:apparitionId", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { apparitionId } = req.params;
-
-  try {
-    await prisma.savedApparition.delete({
-      where: { userId_apparitionId: { userId, apparitionId } }
-    });
-    res.json({ ok: true });
-  } catch (error) {
-    console.error("[Via Fidei] Remove apparition error", error);
-    res.status(500).json({ error: "Failed to remove apparition" });
+    console.error("[Via Fidei] My prayers delete error", error);
+    res.status(500).json({ error: "Failed to remove saved prayer" });
   }
 });
 
@@ -339,36 +189,36 @@ router.delete("/apparitions/:apparitionId", requireAuth, async (req, res) => {
 
 router.get("/journal", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
 
   try {
     const entries = await prisma.journalEntry.findMany({
-      where: { userId },
+      where: { userId: user.id },
       orderBy: { createdAt: "desc" }
     });
 
-    res.json({ entries });
+    res.json({ items: entries });
   } catch (error) {
-    console.error("[Via Fidei] Journal load error", error);
+    console.error("[Via Fidei] Journal list error", error);
     res.status(500).json({ error: "Failed to load journal entries" });
   }
 });
 
 router.post("/journal", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
   const { title, body, isFavorite } = req.body || {};
 
-  if (!title || !body) {
-    return res.status(400).json({ error: "Title and body are required" });
+  if (!body || !String(body).trim()) {
+    return res.status(400).json({ error: "Journal body is required" });
   }
 
   try {
     const entry = await prisma.journalEntry.create({
       data: {
-        userId,
-        title,
-        body,
+        userId: user.id,
+        title: String(title || "Untitled").trim(),
+        body: String(body),
         isFavorite: Boolean(isFavorite)
       }
     });
@@ -382,25 +232,29 @@ router.post("/journal", requireAuth, async (req, res) => {
 
 router.put("/journal/:id", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
   const { id } = req.params;
   const { title, body, isFavorite } = req.body || {};
 
   try {
-    const entry = await prisma.journalEntry.updateMany({
-      where: { id, userId },
-      data: {
-        ...(title != null ? { title } : {}),
-        ...(body != null ? { body } : {}),
-        ...(isFavorite != null ? { isFavorite: Boolean(isFavorite) } : {})
-      }
+    const existing = await prisma.journalEntry.findFirst({
+      where: { id, userId: user.id }
     });
 
-    if (entry.count === 0) {
+    if (!existing) {
       return res.status(404).json({ error: "Journal entry not found" });
     }
 
-    const updated = await prisma.journalEntry.findUnique({ where: { id } });
+    const updated = await prisma.journalEntry.update({
+      where: { id },
+      data: {
+        title: title !== undefined ? String(title).trim() : existing.title,
+        body: body !== undefined ? String(body) : existing.body,
+        isFavorite:
+          typeof isFavorite === "boolean" ? isFavorite : existing.isFavorite
+      }
+    });
+
     res.json({ entry: updated });
   } catch (error) {
     console.error("[Via Fidei] Journal update error", error);
@@ -410,18 +264,19 @@ router.put("/journal/:id", requireAuth, async (req, res) => {
 
 router.delete("/journal/:id", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
   const { id } = req.params;
 
   try {
-    const deleted = await prisma.journalEntry.deleteMany({
-      where: { id, userId }
+    const existing = await prisma.journalEntry.findFirst({
+      where: { id, userId: user.id }
     });
 
-    if (deleted.count === 0) {
+    if (!existing) {
       return res.status(404).json({ error: "Journal entry not found" });
     }
 
+    await prisma.journalEntry.delete({ where: { id } });
     res.json({ ok: true });
   } catch (error) {
     console.error("[Via Fidei] Journal delete error", error);
@@ -433,41 +288,54 @@ router.delete("/journal/:id", requireAuth, async (req, res) => {
 
 router.get("/goals", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
 
   try {
-    await refreshOverdueGoals(prisma, userId);
+    await refreshGoalStatuses(prisma, user.id);
 
     const goals = await prisma.goal.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" }
+      where: { userId: user.id },
+      orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }]
     });
 
-    res.json({ goals });
+    res.json({ items: goals });
   } catch (error) {
-    console.error("[Via Fidei] Goals load error", error);
+    console.error("[Via Fidei] Goals list error", error);
     res.status(500).json({ error: "Failed to load goals" });
   }
 });
 
 router.post("/goals", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
   const { title, description, goalType, dueDate, checklist } = req.body || {};
 
-  if (!title || !description || !goalType) {
-    return res.status(400).json({ error: "Title, description, and goalType are required" });
+  if (!title || !goalType) {
+    return res.status(400).json({ error: "Title and goalType are required" });
+  }
+
+  let parsedDue = null;
+  if (dueDate) {
+    const d = new Date(dueDate);
+    if (!Number.isNaN(d.getTime())) {
+      parsedDue = d;
+    }
+  }
+
+  let status = "ACTIVE";
+  if (parsedDue && parsedDue < new Date()) {
+    status = "OVERDUE";
   }
 
   try {
     const goal = await prisma.goal.create({
       data: {
-        userId,
-        title,
-        description,
+        userId: user.id,
+        title: String(title).trim(),
+        description: String(description || "").trim(),
         goalType,
-        status: "ACTIVE",
-        dueDate: dueDate ? new Date(dueDate) : null,
+        status,
+        dueDate: parsedDue,
         checklist: checklist || null
       }
     });
@@ -481,95 +349,106 @@ router.post("/goals", requireAuth, async (req, res) => {
 
 router.put("/goals/:id", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
   const { id } = req.params;
-  const { title, description, goalType, status, dueDate, checklist } = req.body || {};
+  const { title, description, status, dueDate, checklist } = req.body || {};
 
   try {
-    const updated = await prisma.goal.updateMany({
-      where: { id, userId },
-      data: {
-        ...(title != null ? { title } : {}),
-        ...(description != null ? { description } : {}),
-        ...(goalType != null ? { goalType } : {}),
-        ...(status != null ? { status } : {}),
-        ...(dueDate !== undefined
-          ? { dueDate: dueDate ? new Date(dueDate) : null }
-          : {}),
-        ...(checklist !== undefined ? { checklist } : {})
-      }
+    const existing = await prisma.goal.findFirst({
+      where: { id, userId: user.id }
     });
 
-    if (updated.count === 0) {
+    if (!existing) {
       return res.status(404).json({ error: "Goal not found" });
     }
 
-    const goal = await prisma.goal.findUnique({ where: { id } });
-    res.json({ goal });
+    let parsedDue = existing.dueDate;
+    if (dueDate !== undefined) {
+      if (!dueDate) {
+        parsedDue = null;
+      } else {
+        const d = new Date(dueDate);
+        if (!Number.isNaN(d.getTime())) {
+          parsedDue = d;
+        }
+      }
+    }
+
+    let nextStatus = existing.status;
+    if (status && ["ACTIVE", "COMPLETED", "OVERDUE"].includes(status)) {
+      nextStatus = status;
+    }
+
+    let completedAt = existing.completedAt;
+    if (nextStatus === "COMPLETED" && !completedAt) {
+      completedAt = new Date();
+    }
+    if (nextStatus !== "COMPLETED") {
+      completedAt = null;
+    }
+
+    const updated = await prisma.goal.update({
+      where: { id },
+      data: {
+        title:
+          title !== undefined ? String(title).trim() : existing.title,
+        description:
+          description !== undefined
+            ? String(description).trim()
+            : existing.description,
+        status: nextStatus,
+        dueDate: parsedDue,
+        checklist: checklist !== undefined ? checklist : existing.checklist,
+        completedAt
+      }
+    });
+
+    // Promote to Personal Milestone when completed
+    if (updated.status === "COMPLETED") {
+      const existingMilestone = await prisma.milestone.findFirst({
+        where: { userId: user.id, goalId: updated.id }
+      });
+
+      if (!existingMilestone) {
+        await prisma.milestone.create({
+          data: {
+            userId: user.id,
+            title: updated.title,
+            description: updated.description || null,
+            milestoneType: "PERSONAL",
+            goalId: updated.id,
+            completedAt: updated.completedAt || new Date()
+          }
+        });
+      }
+    }
+
+    res.json({ goal: updated });
   } catch (error) {
     console.error("[Via Fidei] Goal update error", error);
     res.status(500).json({ error: "Failed to update goal" });
   }
 });
 
-// Complete goal and promote to Personal Milestone
-router.post("/goals/:id/complete", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { id } = req.params;
-
-  try {
-    const now = new Date();
-
-    const goal = await prisma.goal.update({
-      where: { id },
-      data: {
-        status: "COMPLETED",
-        completedAt: now
-      }
-    });
-
-    if (goal.userId !== userId) {
-      return res.status(403).json({ error: "Not allowed" });
-    }
-
-    const milestone = await prisma.milestone.upsert({
-      where: {
-        userId_goalId: { userId, goalId: goal.id }
-      },
-      create: {
-        userId,
-        title: goal.title,
-        description: goal.description,
-        milestoneType: "PERSONAL",
-        goalId: goal.id,
-        completedAt: now
-      },
-      update: {
-        completedAt: now
-      }
-    });
-
-    res.json({ goal, milestone });
-  } catch (error) {
-    console.error("[Via Fidei] Complete goal error", error);
-    res.status(500).json({ error: "Failed to complete goal" });
-  }
-});
-
 router.delete("/goals/:id", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
   const { id } = req.params;
 
   try {
-    const deleted = await prisma.goal.deleteMany({
-      where: { id, userId }
+    const existing = await prisma.goal.findFirst({
+      where: { id, userId: user.id }
     });
 
-    if (deleted.count === 0) {
+    if (!existing) {
       return res.status(404).json({ error: "Goal not found" });
     }
+
+    await prisma.milestone.deleteMany({
+      where: { userId: user.id, goalId: id }
+    });
+
+    await prisma.goal.delete({ where: { id } });
 
     res.json({ ok: true });
   } catch (error) {
@@ -582,96 +461,22 @@ router.delete("/goals/:id", requireAuth, async (req, res) => {
 
 router.get("/milestones", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
-  const userId = req.user.id;
+  const user = req.user;
 
   try {
     const milestones = await prisma.milestone.findMany({
-      where: { userId },
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
       include: {
         sacrament: true,
         goal: true
-      },
-      orderBy: { createdAt: "desc" }
+      }
     });
 
-    res.json({ milestones });
+    res.json({ items: milestones });
   } catch (error) {
-    console.error("[Via Fidei] Milestones load error", error);
+    console.error("[Via Fidei] Milestones list error", error);
     res.status(500).json({ error: "Failed to load milestones" });
-  }
-});
-
-// Add sacrament milestone
-router.post("/milestones/sacrament", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { sacramentId, title, description, completedAt } = req.body || {};
-
-  if (!sacramentId) {
-    return res.status(400).json({ error: "sacramentId is required" });
-  }
-
-  try {
-    const milestone = await prisma.milestone.upsert({
-      where: {
-        userId_sacramentId: { userId, sacramentId }
-      },
-      create: {
-        userId,
-        sacramentId,
-        title: title || "",
-        description: description || null,
-        milestoneType: "SACRAMENT",
-        completedAt: completedAt ? new Date(completedAt) : null
-      },
-      update: {
-        title: title || "",
-        description: description || null,
-        ...(completedAt ? { completedAt: new Date(completedAt) } : {})
-      }
-    });
-
-    res.status(201).json({ milestone });
-  } catch (error) {
-    console.error("[Via Fidei] Sacrament milestone error", error);
-    res.status(500).json({ error: "Failed to save sacrament milestone" });
-  }
-});
-
-// Add spiritual milestone (consecrations or retreats)
-router.post("/milestones/spiritual", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { spiritualKey, title, description, completedAt } = req.body || {};
-
-  if (!spiritualKey) {
-    return res.status(400).json({ error: "spiritualKey is required" });
-  }
-
-  try {
-    const milestone = await prisma.milestone.upsert({
-      where: {
-        userId_spiritualKey: { userId, spiritualKey }
-      },
-      create: {
-        userId,
-        spiritualKey,
-        title: title || "",
-        description: description || null,
-        milestoneType: "SPIRITUAL",
-        completedAt: completedAt ? new Date(completedAt) : null
-      },
-      update: {
-        title: title || "",
-        description: description || null,
-        ...(completedAt ? { completedAt: new Date(completedAt) } : {})
-      }
-    });
-
-    res.status(201).json({ milestone });
-  } catch (error) {
-    console.error("[Via Fidei] Spiritual milestone error", error);
-    res.status(500).json({ error: "Failed to save spiritual milestone" });
   }
 });
 
