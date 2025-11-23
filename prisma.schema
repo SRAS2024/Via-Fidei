@@ -25,11 +25,11 @@ model User {
   languageOverride  String?  // "en", "es", "pt", etc
   profilePictureUrl String?
 
-  journals        JournalEntry[]
-  goals           Goal[]
-  milestones      Milestone[]
-  savedPrayers    SavedPrayer[]
-  savedSaints     SavedSaint[]
+  journals         JournalEntry[]
+  goals            Goal[]
+  milestones       Milestone[]
+  savedPrayers     SavedPrayer[]
+  savedSaints      SavedSaint[]
   savedApparitions SavedApparition[]
 }
 
@@ -41,8 +41,8 @@ model JournalEntry {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId String
 
-  title     String
-  body      String
+  title      String
+  body       String
   isFavorite Boolean @default(false)
 }
 
@@ -62,10 +62,10 @@ model Prayer {
   tags    String[]
 
   // Metadata
-  source             String?
-  sourceUrl          String?
-  sourceAttribution  String?
-  isActive           Boolean @default(true)
+  source            String?
+  sourceUrl         String?
+  sourceAttribution String?
+  isActive          Boolean @default(true)
 
   savedBy SavedPrayer[]
 
@@ -103,19 +103,19 @@ model Saint {
   language String
   slug     String
 
-  name      String
-  feastDay  DateTime?
+  name       String
+  feastDay   DateTime?
   patronages String[]
   biography  String
   canonizationStatus String?
   officialPrayer     String?
   imageUrl           String?
 
-  tags   String[]
-  source String?
-  sourceUrl String?
+  tags              String[]
+  source            String?
+  sourceUrl         String?
   sourceAttribution String?
-  isActive Boolean @default(true)
+  isActive          Boolean @default(true)
 
   savedBy SavedSaint[]
 
@@ -143,20 +143,20 @@ model Apparition {
   language String
   slug     String
 
-  title       String
-  location    String?
-  firstYear   Int?
-  feastDay    DateTime?
-  approvalNote String?  // short Church approval context
-  story       String
+  title         String
+  location      String?
+  firstYear     Int?
+  feastDay      DateTime?
+  approvalNote  String?  // short Church approval context
+  story         String
   officialPrayer String?
   imageUrl       String?
 
-  tags   String[]
-  source String?
-  sourceUrl String?
+  tags              String[]
+  source            String?
+  sourceUrl         String?
   sourceAttribution String?
-  isActive Boolean @default(true)
+  isActive          Boolean @default(true)
 
   savedBy SavedApparition[]
 
@@ -184,20 +184,20 @@ model Sacrament {
   language String
   slug     String
 
-  name   String
+  name    String
   iconKey String?
 
-  meaning           String
+  meaning            String
   biblicalFoundation String
-  preparation       String
-  whatToExpect      String
-  commonQuestions   String
+  preparation        String
+  whatToExpect       String
+  commonQuestions    String
 
-  tags   String[]
-  source String?
-  sourceUrl String?
+  tags              String[]
+  source            String?
+  sourceUrl         String?
   sourceAttribution String?
-  isActive Boolean @default(true)
+  isActive          Boolean @default(true)
 
   milestones Milestone[]
 
@@ -219,11 +219,11 @@ model HistorySection {
   // Simple timeline data as JSON to keep the schema compact
   timeline Json?
 
-  tags   String[]
-  source String?
-  sourceUrl String?
+  tags              String[]
+  source            String?
+  sourceUrl         String?
   sourceAttribution String?
-  isActive Boolean @default(true)
+  isActive          Boolean @default(true)
 
   @@unique([slug, language])
 }
@@ -245,11 +245,11 @@ model Guide {
   // Checklist templates and structured steps
   checklistTemplate Json? // [{label: string, required: bool}, ...]
 
-  tags   String[]
-  source String?
-  sourceUrl String?
+  tags              String[]
+  source            String?
+  sourceUrl         String?
   sourceAttribution String?
-  isActive Boolean @default(true)
+  isActive          Boolean @default(true)
 
   @@unique([slug, language])
 }
@@ -325,7 +325,7 @@ model Milestone {
 
   // Personal milestones linked to completed goals
   goal   Goal?   @relation(fields: [goalId], references: [id])
-  goalId String?
+  goalId String? @unique
 
   completedAt DateTime?
 
@@ -350,7 +350,7 @@ model Notice {
   title String
   body  String
 
-  displayOrder Int   @default(0)
+  displayOrder Int    @default(0)
   isActive     Boolean @default(true)
 }
 
