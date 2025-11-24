@@ -1,6 +1,6 @@
 // index.js
-// Via Fidei · main server entry
-// Express API + static client in production
+// Via Fidei main server entry
+// Express API plus static client in production
 
 require("dotenv").config();
 
@@ -19,12 +19,20 @@ const SESSION_TOKEN_TTL = Number(process.env.SESSION_TOKEN_TTL || 5000);
 const PORT = Number(process.env.PORT || 5000);
 const NODE_ENV = process.env.NODE_ENV || "development";
 
+// In local dev with Vite, default the client origin to localhost:5173
+const CLIENT_ORIGIN =
+  process.env.CLIENT_ORIGIN ||
+  (NODE_ENV === "development" ? "http://localhost:5173" : "*");
+
 const app = express();
+
+// Hardening
+app.disable("x-powered-by");
 
 // Basic middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || "*",
+    origin: CLIENT_ORIGIN,
     credentials: true
   })
 );
@@ -53,6 +61,7 @@ app.get("/api/health", async (req, res) => {
       value5000: SESSION_TOKEN_TTL
     });
   } catch (error) {
+    console.error("[Via Fidei] Health check database error", error);
     res.status(500).json({
       status: "error",
       env: NODE_ENV,
@@ -63,7 +72,7 @@ app.get("/api/health", async (req, res) => {
 });
 
 // API routers
-// These files live in the /server folder and keep the file tree small and clear
+// These live in /server and keep the file tree small and clear
 try {
   app.use("/api/home", require("./server/home.routes"));
   app.use("/api/auth", require("./server/auth.routes"));
@@ -75,13 +84,17 @@ try {
   app.use("/api/profile", require("./server/profile.routes"));
   app.use("/api/admin", require("./server/admin.routes"));
 } catch (err) {
-  // During early development some route files may not exist yet.
-  // The server can still boot so Railway builds are not blocked.
-  // Once all routes are added this catch is only a safeguard.
+  // During early development some route files may not exist yet
+  // The server can still boot so Railway builds are not blocked
   console.warn(
     "[Via Fidei] API routes not fully loaded yet. This is expected until all server/*.routes.js files exist."
   );
 }
+
+// Simple 404 JSON for unknown API paths
+app.use("/api", (req, res) => {
+  res.status(404).json({ error: "Not found" });
+});
 
 // Static client in production
 if (NODE_ENV === "production") {
@@ -94,6 +107,20 @@ if (NODE_ENV === "production") {
     res.sendFile(path.join(clientDist, "index.html"));
   });
 }
+
+// Graceful shutdown for Prisma on process end
+const shutdown = async () => {
+  try {
+    await prisma.$disconnect();
+  } catch (err) {
+    console.error("[Via Fidei] Error during Prisma disconnect", err);
+  } finally {
+    process.exit(0);
+  }
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 // Start server
 app.listen(PORT, () => {
