@@ -95,36 +95,41 @@ html[data-theme="dark"] .vf-header {
   text-align: center;
 }
 
+/* Banner behind the logo line */
+
 .vf-header-banner {
   width: 100%;
   display: flex;
   justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .vf-banner-mark {
-  width: 180px;
-  height: 40px;
+  width: 100%;
+  max-width: 480px;
+  height: 34px;
   border-radius: 999px;
   border: 1px solid var(--vf-border-subtle);
-  background: linear-gradient(135deg, #ffffff, #f7f7f7);
+  background: linear-gradient(90deg, #ffffff 0, #f7f3e9 45%, #ffffff 100%);
   position: relative;
   overflow: hidden;
 }
 
 html[data-theme="dark"] .vf-banner-mark {
-  background: linear-gradient(135deg, #161620, #101018);
+  background: linear-gradient(90deg, #161620 0, #27202a 40%, #161620 100%);
 }
+
+/* Soft inner glow and moving highlight */
 
 .vf-banner-mark::before {
   content: "";
   position: absolute;
-  inset: 8px;
+  inset: 6px;
   border-radius: 999px;
   border: 1px solid rgba(0, 0, 0, 0.06);
   border-top-color: rgba(0, 0, 0, 0.15);
   border-bottom-color: rgba(255, 255, 255, 0.7);
-  opacity: 0.85;
+  opacity: 0.9;
 }
 
 html[data-theme="dark"] .vf-banner-mark::before {
@@ -133,14 +138,86 @@ html[data-theme="dark"] .vf-banner-mark::before {
   border-bottom-color: rgba(0, 0, 0, 0.75);
 }
 
+.vf-banner-mark::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 120px;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.9), transparent 60%);
+  transform: translateX(-60%);
+  opacity: 0.7;
+  animation: vf-banner-glide 9s linear infinite;
+}
+
+html[data-theme="dark"] .vf-banner-mark::after {
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent 60%);
+}
+
+@keyframes vf-banner-glide {
+  0% {
+    transform: translateX(-80%);
+  }
+  50% {
+    transform: translateX(80%);
+  }
+  100% {
+    transform: translateX(-80%);
+  }
+}
+
 .vf-header-title-block {
   margin-bottom: 14px;
+}
+
+/* Cross plus word mark */
+
+.vf-title-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.vf-logo-cross {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: radial-gradient(circle at 25% 20%, #ffffff, #f4e2b5 55%, #b28a30 100%);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+
+html[data-theme="dark"] .vf-logo-cross {
+  background: radial-gradient(circle at 25% 20%, #ffffff, #c8a45a 55%, #8f6b24 100%);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.55);
+}
+
+.vf-logo-cross::before,
+.vf-logo-cross::after {
+  content: "";
+  position: absolute;
+  background: #ffffff;
+  border-radius: 999px;
+}
+
+.vf-logo-cross::before {
+  inset: 4px 8px;
+}
+
+.vf-logo-cross::after {
+  inset: 8px 4px;
+}
+
+html[data-theme="dark"] .vf-logo-cross::before,
+html[data-theme="dark"] .vf-logo-cross::after {
+  background: #fdf6e5;
 }
 
 .vf-site-title {
   font-family: "Crimson Text", "Times New Roman", serif;
   font-size: clamp(1.9rem, 2.5vw, 2.4rem);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   margin: 0;
 }
@@ -211,7 +288,7 @@ html[data-theme="dark"] .vf-nav-tab-active {
   gap: 10px;
 }
 
-/* Language select, used in Home toolbar and Settings menu */
+/* Language select, used from Settings menu */
 
 .vf-lang-select {
   border-radius: 999px;
@@ -439,16 +516,6 @@ html[data-theme="dark"] .vf-card-hero {
   font-size: 0.95rem;
   line-height: 1.6;
   color: var(--vf-text-main);
-}
-
-/* Home toolbar for language */
-
-.vf-home-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
 }
 
 /* Notices */
