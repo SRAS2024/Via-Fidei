@@ -6,6 +6,12 @@ const express = require("express");
 const router = express.Router();
 
 const ADMIN_COOKIE_NAME = "vf_admin_session";
+const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
+
+// Simple shared secret for the admin cookie value
+// Set ADMIN_SESSION_SECRET in Railway for production
+const ADMIN_SESSION_SECRET =
+  process.env.ADMIN_SESSION_SECRET || "via-fidei-admin-ok";
 
 function getPrisma(req) {
   if (!req.prisma) {
@@ -14,7 +20,7 @@ function getPrisma(req) {
   return req.prisma;
 }
 
-function adminCookieOptions(req) {
+function adminCookieOptions() {
   const isProduction = (process.env.NODE_ENV || "development") === "production";
   const ttlSeconds = Number(process.env.SESSION_TOKEN_TTL || 5000);
 
@@ -27,19 +33,32 @@ function adminCookieOptions(req) {
   };
 }
 
+function resolveLanguage(req) {
+  const override =
+    req.query.language ||
+    req.user?.languageOverride ||
+    process.env.DEFAULT_LANGUAGE ||
+    "en";
+
+  const lower = String(override).toLowerCase();
+  if (SUPPORTED_LANGS.includes(lower)) return lower;
+
+  const header = req.headers["accept-language"];
+  if (typeof header === "string") {
+    const first = header.split(",")[0].trim().toLowerCase();
+    if (SUPPORTED_LANGS.includes(first)) return first;
+    const base = first.split("-")[0];
+    if (SUPPORTED_LANGS.includes(base)) return base;
+  }
+
+  return "en";
+}
+
 function requireAdmin(req, res, next) {
   const token = req.cookies?.[ADMIN_COOKIE_NAME];
-  if (!token) {
+  if (!token || token !== ADMIN_SESSION_SECRET) {
     return res.status(401).json({ error: "Admin authentication required" });
   }
-
-  // The token is a simple string set after a successful login
-  // If the cookie exists, we treat the user as authenticated admin.
-  // For extra safety in production you could add a secret value check here.
-  if (token !== "ok") {
-    return res.status(401).json({ error: "Admin authentication required" });
-  }
-
   next();
 }
 
@@ -57,18 +76,20 @@ router.post("/login", (req, res) => {
     return res.status(401).json({ error: "Invalid admin credentials" });
   }
 
-  // Set a very small opaque token
+  // Set an opaque token based on ADMIN_SESSION_SECRET
   res
-    .cookie(ADMIN_COOKIE_NAME, "ok", adminCookieOptions(req))
+    .cookie(ADMIN_COOKIE_NAME, ADMIN_SESSION_SECRET, adminCookieOptions())
     .json({ ok: true });
 });
 
 // Admin logout
 router.post("/logout", (req, res) => {
+  const isProduction = (process.env.NODE_ENV || "development") === "production";
+
   res
     .clearCookie(ADMIN_COOKIE_NAME, {
       httpOnly: true,
-      secure: (process.env.NODE_ENV || "development") === "production",
+      secure: isProduction,
       sameSite: "strict",
       path: "/"
     })
@@ -78,17 +99,56 @@ router.post("/logout", (req, res) => {
 // Status endpoint so the client knows whether to show the admin panel
 router.get("/status", (req, res) => {
   const token = req.cookies?.[ADMIN_COOKIE_NAME];
-  res.json({ authenticated: token === "ok" });
+  res.json({ authenticated: token === ADMIN_SESSION_SECRET });
+});
+
+// Lightweight overview for the admin dashboard
+// Lets you confirm that seeds ran and content is present.
+router.get("/overview", requireAdmin, async (req, res) => {
+  const prisma = getPrisma(req);
+  const language = resolveLanguage(req);
+
+  try {
+    const [
+      prayersCount,
+      saintsCount,
+      apparitionsCount,
+      sacramentsCount,
+      historyCount,
+      guidesCount,
+      noticesCount
+    ] = await Promise.all([
+      prisma.prayer.count({ where: { language, isActive: true } }),
+      prisma.saint.count({ where: { language, isActive: true } }),
+      prisma.apparition.count({ where: { language, isActive: true } }),
+      prisma.sacrament.count({ where: { language, isActive: true } }),
+      prisma.historySection.count({ where: { language, isActive: true } }),
+      prisma.guide.count({ where: { language, isActive: true } }),
+      prisma.notice.count({ where: { language } })
+    ]);
+
+    res.json({
+      language,
+      counts: {
+        prayers: prayersCount,
+        saints: saintsCount,
+        apparitions: apparitionsCount,
+        sacraments: sacramentsCount,
+        historySections: historyCount,
+        guides: guidesCount,
+        notices: noticesCount
+      }
+    });
+  } catch (error) {
+    console.error("[Via Fidei] Admin overview error", error);
+    res.status(500).json({ error: "Failed to load admin overview" });
+  }
 });
 
 // Load homepage content for admin Home mirror
 router.get("/home", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language =
-    req.query.language ||
-    req.user?.languageOverride ||
-    process.env.DEFAULT_LANGUAGE ||
-    "en";
+  const language = resolveLanguage(req);
 
   try {
     const [mission, about, collage, notices] = await Promise.all([
@@ -123,7 +183,7 @@ router.get("/home", requireAdmin, async (req, res) => {
 // Update mission statement
 router.put("/mission", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.body.language || process.env.DEFAULT_LANGUAGE || "en";
+  const language = req.body.language || resolveLanguage(req);
   const content = req.body.content || {};
 
   try {
@@ -143,7 +203,7 @@ router.put("/mission", requireAdmin, async (req, res) => {
 // Update About Via Fidei
 router.put("/about", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.body.language || process.env.DEFAULT_LANGUAGE || "en";
+  const language = req.body.language || resolveLanguage(req);
   const content = req.body.content || {};
 
   try {
@@ -163,7 +223,7 @@ router.put("/about", requireAdmin, async (req, res) => {
 // Update photo collage configuration
 router.put("/photo-collage", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.body.language || process.env.DEFAULT_LANGUAGE || "en";
+  const language = req.body.language || resolveLanguage(req);
   const content = req.body.content || {};
 
   try {
@@ -185,7 +245,7 @@ router.put("/photo-collage", requireAdmin, async (req, res) => {
 // List notices for admin
 router.get("/notices", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.query.language || process.env.DEFAULT_LANGUAGE || "en";
+  const language = req.query.language || resolveLanguage(req);
 
   try {
     const notices = await prisma.notice.findMany({
@@ -204,7 +264,7 @@ router.get("/notices", requireAdmin, async (req, res) => {
 router.post("/notices", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
   const { title, body, language, displayOrder } = req.body || {};
-  const lang = language || process.env.DEFAULT_LANGUAGE || "en";
+  const lang = language || resolveLanguage(req);
 
   if (!title || !body) {
     return res.status(400).json({ error: "Title and body are required" });
