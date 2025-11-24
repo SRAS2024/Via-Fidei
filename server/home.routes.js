@@ -37,13 +37,112 @@ function resolveLanguage(req) {
   return "en";
 }
 
+function safeJsonParse(value) {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return null;
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "object" && parsed !== null ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+// Default mission text, currently authored in English and reused as fallback
+function defaultMission(language) {
+  return {
+    heading: "Via Fidei",
+    subheading: "A space for the devout faithful and the searching soul",
+    body: [
+      "Via Fidei’s mission is to be a space where the devout faithful can grow in their friendship with God and where those who are curious, distant, or unsure can encounter the beauty and clarity of the Catholic faith without noise or pressure.",
+      "It gathers prayers, the lives of the saints, guides for sacramental life, and tools for personal reflection into one reverent and trustworthy place. The focus is clarity, depth, and peace rather than distraction or debate.",
+      "Whether someone is preparing for the sacraments, deepening a lifelong vocation, or taking a first step back toward the Lord, Via Fidei exists as a quiet companion and a tool for spiritual growth."
+    ]
+  };
+}
+
+function defaultAbout(language) {
+  return {
+    paragraphs: [
+      "Via Fidei is a multilingual Catholic website and app that aims to be clear, calm, and beautifully ordered. It is designed to be welcoming for newcomers who need a gentle introduction and stable for lifelong Catholics who want a complete and trustworthy reference without feeling overwhelmed.",
+      "The platform gathers a curated library of approved prayers, guides for sacramental life and vocation, a private spiritual journal, and a profile system for milestones and goals. Everything is organized top to bottom and left to right, with careful typography, reverent imagery, and a quiet visual rhythm.",
+      "All content is meant to be easy to read, prayerful to sit with, and simple to print or revisit later. The design is intentionally low noise and symmetrical, with a black and white core palette and minimal purposeful color, so that the focus remains on the Lord, the sacraments, and the wisdom of the Church."
+    ],
+    quickLinks: [
+      { target: "sacraments", label: "Sacraments" },
+      { target: "guides-ocia", label: "OCIA" },
+      { target: "guides-rosary", label: "Rosary" },
+      { target: "guides-confession", label: "Confession" },
+      { target: "guides", label: "Guides" }
+    ]
+  };
+}
+
+function normalizeMission(siteContentEntry, language) {
+  const parsed = safeJsonParse(siteContentEntry?.content);
+  if (parsed && typeof parsed.heading === "string" && Array.isArray(parsed.body)) {
+    return {
+      heading: parsed.heading,
+      subheading:
+        typeof parsed.subheading === "string"
+          ? parsed.subheading
+          : defaultMission(language).subheading,
+      body: parsed.body
+    };
+  }
+
+  if (siteContentEntry && typeof siteContentEntry.content === "string") {
+    return {
+      heading: "Via Fidei",
+      subheading: defaultMission(language).subheading,
+      body: [siteContentEntry.content]
+    };
+  }
+
+  return defaultMission(language);
+}
+
+function normalizeAbout(siteContentEntry, language) {
+  const parsed = safeJsonParse(siteContentEntry?.content);
+  if (parsed && Array.isArray(parsed.paragraphs)) {
+    return {
+      paragraphs: parsed.paragraphs,
+      quickLinks: Array.isArray(parsed.quickLinks)
+        ? parsed.quickLinks
+        : defaultAbout(language).quickLinks
+    };
+  }
+
+  if (siteContentEntry && typeof siteContentEntry.content === "string") {
+    return {
+      paragraphs: [siteContentEntry.content],
+      quickLinks: defaultAbout(language).quickLinks
+    };
+  }
+
+  return defaultAbout(language);
+}
+
+function publicNotice(n) {
+  return {
+    id: n.id,
+    language: n.language,
+    title: n.title,
+    body: n.body,
+    displayOrder: n.displayOrder,
+    startsAt: n.startsAt,
+    endsAt: n.endsAt
+  };
+}
+
 // Public home payload
 router.get("/", async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
 
   try {
-    const [mission, about, collage, notices] = await Promise.all([
+    const [missionRow, aboutRow, collageRow, notices] = await Promise.all([
       prisma.siteContent.findUnique({
         where: { language_key: { language, key: "MISSION" } }
       }),
@@ -59,12 +158,16 @@ router.get("/", async (req, res) => {
       })
     ]);
 
+    const mission = normalizeMission(missionRow, language);
+    const about = normalizeAbout(aboutRow, language);
+    const collage = collageRow?.content || null;
+
     res.json({
       language,
-      mission: mission?.content || null,
-      about: about?.content || null,
-      collage: collage?.content || null,
-      notices
+      mission,
+      about,
+      collage,
+      notices: notices.map(publicNotice)
     });
   } catch (error) {
     console.error("[Via Fidei] Home load error", error);
