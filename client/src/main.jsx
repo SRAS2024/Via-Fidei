@@ -288,7 +288,6 @@ function AppShell() {
   function handleThemeChange(nextTheme) {
     setTheme(nextTheme);
     if (user) {
-      // Persist through settings API
       fetch("/api/profile/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -440,7 +439,10 @@ function AppShell() {
           </div>
 
           <div className="vf-header-title-block">
-            <h1 className="vf-site-title">Via Fidei</h1>
+            <div className="vf-title-row">
+              <span className="vf-logo-cross" aria-hidden="true" />
+              <h1 className="vf-site-title">Via Fidei</h1>
+            </div>
             <p className="vf-site-subtitle">
               Multilingual Catholic prayers, saints, sacraments, and guides
             </p>
@@ -592,6 +594,7 @@ function AppShell() {
                         <select
                           value={language}
                           onChange={(e) => handleLanguageChange(e.target.value)}
+                          className="vf-lang-select"
                         >
                           {SUPPORTED_LANGS.map((lang) => (
                             <option key={lang.code} value={lang.code}>
@@ -671,25 +674,6 @@ function AppShell() {
               ))}
             </div>
           )}
-
-          {/* Always visible language selector for Home */}
-          <div className="vf-home-toolbar">
-            <label htmlFor="vf-home-language" className="vf-field-label">
-              Language
-            </label>
-            <select
-              id="vf-home-language"
-              className="vf-lang-select"
-              value={language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-            >
-              {SUPPORTED_LANGS.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
-              ))}
-            </select>
-          </div>
 
           <article className="vf-card vf-card-hero">
             <header className="vf-card-header">
@@ -799,7 +783,7 @@ function AppShell() {
               </p>
             </header>
 
-            {/* Local search bar inside Prayers, not in global header */}
+            {/* Local search bar inside Prayers */}
             <form className="vf-search-bar" onSubmit={submitPrayersSearch}>
               <label className="vf-field-label" htmlFor="prayers-search">
                 Search prayers
@@ -1022,13 +1006,14 @@ function AppShell() {
                           <strong>What to expect:</strong> {s.whatToExpect}
                         </p>
                       )}
-                      {Array.isArray(s.commonQuestions) && s.commonQuestions.length > 0 && (
-                        <ul className="vf-sacrament-questions">
-                          {s.commonQuestions.map((q, idx) => (
-                            <li key={idx}>{q}</li>
-                          ))}
-                        </ul>
-                      )}
+                      {Array.isArray(s.commonQuestions) &&
+                        s.commonQuestions.length > 0 && (
+                          <ul className="vf-sacrament-questions">
+                            {s.commonQuestions.map((q, idx) => (
+                              <li key={idx}>{q}</li>
+                            ))}
+                          </ul>
+                        )}
                     </section>
                   ))}
                 </div>
