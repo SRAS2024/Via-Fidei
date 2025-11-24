@@ -46,6 +46,7 @@ function applyTheme(theme) {
 
 function AppShell() {
   const [currentTab, setCurrentTab] = useState("home");
+
   const [accountMenu, setAccountMenu] = useState(ACCOUNT_STATES.CLOSED);
   const [settingsMenu, setSettingsMenu] = useState(SETTINGS_STATES.CLOSED);
 
@@ -57,13 +58,29 @@ function AppShell() {
     window.localStorage.getItem("vf_language") || "en"
   );
 
+  // Home content
   const [homeData, setHomeData] = useState(null);
   const [loadingHome, setLoadingHome] = useState(true);
 
+  // History, Sacraments, Guides
+  const [historyItems, setHistoryItems] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
+  const [sacramentItems, setSacramentItems] = useState([]);
+  const [loadingSacraments, setLoadingSacraments] = useState(false);
+  const [sacramentsLoaded, setSacramentsLoaded] = useState(false);
+
+  const [guideItems, setGuideItems] = useState([]);
+  const [loadingGuides, setLoadingGuides] = useState(false);
+  const [guidesLoaded, setGuidesLoaded] = useState(false);
+
+  // Prayers search
   const [prayersSearch, setPrayersSearch] = useState("");
   const [prayersSuggestions, setPrayersSuggestions] = useState([]);
   const [prayersResults, setPrayersResults] = useState([]);
 
+  // Saints search
   const [saintsSearch, setSaintsSearch] = useState("");
   const [saintsSuggestions, setSaintsSuggestions] = useState([]);
   const [saintsResults, setSaintsResults] = useState({
@@ -125,6 +142,18 @@ function AppShell() {
     window.localStorage.setItem("vf_theme", theme);
   }, [theme]);
 
+  // When language changes, mark language dependent sections as needing reload
+  useEffect(() => {
+    setHistoryLoaded(false);
+    setHistoryItems([]);
+
+    setSacramentsLoaded(false);
+    setSacramentItems([]);
+
+    setGuidesLoaded(false);
+    setGuideItems([]);
+  }, [language]);
+
   // Fetch home content
   const loadHome = useCallback(
     async (lang) => {
@@ -149,6 +178,97 @@ function AppShell() {
   useEffect(() => {
     loadHome(language);
   }, [language, loadHome]);
+
+  // Fetch history sections on demand
+  const loadHistory = useCallback(
+    async (lang) => {
+      try {
+        setLoadingHistory(true);
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        const res = await fetch(`/api/history?${params.toString()}`);
+        const data = await res.json();
+        setHistoryItems(Array.isArray(data.items) ? data.items : []);
+        setHistoryLoaded(true);
+      } catch (err) {
+        console.error("Failed to load history sections", err);
+      } finally {
+        setLoadingHistory(false);
+      }
+    },
+    []
+  );
+
+  // Fetch sacraments on demand
+  const loadSacraments = useCallback(
+    async (lang) => {
+      try {
+        setLoadingSacraments(true);
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        const res = await fetch(`/api/sacraments?${params.toString()}`);
+        const data = await res.json();
+        setSacramentItems(Array.isArray(data.items) ? data.items : []);
+        setSacramentsLoaded(true);
+      } catch (err) {
+        console.error("Failed to load sacraments", err);
+      } finally {
+        setLoadingSacraments(false);
+      }
+    },
+    []
+  );
+
+  // Fetch guides on demand
+  const loadGuides = useCallback(
+    async (lang) => {
+      try {
+        setLoadingGuides(true);
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        const res = await fetch(`/api/guides?${params.toString()}`);
+        const data = await res.json();
+        setGuideItems(Array.isArray(data.items) ? data.items : []);
+        setGuidesLoaded(true);
+      } catch (err) {
+        console.error("Failed to load guides", err);
+      } finally {
+        setLoadingGuides(false);
+      }
+    },
+    []
+  );
+
+  // Trigger language dependent loads when tab is opened for the first time
+  useEffect(() => {
+    if (currentTab === "history" && !historyLoaded && !loadingHistory) {
+      loadHistory(language);
+    }
+    if (currentTab === "sacraments" && !sacramentsLoaded && !loadingSacraments) {
+      loadSacraments(language);
+    }
+    if (currentTab === "guides" && !guidesLoaded && !loadingGuides) {
+      loadGuides(language);
+    }
+  }, [
+    currentTab,
+    language,
+    historyLoaded,
+    sacramentsLoaded,
+    guidesLoaded,
+    loadingHistory,
+    loadingSacraments,
+    loadingGuides,
+    loadHistory,
+    loadSacraments,
+    loadGuides
+  ]);
 
   // Account actions
   async function handleLogout() {
@@ -217,7 +337,7 @@ function AppShell() {
         const data = await res.json();
         if (cancelled) return;
 
-        setPrayersSuggestions(data.suggestions || []);
+        setPrayersSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
       } catch (err) {
         console.error("Prayers suggest search failed", err);
       }
@@ -244,7 +364,7 @@ function AppShell() {
 
       const res = await fetch(`/api/prayers/search/local?${params.toString()}`);
       const data = await res.json();
-      setPrayersResults(data.results || []);
+      setPrayersResults(Array.isArray(data.results) ? data.results : []);
     } catch (err) {
       console.error("Prayers full search failed", err);
     }
@@ -273,7 +393,7 @@ function AppShell() {
         const data = await res.json();
         if (cancelled) return;
 
-        setSaintsSuggestions(data.suggestions || []);
+        setSaintsSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
       } catch (err) {
         console.error("Saints suggest search failed", err);
       }
@@ -302,8 +422,8 @@ function AppShell() {
       const res = await fetch(`/api/saints/search/local?${params.toString()}`);
       const data = await res.json();
       setSaintsResults({
-        saints: data.resultsSaints || [],
-        apparitions: data.resultsApparitions || []
+        saints: Array.isArray(data.resultsSaints) ? data.resultsSaints : [],
+        apparitions: Array.isArray(data.resultsApparitions) ? data.resultsApparitions : []
       });
     } catch (err) {
       console.error("Saints full search failed", err);
@@ -344,28 +464,13 @@ function AppShell() {
             </ul>
 
             <div className="vf-nav-right">
-              {/* Language selector always visible as requested on Home, but we keep it in header for global clarity */}
-              <select
-                className="vf-lang-select"
-                aria-label="Language"
-                value={language}
-                onChange={(e) => handleLanguageChange(e.target.value)}
-              >
-                {SUPPORTED_LANGS.map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.label}
-                  </option>
-                ))}
-              </select>
-
               <div className="vf-icon-group">
                 <div className="vf-icon-wrapper">
                   <button
                     type="button"
-                    className="vf-icon-button"
+                    className="vf-account-button"
                     aria-haspopup="menu"
                     aria-expanded={accountMenu === ACCOUNT_STATES.OPEN}
-                    aria-label="Account"
                     onClick={() =>
                       setAccountMenu(
                         accountMenu === ACCOUNT_STATES.OPEN
@@ -374,7 +479,7 @@ function AppShell() {
                       )
                     }
                   >
-                    <span className="vf-icon-avatar" aria-hidden="true" />
+                    <span className="vf-account-label">Account</span>
                   </button>
                   {accountMenu === ACCOUNT_STATES.OPEN && (
                     <div className="vf-menu" role="menu">
@@ -508,12 +613,50 @@ function AppShell() {
 
   function renderHome() {
     if (loadingHome) {
-      return <div className="vf-card">Loading home content…</div>;
+      return (
+        <main className="vf-main">
+          <section className="vf-section">
+            <article className="vf-card">
+              <div className="vf-card-body">
+                <p>Loading home content…</p>
+              </div>
+            </article>
+          </section>
+        </main>
+      );
     }
 
-    const mission = homeData?.mission;
-    const about = homeData?.about;
+    const missionFromApi = homeData?.mission;
+    const aboutFromApi = homeData?.about;
     const notices = homeData?.notices || [];
+
+    const fallbackMission = {
+      heading: "Via Fidei",
+      subheading: "A Catholic space for clarity, beauty, and depth",
+      body: [
+        "Via Fidei is a quiet and reverent space where the devout faithful can grow in their relationship with God and where those who are searching can encounter trusted Catholic teaching at a gentle pace.",
+        "The mission of Via Fidei is to be a place where both the non religious and the faithful alike can find the prayers, saints, sacraments, and guides they need to deepen in faith. It is a tool for spiritual growth, not noise.",
+        "All content is curated, catechism aligned, and presented in a way that is readable, calm, and ordered from top to bottom, left to right."
+      ]
+    };
+
+    const fallbackAbout = {
+      paragraphs: [
+        "Via Fidei is designed to be simple, symmetrical, and approachable. The interface favors clarity over clutter so that you can focus on prayer, study, and discernment.",
+        "Every section is multilingual and carefully localized. Prayers, saints, sacraments, history, and guides are paired with visual elements like icons and artwork so that the whole experience feels rooted in the life of the Church.",
+        "All interactive features are personal and private. There is no social feed or messaging, only tools that support your sacramental life, your goals, and your spiritual journal."
+      ],
+      quickLinks: [
+        { label: "Sacraments", target: "sacraments" },
+        { label: "OCIA", target: "guides-ocia" },
+        { label: "Rosary", target: "guides-rosary" },
+        { label: "Confession", target: "guides-confession" },
+        { label: "Guides", target: "guides-root" }
+      ]
+    };
+
+    const mission = missionFromApi || fallbackMission;
+    const about = aboutFromApi || fallbackAbout;
 
     return (
       <main className="vf-main">
@@ -529,16 +672,33 @@ function AppShell() {
             </div>
           )}
 
+          {/* Always visible language selector for Home */}
+          <div className="vf-home-toolbar">
+            <label htmlFor="vf-home-language" className="vf-field-label">
+              Language
+            </label>
+            <select
+              id="vf-home-language"
+              className="vf-lang-select"
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+            >
+              {SUPPORTED_LANGS.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <article className="vf-card vf-card-hero">
             <header className="vf-card-header">
-              <h2 className="vf-card-title">
-                {mission?.heading || "Via Fidei"}
-              </h2>
-              {mission?.subheading && (
+              <h2 className="vf-card-title">{mission.heading}</h2>
+              {mission.subheading && (
                 <p className="vf-card-subtitle">{mission.subheading}</p>
               )}
             </header>
-            {Array.isArray(mission?.body) && (
+            {Array.isArray(mission.body) && (
               <div className="vf-card-body">
                 {mission.body.map((p, idx) => (
                   <p key={idx}>{p}</p>
@@ -552,9 +712,9 @@ function AppShell() {
               <h3 className="vf-card-title">About Via Fidei</h3>
             </header>
             <div className="vf-card-body">
-              {Array.isArray(about?.paragraphs) &&
+              {Array.isArray(about.paragraphs) &&
                 about.paragraphs.map((p, idx) => <p key={idx}>{p}</p>)}
-              {Array.isArray(about?.quickLinks) && (
+              {Array.isArray(about.quickLinks) && (
                 <div className="vf-quick-links">
                   {about.quickLinks.map((link) => (
                     <button
@@ -562,11 +722,11 @@ function AppShell() {
                       type="button"
                       className="vf-chip-link"
                       onClick={() => {
-                        if (link.target === "sacraments") setCurrentTab("sacraments");
-                        else if (link.target.startsWith("guides")) setCurrentTab("guides");
-                        else if (link.target === "guides-confession") setCurrentTab("guides");
-                        else if (link.target === "guides-rosary") setCurrentTab("guides");
-                        else if (link.target === "guides-ocia") setCurrentTab("guides");
+                        if (link.target === "sacraments") {
+                          setCurrentTab("sacraments");
+                        } else if (link.target.startsWith("guides")) {
+                          setCurrentTab("guides");
+                        }
                       }}
                     >
                       {link.label}
@@ -594,15 +754,32 @@ function AppShell() {
               </p>
             </header>
             <div className="vf-card-body">
-              <p>
-                This section will present a catechism aligned overview of Church history with
-                timelines, key events, and a simple glossary. The pages are designed to be
-                print friendly, with clear typography and calm spacing.
-              </p>
-              <p>
-                The client will load history sections from the <code>/api/history</code> endpoint
-                and render them in order, from the Apostolic Age to the Contemporary Church.
-              </p>
+              {loadingHistory && historyItems.length === 0 && (
+                <p>Loading history overview…</p>
+              )}
+
+              {!loadingHistory && historyItems.length === 0 && (
+                <p>
+                  History sections will appear here as soon as content is seeded for this
+                  language.
+                </p>
+              )}
+
+              {historyItems.length > 0 && (
+                <div className="vf-stack">
+                  {historyItems.map((section) => (
+                    <section key={section.id} className="vf-history-section">
+                      <h3 className="vf-section-subtitle">{section.title}</h3>
+                      {section.summary && (
+                        <p className="vf-history-summary">{section.summary}</p>
+                      )}
+                      {section.body && (
+                        <p className="vf-history-body">{section.body}</p>
+                      )}
+                    </section>
+                  ))}
+                </div>
+              )}
             </div>
           </article>
         </section>
@@ -665,7 +842,9 @@ function AppShell() {
                   {prayersResults.map((p) => (
                     <article key={p.id} className="vf-prayer-item">
                       <h3 className="vf-prayer-title">{p.title}</h3>
-                      <p className="vf-prayer-category">{p.category}</p>
+                      {p.category && (
+                        <p className="vf-prayer-category">{p.category}</p>
+                      )}
                       <p className="vf-prayer-body">{p.content}</p>
                     </article>
                   ))}
@@ -750,7 +929,8 @@ function AppShell() {
                           <h4 className="vf-saint-name">{s.name}</h4>
                           {s.feastDay && (
                             <p className="vf-saint-meta">
-                              Feast day: {new Date(s.feastDay).toLocaleDateString()}
+                              Feast day:{" "}
+                              {new Date(s.feastDay).toLocaleDateString()}
                             </p>
                           )}
                         </div>
@@ -808,10 +988,51 @@ function AppShell() {
               </p>
             </header>
             <div className="vf-card-body">
-              <p>
-                The full client will load sacrament details from <code>/api/sacraments</code> and
-                render them with accurate icons and links to Goals and Milestones templates.
-              </p>
+              {loadingSacraments && sacramentItems.length === 0 && (
+                <p>Loading sacraments…</p>
+              )}
+
+              {!loadingSacraments && sacramentItems.length === 0 && (
+                <p>
+                  Sacrament details will appear here as soon as content is seeded for this
+                  language.
+                </p>
+              )}
+
+              {sacramentItems.length > 0 && (
+                <div className="vf-stack">
+                  {sacramentItems.map((s) => (
+                    <section key={s.id} className="vf-sacrament-item">
+                      <h3 className="vf-section-subtitle">{s.name}</h3>
+                      {s.meaning && (
+                        <p className="vf-sacrament-meaning">{s.meaning}</p>
+                      )}
+                      {s.biblicalFoundation && (
+                        <p className="vf-sacrament-field">
+                          <strong>Biblical foundation:</strong> {s.biblicalFoundation}
+                        </p>
+                      )}
+                      {s.preparation && (
+                        <p className="vf-sacrament-field">
+                          <strong>How to prepare:</strong> {s.preparation}
+                        </p>
+                      )}
+                      {s.whatToExpect && (
+                        <p className="vf-sacrament-field">
+                          <strong>What to expect:</strong> {s.whatToExpect}
+                        </p>
+                      )}
+                      {Array.isArray(s.commonQuestions) && s.commonQuestions.length > 0 && (
+                        <ul className="vf-sacrament-questions">
+                          {s.commonQuestions.map((q, idx) => (
+                            <li key={idx}>{q}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </section>
+                  ))}
+                </div>
+              )}
             </div>
           </article>
         </section>
@@ -832,11 +1053,29 @@ function AppShell() {
               </p>
             </header>
             <div className="vf-card-body">
-              <p>
-                Guides are loaded from <code>/api/guides</code> and can be added directly as
-                Goals. Each guide includes an overview, steps, recommended reading, and
-                checklist templates.
-              </p>
+              {loadingGuides && guideItems.length === 0 && (
+                <p>Loading guides…</p>
+              )}
+
+              {!loadingGuides && guideItems.length === 0 && (
+                <p>
+                  Guides will appear here as soon as content is seeded for this language.
+                </p>
+              )}
+
+              {guideItems.length > 0 && (
+                <div className="vf-stack">
+                  {guideItems.map((g) => (
+                    <section key={g.id} className="vf-guide-item">
+                      <h3 className="vf-section-subtitle">{g.title}</h3>
+                      {g.summary && (
+                        <p className="vf-guide-summary">{g.summary}</p>
+                      )}
+                      {g.body && <p className="vf-guide-body">{g.body}</p>}
+                    </section>
+                  ))}
+                </div>
+              )}
             </div>
           </article>
         </section>
@@ -948,9 +1187,7 @@ function AppShell() {
       {renderCurrentTab()}
       <footer className="vf-footer">
         <div className="vf-footer-inner">
-          <span>
-            © {new Date().getFullYear()} Via Fidei. All rights reserved.
-          </span>
+          <span>© {new Date().getFullYear()} Via Fidei. All rights reserved.</span>
         </div>
       </footer>
     </div>
