@@ -10,18 +10,16 @@
     "dev": "npm run dev:server",
     "build:client": "vite build",
     "build": "npm run build:client",
-    "start": "node index.js",
 
     "prisma:generate": "prisma generate --schema=./prisma.schema",
     "prisma:migrate": "prisma migrate deploy --schema=./prisma.schema",
-
-    // new helper to create tables directly from the schema
     "prisma:push": "prisma db push --schema=./prisma.schema",
-
     "db:seed": "node database/seed.js",
 
-    // critical: run on Railway build so the DB is ready and prefilled
-    "postinstall": "npm run prisma:generate && npm run prisma:push && npm run db:seed"
+    "prestart": "npm run prisma:generate && npm run prisma:push && npm run db:seed",
+    "start": "node index.js",
+
+    "postinstall": "npm run prisma:generate"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
