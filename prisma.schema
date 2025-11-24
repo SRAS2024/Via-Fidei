@@ -16,13 +16,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  firstName String
-  lastName  String
-  email     String   @unique
+  firstName    String
+  lastName     String
+  email        String   @unique
   passwordHash String
 
-  themePreference   String?  // "light", "dark", "system"
-  languageOverride  String?  // "en", "es", "pt", etc
+  // "light", "dark", "system"
+  themePreference   String?
+  // "en", "es", "pt", etc
+  languageOverride  String?
   profilePictureUrl String?
 
   journals         JournalEntry[]
@@ -44,6 +46,8 @@ model JournalEntry {
   title      String
   body       String
   isFavorite Boolean @default(false)
+
+  @@index([userId, createdAt])
 }
 
 model Prayer {
@@ -52,7 +56,7 @@ model Prayer {
   updatedAt DateTime @updatedAt
 
   // Localization
-  language String    // "en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"
+  language String // "en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"
   slug     String
 
   title   String
@@ -60,6 +64,10 @@ model Prayer {
 
   category PrayerCategory
   tags    String[]
+
+  // Optional hook for external or scraped sources
+  externalId     String? // for example Vatican or Open Source IDs
+  externalSource String? // short key such as "vatican_va", "open_prayers"
 
   // Metadata
   source            String?
@@ -70,6 +78,8 @@ model Prayer {
   savedBy SavedPrayer[]
 
   @@unique([slug, language])
+  @@index([language, isActive, category])
+  @@index([language, isActive, title])
 }
 
 enum PrayerCategory {
@@ -93,6 +103,7 @@ model SavedPrayer {
   prayerId String
 
   @@unique([userId, prayerId])
+  @@index([userId])
 }
 
 model Saint {
@@ -111,6 +122,10 @@ model Saint {
   officialPrayer     String?
   imageUrl           String?
 
+  // Optional external mapping
+  externalId     String?
+  externalSource String?
+
   tags              String[]
   source            String?
   sourceUrl         String?
@@ -120,6 +135,7 @@ model Saint {
   savedBy SavedSaint[]
 
   @@unique([slug, language])
+  @@index([language, isActive, name])
 }
 
 model SavedSaint {
@@ -133,6 +149,7 @@ model SavedSaint {
   saintId String
 
   @@unique([userId, saintId])
+  @@index([userId])
 }
 
 model Apparition {
@@ -143,14 +160,18 @@ model Apparition {
   language String
   slug     String
 
-  title         String
-  location      String?
-  firstYear     Int?
-  feastDay      DateTime?
-  approvalNote  String?  // short Church approval context
-  story         String
+  title        String
+  location     String?
+  firstYear    Int?
+  feastDay     DateTime?
+  approvalNote String?  // short Church approval context
+  story        String
   officialPrayer String?
   imageUrl       String?
+
+  // Optional external mapping
+  externalId     String?
+  externalSource String?
 
   tags              String[]
   source            String?
@@ -161,6 +182,7 @@ model Apparition {
   savedBy SavedApparition[]
 
   @@unique([slug, language])
+  @@index([language, isActive, title])
 }
 
 model SavedApparition {
@@ -174,6 +196,7 @@ model SavedApparition {
   apparitionId String
 
   @@unique([userId, apparitionId])
+  @@index([userId])
 }
 
 model Sacrament {
@@ -186,6 +209,11 @@ model Sacrament {
 
   name    String
   iconKey String?
+
+  // Canonical order index for the seven sacraments
+  // 1 = Baptism, 2 = Confirmation, 3 = Eucharist, 4 = Penance,
+  // 5 = Anointing of the Sick, 6 = Matrimony, 7 = Holy Orders
+  orderIndex Int @default(0)
 
   meaning            String
   biblicalFoundation String
@@ -202,6 +230,7 @@ model Sacrament {
   milestones Milestone[]
 
   @@unique([slug, language])
+  @@index([language, isActive, orderIndex])
 }
 
 model HistorySection {
@@ -219,6 +248,11 @@ model HistorySection {
   // Simple timeline data as JSON to keep the schema compact
   timeline Json?
 
+  // Canonical era order for consistent display
+  // 1 = Apostolic Age, 2 = Early Church, 3 = Councils, 4 = Middle Ages,
+  // 5 = Reformation, 6 = Modern Era, 7 = Vatican Councils, 8 = Contemporary Church
+  eraOrder Int @default(0)
+
   tags              String[]
   source            String?
   sourceUrl         String?
@@ -226,6 +260,7 @@ model HistorySection {
   isActive          Boolean @default(true)
 
   @@unique([slug, language])
+  @@index([language, isActive, eraOrder])
 }
 
 model Guide {
@@ -243,7 +278,11 @@ model Guide {
   guideType GuideType
 
   // Checklist templates and structured steps
-  checklistTemplate Json? // [{label: string, required: bool}, ...]
+  // For example: [{label: string, required: bool}, ...]
+  checklistTemplate Json?
+
+  // Optional display order within a guideType
+  guideOrder Int @default(0)
 
   tags              String[]
   source            String?
@@ -252,6 +291,7 @@ model Guide {
   isActive          Boolean @default(true)
 
   @@unique([slug, language])
+  @@index([language, isActive, guideType, guideOrder])
 }
 
 enum GuideType {
@@ -281,7 +321,8 @@ model Goal {
   dueDate     DateTime?
   completedAt DateTime?
 
-  checklist Json? // [{label, done}, ...]
+  // [{label, done}, ...]
+  checklist Json?
 
   // When completed, a Personal Milestone will reference this goal
   personalMilestone Milestone?
@@ -321,7 +362,8 @@ model Milestone {
   sacramentId String?
 
   // Spiritual milestones such as consecrations or retreats from a predefined list
-  spiritualKey String? // for example "ST_LOUIS_CONSECRATION", "ST_JOSEPH_CONSECRATION", etc
+  // for example "ST_LOUIS_CONSECRATION", "ST_JOSEPH_CONSECRATION"
+  spiritualKey String?
 
   // Personal milestones linked to completed goals
   goal   Goal?   @relation(fields: [goalId], references: [id])
@@ -350,8 +392,10 @@ model Notice {
   title String
   body  String
 
-  displayOrder Int    @default(0)
+  displayOrder Int     @default(0)
   isActive     Boolean @default(true)
+
+  @@index([language, isActive, displayOrder])
 }
 
 model SiteContent {
