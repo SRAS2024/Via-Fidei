@@ -7,8 +7,6 @@ const { requireAuth } = require("./auth.routes");
 
 const router = express.Router();
 
-const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
-
 function getPrisma(req) {
   if (!req.prisma) {
     throw new Error("Prisma client not attached to request");
@@ -16,73 +14,39 @@ function getPrisma(req) {
   return req.prisma;
 }
 
-function resolveLanguage(req) {
-  const override =
-    req.user?.languageOverride ||
-    req.query.language ||
-    process.env.DEFAULT_LANGUAGE ||
-    "en";
-
-  const lower = String(override).toLowerCase();
-
-  if (SUPPORTED_LANGS.includes(lower)) return lower;
-
-  const header = req.headers["accept-language"];
-  if (typeof header === "string") {
-    const first = header.split(",")[0].trim().toLowerCase();
-    if (SUPPORTED_LANGS.includes(first)) return first;
-    const base = first.split("-")[0];
-    if (SUPPORTED_LANGS.includes(base)) return base;
-  }
-
-  return "en";
-}
-
-function normalizeTags(tags) {
-  if (!tags) return [];
-  if (!Array.isArray(tags)) return [];
-  return tags
-    .map((t) => String(t || "").trim())
-    .filter(Boolean);
-}
-
 function publicEntry(e) {
   return {
     id: e.id,
     userId: e.userId,
-    language: e.language,
     title: e.title,
-    content: e.content,
-    tags: Array.isArray(e.tags) ? e.tags : [],
-    isArchived: Boolean(e.isArchived),
+    body: e.body,
+    isFavorite: Boolean(e.isFavorite),
     createdAt: e.createdAt,
     updatedAt: e.updatedAt
   };
 }
 
 // List journal entries for current user
-// GET /api/journal?archived=false|true|all&take=20&cursor=<id>
+// GET /api/journal?favorite=false|true|all&take=20&cursor=<id>
 router.get("/", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const userId = req.user.id;
-  const language = resolveLanguage(req);
 
-  const archivedParam = (req.query.archived || "false").toString();
+  const favoriteParam = (req.query.favorite || "all").toString();
   const take = Math.min(Number(req.query.take) || 20, 100);
   const cursor = req.query.cursor || null;
 
-  let archivedFilter = {};
-  if (archivedParam === "true") {
-    archivedFilter = { isArchived: true };
-  } else if (archivedParam === "false") {
-    archivedFilter = { isArchived: false };
+  let favoriteFilter = {};
+  if (favoriteParam === "true") {
+    favoriteFilter = { isFavorite: true };
+  } else if (favoriteParam === "false") {
+    favoriteFilter = { isFavorite: false };
   }
 
   try {
     const where = {
       userId,
-      language,
-      ...archivedFilter
+      ...favoriteFilter
     };
 
     const entries = await prisma.journalEntry.findMany({
@@ -98,7 +62,6 @@ router.get("/", requireAuth, async (req, res) => {
     }
 
     res.json({
-      language,
       items: entries.map(publicEntry),
       nextCursor: hasMore ? entries[entries.length - 1].id : null
     });
@@ -133,27 +96,31 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 // Create a new entry
 // POST /api/journal
-// { title?, content, language?, tags? }
+// { title?, body?, isFavorite? }
 router.post("/", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const userId = req.user.id;
-  const language = req.body.language || resolveLanguage(req);
 
   const rawTitle = (req.body.title || "").toString().trim();
   const title = rawTitle || "Untitled entry";
-  const content = req.body.content ?? "";
-  const tags = normalizeTags(req.body.tags);
-  const isArchived = Boolean(req.body.isArchived);
+
+  // Support either body or legacy content key in the request
+  const contentBody =
+    typeof req.body.body === "string"
+      ? req.body.body
+      : typeof req.body.content === "string"
+      ? req.body.content
+      : "";
+
+  const isFavorite = Boolean(req.body.isFavorite);
 
   try {
     const entry = await prisma.journalEntry.create({
       data: {
         userId,
-        language,
         title,
-        content,
-        tags,
-        isArchived
+        body: contentBody,
+        isFavorite
       }
     });
 
@@ -187,21 +154,16 @@ router.put("/:id", requireAuth, async (req, res) => {
       if (t) data.title = t;
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body, "content")) {
-      data.content = req.body.content;
+    if (Object.prototype.hasOwnProperty.call(req.body, "body")) {
+      data.body = req.body.body;
+    } else if (
+      Object.prototype.hasOwnProperty.call(req.body, "content")
+    ) {
+      data.body = req.body.content;
     }
 
-    if (Object.prototype.hasOwnProperty.call(req.body, "language")) {
-      const lang = String(req.body.language || "").toLowerCase();
-      data.language = SUPPORTED_LANGS.includes(lang) ? lang : existing.language;
-    }
-
-    if (Object.prototype.hasOwnProperty.call(req.body, "tags")) {
-      data.tags = normalizeTags(req.body.tags);
-    }
-
-    if (Object.prototype.hasOwnProperty.call(req.body, "isArchived")) {
-      data.isArchived = Boolean(req.body.isArchived);
+    if (Object.prototype.hasOwnProperty.call(req.body, "isFavorite")) {
+      data.isFavorite = Boolean(req.body.isFavorite);
     }
 
     const updated = await prisma.journalEntry.update({
@@ -216,9 +178,9 @@ router.put("/:id", requireAuth, async (req, res) => {
   }
 });
 
-// Archive or unarchive an entry
-// POST /api/journal/:id/archive { isArchived: true|false }
-router.post("/:id/archive", requireAuth, async (req, res) => {
+// Toggle favorite on an entry
+// POST /api/journal/:id/favorite { isFavorite: true|false }
+router.post("/:id/favorite", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const userId = req.user.id;
   const { id } = req.params;
@@ -232,17 +194,17 @@ router.post("/:id/archive", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Journal entry not found" });
     }
 
-    const isArchived = Boolean(req.body.isArchived);
+    const isFavorite = Boolean(req.body.isFavorite);
 
     const updated = await prisma.journalEntry.update({
       where: { id },
-      data: { isArchived }
+      data: { isFavorite }
     });
 
     res.json({ entry: publicEntry(updated) });
   } catch (error) {
-    console.error("[Via Fidei] Journal archive toggle error", error);
-    res.status(500).json({ error: "Failed to update archive state" });
+    console.error("[Via Fidei] Journal favorite toggle error", error);
+    res.status(500).json({ error: "Failed to update favorite state" });
   }
 });
 
