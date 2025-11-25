@@ -90,11 +90,14 @@ try {
   app.use("/api/history", require("./server/history.routes"));
   app.use("/api/profile", require("./server/profile.routes"));
   app.use("/api/admin", require("./server/admin.routes"));
+  app.use("/api/account", require("./server/account.routes"));
+  app.use("/api/journal", require("./server/journal.routes"));
 } catch (err) {
   // During early development some route files may not exist yet
   // The server can still boot so Railway builds are not blocked
   console.warn(
-    "[Via Fidei] API routes not fully loaded yet. This is expected until all server/*.routes.js files exist."
+    "[Via Fidei] API routes not fully loaded yet. This is expected until all server/*.routes.js files exist.",
+    err && err.message ? `Reason: ${err.message}` : ""
   );
 }
 
