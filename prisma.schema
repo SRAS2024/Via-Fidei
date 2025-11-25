@@ -387,6 +387,7 @@ model Notice {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // "global" for all languages, or a specific language code
   language String
 
   title String
@@ -403,11 +404,15 @@ model SiteContent {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // "en", "pt", etc, or "global" for shared content such as theme
   language String
   key      SiteContentKey
 
-  // Flexible payload for mission statement, About Via Fidei,
-  // and optional photo collage configuration
+  // Flexible payload:
+  // MISSION: { heading, subheading, body: string[] }
+  // ABOUT: { paragraphs: string[], quickLinks?: [...] }
+  // PHOTO_COLLAGE: { photos: [{ id, url, alt }] }
+  // LITURGICAL_THEME: { liturgicalTheme: "normal" | "advent" | "easter" }
   content Json
 
   @@unique([language, key])
@@ -417,4 +422,5 @@ enum SiteContentKey {
   MISSION
   ABOUT
   PHOTO_COLLAGE
+  LITURGICAL_THEME
 }
