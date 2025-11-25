@@ -58,26 +58,65 @@ function publicUser(u) {
   };
 }
 
+function publicJournalEntry(e) {
+  return {
+    id: e.id,
+    title: e.title,
+    body: e.body,
+    isFavorite: e.isFavorite,
+    isArchived: e.isArchived ?? false,
+    createdAt: e.createdAt,
+    updatedAt: e.updatedAt
+  };
+}
+
 // Overview of profile
 router.get("/", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const user = req.user;
 
   try {
-    const [savedPrayersCount, journalCount, goalsCount, milestonesCount] =
-      await Promise.all([
-        prisma.savedPrayer.count({ where: { userId: user.id } }),
-        prisma.journalEntry.count({ where: { userId: user.id } }),
-        prisma.goal.count({ where: { userId: user.id } }),
-        prisma.milestone.count({ where: { userId: user.id } })
-      ]);
+    const [
+      savedPrayersCount,
+      savedSaintsCount,
+      savedApparitionsCount,
+      journalCount,
+      journalArchivedCount,
+      goalsCount,
+      goalsActiveCount,
+      goalsOverdueCount,
+      milestonesCount
+    ] = await Promise.all([
+      prisma.savedPrayer.count({ where: { userId: user.id } }),
+      prisma.savedSaint.count({ where: { userId: user.id } }),
+      prisma.savedApparition.count({ where: { userId: user.id } }),
+      prisma.journalEntry.count({
+        where: { userId: user.id, isArchived: false }
+      }),
+      prisma.journalEntry.count({
+        where: { userId: user.id, isArchived: true }
+      }),
+      prisma.goal.count({ where: { userId: user.id } }),
+      prisma.goal.count({
+        where: { userId: user.id, status: "ACTIVE" }
+      }),
+      prisma.goal.count({
+        where: { userId: user.id, status: "OVERDUE" }
+      }),
+      prisma.milestone.count({ where: { userId: user.id } })
+    ]);
 
     res.json({
       user: publicUser(user),
       overview: {
         savedPrayersCount,
+        savedSaintsCount,
+        savedApparitionsCount,
         journalCount,
+        journalArchivedCount,
         goalsCount,
+        goalsActiveCount,
+        goalsOverdueCount,
         milestonesCount
       }
     });
@@ -187,17 +226,26 @@ router.delete("/my-prayers/:prayerId", requireAuth, async (req, res) => {
 
 // Journal
 
+// GET /api/profile/journal?view=active|archived|all
 router.get("/journal", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const user = req.user;
+  const view = (req.query.view || "active").toString();
+
+  const where = { userId: user.id };
+  if (view === "active") {
+    where.isArchived = false;
+  } else if (view === "archived") {
+    where.isArchived = true;
+  }
 
   try {
     const entries = await prisma.journalEntry.findMany({
-      where: { userId: user.id },
+      where,
       orderBy: { createdAt: "desc" }
     });
 
-    res.json({ items: entries });
+    res.json({ items: entries.map(publicJournalEntry) });
   } catch (error) {
     console.error("[Via Fidei] Journal list error", error);
     res.status(500).json({ error: "Failed to load journal entries" });
@@ -219,11 +267,12 @@ router.post("/journal", requireAuth, async (req, res) => {
         userId: user.id,
         title: String(title || "Untitled").trim(),
         body: String(body),
-        isFavorite: Boolean(isFavorite)
+        isFavorite: Boolean(isFavorite),
+        isArchived: false
       }
     });
 
-    res.status(201).json({ entry });
+    res.status(201).json({ entry: publicJournalEntry(entry) });
   } catch (error) {
     console.error("[Via Fidei] Journal create error", error);
     res.status(500).json({ error: "Failed to create journal entry" });
@@ -234,7 +283,7 @@ router.put("/journal/:id", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const user = req.user;
   const { id } = req.params;
-  const { title, body, isFavorite } = req.body || {};
+  const { title, body, isFavorite, isArchived } = req.body || {};
 
   try {
     const existing = await prisma.journalEntry.findFirst({
@@ -248,14 +297,17 @@ router.put("/journal/:id", requireAuth, async (req, res) => {
     const updated = await prisma.journalEntry.update({
       where: { id },
       data: {
-        title: title !== undefined ? String(title).trim() : existing.title,
+        title:
+          title !== undefined ? String(title).trim() : existing.title,
         body: body !== undefined ? String(body) : existing.body,
         isFavorite:
-          typeof isFavorite === "boolean" ? isFavorite : existing.isFavorite
+          typeof isFavorite === "boolean" ? isFavorite : existing.isFavorite,
+        isArchived:
+          typeof isArchived === "boolean" ? isArchived : existing.isArchived
       }
     });
 
-    res.json({ entry: updated });
+    res.json({ entry: publicJournalEntry(updated) });
   } catch (error) {
     console.error("[Via Fidei] Journal update error", error);
     res.status(500).json({ error: "Failed to update journal entry" });
