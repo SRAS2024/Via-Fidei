@@ -29,22 +29,29 @@
       <!--
         Via Fidei React app mounts here.
 
-        Overall layout expectations:
+        Layout expectations:
 
-        1. Centered banner across the top of the page.
+        1. Centered seasonal banner across the top of the page.
+           Normal: wooden cross, tan and grey palette.
+           Advent: Holy Family, grey and deep red palette.
+           Easter: crucifix, blue grey and gold palette.
+
         2. Website title centered beneath the banner.
         3. Centered navigation tabs beneath the title:
-           Home, History, Prayers, Saints and Our Lady, Sacraments, Guides.
-        4. Far right of the header: small Account and Settings icons.
+           Home, Liturgy and History, Prayers, Saints, Our Lady, Sacraments, Guides.
+        4. Far right of the header: Account button and Settings gear.
 
-        The React shell will:
-        - Keep the site black and white by default with minimal accent color.
-        - Use red for remove or delete, blue for save or continue, gray for cancel.
-        - Respect theme (light, dark, system) and language selections.
+        The React shell:
+        - Uses a restrained palette with clear accent colors for actions.
+        - Respects theme (light, dark, system) and language selections.
+        - Renders consistently across desktop, tablet, and mobile.
       -->
+      <noscript>
+        Via Fidei uses JavaScript to render content. Please enable JavaScript in your browser.
+      </noscript>
     </div>
 
-    <!-- Vite entry point -->
-    <script type="module" src="/src/main.jsx"></script>
+    <!-- React entry point (Vite module) -->
+    <script type="module" src="/main.js"></script>
   </body>
 </html>
