@@ -65,7 +65,7 @@ function defaultMission(language) {
 function defaultAbout(language) {
   return {
     paragraphs: [
-      "Via Fidei is a multilingual Catholic website and app that aims to be clear, calm, and beautifully ordered. It is designed to be welcoming for newcomers who need a gentle introduction and stable for lifelong Catholics who want a complete and trustworthy reference without feeling overwhelmed.",
+      "Via Fidei is a Catholic website and app that aims to be clear, calm, and beautifully ordered. It is designed to be welcoming for newcomers who need a gentle introduction and stable for lifelong Catholics who want a complete and trustworthy reference without feeling overwhelmed.",
       "The platform gathers a curated library of approved prayers, guides for sacramental life and vocation, a private spiritual journal, and a profile system for milestones and goals. Everything is organized top to bottom and left to right, with careful typography, reverent imagery, and a quiet visual rhythm.",
       "All content is meant to be easy to read, prayerful to sit with, and simple to print or revisit later. The design is intentionally low noise and symmetrical, with a black and white core palette and minimal purposeful color, so that the focus remains on the Lord, the sacraments, and the wisdom of the Church."
     ],
@@ -124,6 +124,32 @@ function normalizeAbout(siteContentEntry, language) {
   return defaultAbout(language);
 }
 
+function normalizeCollage(siteContentEntry) {
+  const parsed = safeJsonParse(siteContentEntry?.content);
+  if (!parsed) return [];
+
+  const photos = Array.isArray(parsed.photos) ? parsed.photos : parsed;
+  if (!Array.isArray(photos)) return [];
+
+  // Deduplicate by url to avoid duplicate entries in the collage
+  const seen = new Set();
+  const result = [];
+
+  for (const item of photos) {
+    if (!item || typeof item !== "object") continue;
+    const url = item.url || item.src;
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    result.push({
+      id: item.id || url,
+      url,
+      alt: item.alt || "Via Fidei photo"
+    });
+  }
+
+  return result;
+}
+
 function publicNotice(n) {
   return {
     id: n.id,
@@ -142,7 +168,7 @@ router.get("/", async (req, res) => {
   const language = resolveLanguage(req);
 
   try {
-    const [missionRow, aboutRow, collageRow, notices] = await Promise.all([
+    const [missionRow, aboutRow, collageRow, notices, themeRow] = await Promise.all([
       prisma.siteContent.findUnique({
         where: { language_key: { language, key: "MISSION" } }
       }),
@@ -155,18 +181,33 @@ router.get("/", async (req, res) => {
       prisma.notice.findMany({
         where: { language, isActive: true },
         orderBy: { displayOrder: "asc" }
+      }),
+      prisma.siteContent.findUnique({
+        where: {
+          language_key: {
+            language: "global",
+            key: "LITURGICAL_THEME"
+          }
+        }
       })
     ]);
 
     const mission = normalizeMission(missionRow, language);
     const about = normalizeAbout(aboutRow, language);
     const collage = collageRow?.content || null;
+    const collagePhotos = normalizeCollage(collageRow);
+    const liturgicalTheme =
+      themeRow?.content?.liturgicalTheme || "normal";
 
     res.json({
       language,
       mission,
       about,
+      // Legacy field if anything else expects it
       collage,
+      // New field used by the frontend for the home collage
+      collagePhotos,
+      liturgicalTheme,
       notices: notices.map(publicNotice)
     });
   } catch (error) {
