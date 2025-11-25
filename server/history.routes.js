@@ -19,8 +19,8 @@ function getPrisma(req) {
 
 function resolveLanguage(req) {
   const override =
-    req.user?.languageOverride ||
     req.query.language ||
+    req.user?.languageOverride ||
     process.env.DEFAULT_LANGUAGE ||
     "en";
 
@@ -168,8 +168,6 @@ async function fetchExternalHistorySections(language) {
       title: summary.title || config.wikiTitle,
       summary: summary.description || summary.extract || null,
       body: bodyText,
-      // Timeline left as an empty array for now,
-      // can be enriched later from structured datasets
       timeline: [],
       tags: ["history", "public-source", "wikipedia"],
       source: "wikipedia",
@@ -187,13 +185,11 @@ async function fetchExternalHistorySections(language) {
     sections.push(section);
   }
 
-  // Cache even if empty so we do not hammer the public API
   externalHistoryCache.set(language, sections);
   return sections;
 }
 
 // Load and merge history sections from PostgreSQL and public data
-// Database entries win, then we keep canonical order
 async function loadHistorySections(prisma, language) {
   const [dbSections, externalSections] = await Promise.all([
     prisma.historySection.findMany({
@@ -232,8 +228,6 @@ async function loadHistorySections(prisma, language) {
 }
 
 // List all history sections for the chosen language in canonical order
-// Example slugs: apostolic-age, early-church, councils, middle-ages, reformation,
-// modern-era, vatican-councils, contemporary-church
 router.get("/", async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
@@ -258,18 +252,18 @@ router.get("/:idOrSlug", async (req, res) => {
   const { idOrSlug } = req.params;
 
   try {
-    // Try database by id or slug-language first
+    // Try database by id first
     let section = await prisma.historySection.findUnique({
       where: { id: idOrSlug }
     });
 
+    // If not found by id, try slug plus language
     if (!section) {
-      section = await prisma.historySection.findUnique({
+      section = await prisma.historySection.findFirst({
         where: {
-          slug_language: {
-            slug: idOrSlug,
-            language
-          }
+          slug: idOrSlug,
+          language,
+          isActive: true
         }
       });
     }
@@ -278,7 +272,7 @@ router.get("/:idOrSlug", async (req, res) => {
       return res.json({ section: publicSection(section) });
     }
 
-    // If not found or not active in DB, check merged set for this language
+    // If not found in DB, check merged set (including Wikipedia based sections)
     const mergedSections = await loadHistorySections(prisma, language);
     const extMatch =
       mergedSections.find((s) => s.id === idOrSlug) ||
