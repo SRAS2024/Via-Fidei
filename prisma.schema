@@ -393,6 +393,10 @@ model Notice {
   title String
   body  String
 
+  // Optional scheduling for when a notice should be active
+  startsAt DateTime?
+  endsAt   DateTime?
+
   displayOrder Int     @default(0)
   isActive     Boolean @default(true)
 
@@ -415,6 +419,7 @@ model SiteContent {
   // LITURGICAL_THEME: { liturgicalTheme: "normal" | "advent" | "easter" }
   content Json
 
+  // Composite unique used across the app and in seed.js
   @@unique([language, key])
 }
 
