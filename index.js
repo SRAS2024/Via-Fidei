@@ -26,6 +26,9 @@ const CLIENT_ORIGIN =
 
 const app = express();
 
+// Trust reverse proxy (Railway, etc) so secure cookies work correctly
+app.set("trust proxy", 1);
+
 // Hardening
 app.disable("x-powered-by");
 
@@ -37,7 +40,10 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Handle CORS preflight for all API routes
+app.options("/api/*", cors({ origin: CLIENT_ORIGIN, credentials: true }));
+
+app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 // Attach shared services to request for lightweight access in routes
@@ -58,7 +64,8 @@ app.get("/api/health", async (req, res) => {
       status: "ok",
       env: NODE_ENV,
       db: "reachable",
-      value5000: SESSION_TOKEN_TTL
+      value5000: SESSION_TOKEN_TTL,
+      clientOrigin: CLIENT_ORIGIN
     });
   } catch (error) {
     console.error("[Via Fidei] Health check database error", error);
