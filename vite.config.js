@@ -4,12 +4,20 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
+import { fileURLToPath } from "url";
+
+// Recreate __dirname for ES module context
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
+  // Vite project root is the /client folder
   root: path.resolve(__dirname, "client"),
   plugins: [react()],
   resolve: {
     alias: {
+      // You can use "@/..." to refer to files inside client/src
+      // This is optional and only used if you import from "@"
       "@": path.resolve(__dirname, "client", "src")
     }
   },
@@ -18,6 +26,8 @@ export default defineConfig({
     strictPort: true
   },
   build: {
+    // Output folder relative to the Vite root (client/)
+    // So final path on disk is /client/dist
     outDir: "dist",
     emptyOutDir: true
   }
