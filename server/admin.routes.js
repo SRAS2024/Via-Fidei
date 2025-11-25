@@ -13,6 +13,12 @@ const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
 const ADMIN_SESSION_SECRET =
   process.env.ADMIN_SESSION_SECRET || "via-fidei-admin-ok";
 
+// Default admin credentials if not overridden in environment
+// Username: "Ryan Simonds"
+// Password: "Santidade"
+const DEFAULT_ADMIN_USERNAME = "Ryan Simonds";
+const DEFAULT_ADMIN_PASSWORD = "Santidade";
+
 function getPrisma(req) {
   if (!req.prisma) {
     throw new Error("Prisma client not attached to request");
@@ -36,6 +42,7 @@ function adminCookieOptions() {
 function resolveLanguage(req) {
   const override =
     req.query.language ||
+    req.body?.language ||
     req.user?.languageOverride ||
     process.env.DEFAULT_LANGUAGE ||
     "en";
@@ -65,8 +72,10 @@ function requireAdmin(req, res, next) {
 // Admin login
 router.post("/login", (req, res) => {
   const { username, password } = req.body || {};
-  const expectedUser = process.env.ADMIN_USERNAME || "";
-  const expectedPass = process.env.ADMIN_PASSWORD || "";
+
+  // Environment variables override the defaults
+  const expectedUser = process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME;
+  const expectedPass = process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD;
 
   if (!username || !password) {
     return res.status(400).json({ error: "Username and password are required" });
@@ -146,12 +155,13 @@ router.get("/overview", requireAdmin, async (req, res) => {
 });
 
 // Load homepage content for admin Home mirror
+// Includes mission, about, notices, collage config, and liturgical theme
 router.get("/home", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
 
   try {
-    const [mission, about, collage, notices] = await Promise.all([
+    const [mission, about, collage, notices, themeRow] = await Promise.all([
       prisma.siteContent.findUnique({
         where: { language_key: { language, key: "MISSION" } }
       }),
@@ -164,14 +174,27 @@ router.get("/home", requireAdmin, async (req, res) => {
       prisma.notice.findMany({
         where: { language, isActive: true },
         orderBy: { displayOrder: "asc" }
+      }),
+      // Global liturgical theme, shared across languages
+      prisma.siteContent.findUnique({
+        where: {
+          language_key: {
+            language: "global",
+            key: "LITURGICAL_THEME"
+          }
+        }
       })
     ]);
+
+    const liturgicalTheme =
+      themeRow?.content?.liturgicalTheme || "normal";
 
     res.json({
       language,
       mission: mission?.content || null,
       about: about?.content || null,
       collage: collage?.content || null,
+      liturgicalTheme,
       notices
     });
   } catch (error) {
@@ -180,7 +203,55 @@ router.get("/home", requireAdmin, async (req, res) => {
   }
 });
 
-// Update mission statement
+// Update mission and About in one request for the mirrored home editor
+router.put("/home", requireAdmin, async (req, res) => {
+  const prisma = getPrisma(req);
+  const language = resolveLanguage(req);
+  const { mission, about } = req.body || {};
+
+  try {
+    const ops = [];
+
+    if (mission) {
+      ops.push(
+        prisma.siteContent.upsert({
+          where: { language_key: { language, key: "MISSION" } },
+          create: { language, key: "MISSION", content: mission },
+          update: { content: mission }
+        })
+      );
+    }
+
+    if (about) {
+      ops.push(
+        prisma.siteContent.upsert({
+          where: { language_key: { language, key: "ABOUT" } },
+          create: { language, key: "ABOUT", content: about },
+          update: { content: about }
+        })
+      );
+    }
+
+    const results = await Promise.all(ops);
+
+    const updatedMission = results.find(
+      (row) => row.key === "MISSION"
+    );
+    const updatedAbout = results.find(
+      (row) => row.key === "ABOUT"
+    );
+
+    res.json({
+      mission: updatedMission?.content || mission || null,
+      about: updatedAbout?.content || about || null
+    });
+  } catch (error) {
+    console.error("[Via Fidei] Admin combined home update error", error);
+    res.status(500).json({ error: "Failed to update home content" });
+  }
+});
+
+// Update mission statement (kept for backwards compatibility)
 router.put("/mission", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
   const language = req.body.language || resolveLanguage(req);
@@ -200,7 +271,7 @@ router.put("/mission", requireAdmin, async (req, res) => {
   }
 });
 
-// Update About Via Fidei
+// Update About Via Fidei (kept for backwards compatibility)
 router.put("/about", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
   const language = req.body.language || resolveLanguage(req);
@@ -221,6 +292,7 @@ router.put("/about", requireAdmin, async (req, res) => {
 });
 
 // Update photo collage configuration
+// Expecting content to be an object like { photos: [{ id, url, alt }, ...] }
 router.put("/photo-collage", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
   const language = req.body.language || resolveLanguage(req);
@@ -237,6 +309,45 @@ router.put("/photo-collage", requireAdmin, async (req, res) => {
   } catch (error) {
     console.error("[Via Fidei] Admin collage update error", error);
     res.status(500).json({ error: "Failed to update photo collage" });
+  }
+});
+
+// Liturgical theme toggle for banner (Normal, Advent, Easter)
+router.put("/theme", requireAdmin, async (req, res) => {
+  const prisma = getPrisma(req);
+  const liturgicalTheme = String(
+    req.body?.liturgicalTheme || "normal"
+  ).toLowerCase();
+
+  const allowed = ["normal", "advent", "easter"];
+  if (!allowed.includes(liturgicalTheme)) {
+    return res
+      .status(400)
+      .json({ error: "Invalid liturgical theme value" });
+  }
+
+  try {
+    const row = await prisma.siteContent.upsert({
+      where: {
+        language_key: {
+          language: "global",
+          key: "LITURGICAL_THEME"
+        }
+      },
+      create: {
+        language: "global",
+        key: "LITURGICAL_THEME",
+        content: { liturgicalTheme }
+      },
+      update: {
+        content: { liturgicalTheme }
+      }
+    });
+
+    res.json({ liturgicalTheme: row.content.liturgicalTheme });
+  } catch (error) {
+    console.error("[Via Fidei] Admin theme update error", error);
+    res.status(500).json({ error: "Failed to update liturgical theme" });
   }
 });
 
