@@ -72,6 +72,220 @@ function applyTheme(theme) {
   html.setAttribute("data-theme", theme);
 }
 
+// Helpers for sacraments rendering
+
+function renderSacramentBiblicalFoundation(biblicalFoundation) {
+  if (!biblicalFoundation) return null;
+
+  if (Array.isArray(biblicalFoundation) && biblicalFoundation.length > 0) {
+    return (
+      <div className="vf-sacrament-field">
+        <strong>Scripture</strong>
+        <ul className="vf-sacrament-list">
+          {biblicalFoundation.map((item, idx) => {
+            if (!item) return null;
+            if (typeof item === "string") {
+              return <li key={idx}>{item}</li>;
+            }
+            return (
+              <li key={item.reference || idx}>
+                {item.reference && (
+                  <span className="vf-sacrament-ref">{item.reference}: </span>
+                )}
+                {item.text}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
+  }
+
+  if (typeof biblicalFoundation === "string" && biblicalFoundation.trim()) {
+    return (
+      <p className="vf-sacrament-field">
+        <strong>Biblical foundation:</strong> {biblicalFoundation}
+      </p>
+    );
+  }
+
+  return null;
+}
+
+function renderSacramentPreparation(preparation) {
+  if (!preparation) return null;
+
+  if (typeof preparation === "string") {
+    return (
+      <p className="vf-sacrament-field">
+        <strong>How to prepare:</strong> {preparation}
+      </p>
+    );
+  }
+
+  const overview = preparation.overview;
+  const steps = Array.isArray(preparation.steps) ? preparation.steps : [];
+
+  return (
+    <div className="vf-sacrament-field">
+      <strong>How to prepare</strong>
+      {overview && <p className="vf-sacrament-text">{overview}</p>}
+      {steps.length > 0 && (
+        <ul className="vf-sacrament-list">
+          {steps.map((step, idx) => (
+            <li key={idx}>{step}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function renderSacramentWhatToExpect(whatToExpect) {
+  if (!whatToExpect) return null;
+
+  if (typeof whatToExpect === "string") {
+    return (
+      <p className="vf-sacrament-field">
+        <strong>What to expect:</strong> {whatToExpect}
+      </p>
+    );
+  }
+
+  const short = whatToExpect.short;
+  const notes = Array.isArray(whatToExpect.notes) ? whatToExpect.notes : [];
+
+  return (
+    <div className="vf-sacrament-field">
+      <strong>What to expect</strong>
+      {short && <p className="vf-sacrament-text">{short}</p>}
+      {notes.length > 0 && (
+        <ul className="vf-sacrament-list">
+          {notes.map((note, idx) => (
+            <li key={idx}>{note}</li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function renderSacramentQuestions(commonQuestions) {
+  if (!Array.isArray(commonQuestions) || commonQuestions.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="vf-sacrament-qa">
+      <h4 className="vf-sacrament-qa-title">Common questions</h4>
+      <dl className="vf-sacrament-qa-list">
+        {commonQuestions.map((qItem, idx) => {
+          if (!qItem) return null;
+          if (typeof qItem === "string") {
+            return (
+              <div key={idx} className="vf-sacrament-qa-item">
+                <dd>{qItem}</dd>
+              </div>
+            );
+          }
+          return (
+            <div key={idx} className="vf-sacrament-qa-item">
+              {qItem.question && <dt>{qItem.question}</dt>}
+              {qItem.answer && <dd>{qItem.answer}</dd>}
+            </div>
+          );
+        })}
+      </dl>
+    </div>
+  );
+}
+
+// Helper for guides body
+
+function renderGuideBodyContent(body) {
+  if (!body) return null;
+
+  if (typeof body === "string") {
+    return <p className="vf-guide-body">{body}</p>;
+  }
+
+  const intro = body.intro;
+  const sections = Array.isArray(body.sections) ? body.sections : [];
+
+  return (
+    <div className="vf-guide-body">
+      {intro && <p>{intro}</p>}
+      {sections.map((section, idx) => (
+        <section
+          key={section.title || idx}
+          className="vf-guide-section"
+        >
+          {section.title && (
+            <h4 className="vf-guide-section-title">{section.title}</h4>
+          )}
+          {Array.isArray(section.paragraphs) &&
+            section.paragraphs.map((p, i) => (
+              <p key={i} className="vf-guide-paragraph">
+                {p}
+              </p>
+            ))}
+          {Array.isArray(section.steps) && section.steps.length > 0 && (
+            <ol className="vf-guide-steps">
+              {section.steps.map((step, j) => (
+                <li key={step.label || j} className="vf-guide-step">
+                  <div className="vf-guide-step-main">
+                    {step.label && (
+                      <span className="vf-guide-step-label">
+                        {step.label}
+                      </span>
+                    )}
+                    {step.description && (
+                      <span className="vf-guide-step-description">
+                        {step.description}
+                      </span>
+                    )}
+                  </div>
+                  {step.prayerTitle && step.prayerText && (
+                    <div className="vf-guide-step-prayer">
+                      <div className="vf-guide-step-prayer-title">
+                        {step.prayerTitle}
+                      </div>
+                      <p className="vf-guide-step-prayer-text">
+                        {step.prayerText}
+                      </p>
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
+function renderGuideChecklist(checklistTemplate) {
+  if (!checklistTemplate) return null;
+  const items = Array.isArray(checklistTemplate.items)
+    ? checklistTemplate.items
+    : [];
+  if (items.length === 0) return null;
+
+  return (
+    <div className="vf-guide-checklist">
+      <h4 className="vf-guide-checklist-title">
+        {checklistTemplate.title || "Checklist"}
+      </h4>
+      <ul>
+        {items.map((item, idx) => (
+          <li key={idx}>{item.label || String(item)}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function AppShell() {
   const [currentTab, setCurrentTab] = useState("home");
 
@@ -116,17 +330,14 @@ function AppShell() {
   const [historyItems, setHistoryItems] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [historySearch, setHistorySearch] = useState("");
 
   const [sacramentItems, setSacramentItems] = useState([]);
   const [loadingSacraments, setLoadingSacraments] = useState(false);
   const [sacramentsLoaded, setSacramentsLoaded] = useState(false);
-  const [sacramentsSearch, setSacramentsSearch] = useState("");
 
   const [guideItems, setGuideItems] = useState([]);
   const [loadingGuides, setLoadingGuides] = useState(false);
   const [guidesLoaded, setGuidesLoaded] = useState(false);
-  const [guidesSearch, setGuidesSearch] = useState("");
 
   // Prayers search
   const [prayersSearch, setPrayersSearch] = useState("");
@@ -252,7 +463,6 @@ function AppShell() {
     if (homeData?.liturgicalTheme) {
       setSeasonTheme(homeData.liturgicalTheme);
     }
-    // collage is read in render from homeData
     void collage;
   }, [adminAuthenticated, homeData]);
 
@@ -449,7 +659,6 @@ function AppShell() {
   function handlePrayersSuggestionClick(suggestion) {
     setPrayersSearch(suggestion.title || "");
     setPrayersSuggestions([]);
-    // Trigger a full search for the selected suggestion
     submitPrayersSearch();
   }
 
@@ -487,7 +696,7 @@ function AppShell() {
     return () => {
       cancelled = true;
       clearTimeout(id);
-    };
+      };
   }, [saintsSearch, language]);
 
   async function submitSaintsSearch(e) {
@@ -887,20 +1096,6 @@ function AppShell() {
   }
 
   function renderHistory() {
-    const q = historySearch.trim().toLowerCase();
-    const filtered =
-      q.length === 0
-        ? historyItems
-        : historyItems.filter((section) => {
-            const text =
-              (section.title || "") +
-              " " +
-              (section.summary || "") +
-              " " +
-              (section.body || "");
-            return text.toLowerCase().includes(q);
-          });
-
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -908,30 +1103,10 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Liturgy and History</h2>
               <p className="vf-card-subtitle">
-                Apostolic Age, Early Church, Councils, Middle Ages, Reformation, Modern era,
-                Vatican Councils, and the Contemporary Church.
+                Apostolic Age, Early Church, Councils, Middle Ages, Reformation, modern era,
+                the councils of the last century, and the contemporary life of the Church.
               </p>
             </header>
-
-            <form
-              className="vf-search-bar"
-              onSubmit={(e) => {
-                e.preventDefault();
-              }}
-            >
-              <label className="vf-field-label" htmlFor="history-search">
-                Search liturgy and history
-              </label>
-              <div className="vf-search-input-wrap">
-                <input
-                  id="history-search"
-                  type="search"
-                  placeholder="Search councils, eras, or topics"
-                  value={historySearch}
-                  onChange={(e) => setHistorySearch(e.target.value)}
-                />
-              </div>
-            </form>
 
             <div className="vf-card-body">
               {loadingHistory && historyItems.length === 0 && (
@@ -940,14 +1115,14 @@ function AppShell() {
 
               {!loadingHistory && historyItems.length === 0 && (
                 <p>
-                  History sections will appear here as soon as content is seeded for this
+                  History sections will appear here as soon as content is available for this
                   language.
                 </p>
               )}
 
-              {filtered.length > 0 && (
+              {historyItems.length > 0 && (
                 <div className="vf-stack">
-                  {filtered.map((section) => (
+                  {historyItems.map((section) => (
                     <section key={section.id} className="vf-history-section">
                       <h3 className="vf-section-subtitle">{section.title}</h3>
                       {section.summary && (
@@ -959,10 +1134,6 @@ function AppShell() {
                     </section>
                   ))}
                 </div>
-              )}
-
-              {!loadingHistory && historyItems.length > 0 && filtered.length === 0 && (
-                <p>No history items match that search.</p>
               )}
             </div>
           </article>
@@ -1100,7 +1271,7 @@ function AppShell() {
               {saintsResults.length > 0 && (
                 <section className="vf-stack">
                   {saintsResults.map((s) => (
-                    <article key={s.id} className="vf-saint-item">
+                    <article key={s.id} className="vf-saint-item vf-saint-detail">
                       <div className="vf-saint-header">
                         {s.imageUrl && (
                           <div className="vf-saint-avatar-wrap">
@@ -1126,7 +1297,11 @@ function AppShell() {
                           )}
                         </div>
                       </div>
-                      {s.biography && <p className="vf-saint-bio">{s.biography}</p>}
+                      {s.biography && (
+                        <p className="vf-saint-bio">
+                          {s.biography}
+                        </p>
+                      )}
                     </article>
                   ))}
                 </section>
@@ -1151,7 +1326,9 @@ function AppShell() {
             </header>
 
             <section className="vf-card-body vf-mary-about">
-              <h3 className="vf-section-subtitle">Mary, Mother of God and Mother of the Church</h3>
+              <h3 className="vf-section-subtitle">
+                Mary, Mother of God and Mother of the Church
+              </h3>
               <p>
                 Mary is the Mother of God, the Mother of the Church, and the perfect model of
                 discipleship. She leads the faithful to her Son with a heart that is humble,
@@ -1213,7 +1390,7 @@ function AppShell() {
               {ourLadyResults.length > 0 && (
                 <section className="vf-stack vf-stack-apparitions">
                   {ourLadyResults.map((a) => (
-                    <article key={a.id} className="vf-saint-item">
+                    <article key={a.id} className="vf-saint-item vf-saint-detail">
                       <div className="vf-saint-header">
                         {a.imageUrl && (
                           <div className="vf-saint-avatar-wrap">
@@ -1249,24 +1426,6 @@ function AppShell() {
   }
 
   function renderSacraments() {
-    const q = sacramentsSearch.trim().toLowerCase();
-    const filtered =
-      q.length === 0
-        ? sacramentItems
-        : sacramentItems.filter((s) => {
-            const text =
-              (s.name || "") +
-              " " +
-              (s.meaning || "") +
-              " " +
-              (s.biblicalFoundation || "") +
-              " " +
-              (s.preparation || "") +
-              " " +
-              (s.whatToExpect || "");
-            return text.toLowerCase().includes(q);
-          });
-
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1279,26 +1438,6 @@ function AppShell() {
               </p>
             </header>
 
-            <form
-              className="vf-search-bar"
-              onSubmit={(e) => {
-                e.preventDefault();
-              }}
-            >
-              <label className="vf-field-label" htmlFor="sacraments-search">
-                Search sacraments
-              </label>
-              <div className="vf-search-input-wrap">
-                <input
-                  id="sacraments-search"
-                  type="search"
-                  placeholder="Search by sacrament or topic"
-                  value={sacramentsSearch}
-                  onChange={(e) => setSacramentsSearch(e.target.value)}
-                />
-              </div>
-            </form>
-
             <div className="vf-card-body">
               {loadingSacraments && sacramentItems.length === 0 && (
                 <p>Loading sacraments…</p>
@@ -1306,50 +1445,28 @@ function AppShell() {
 
               {!loadingSacraments && sacramentItems.length === 0 && (
                 <p>
-                  Sacrament details will appear here as soon as content is seeded for this
+                  Sacrament details will appear here as soon as content is available for this
                   language.
                 </p>
               )}
 
-              {filtered.length > 0 && (
+              {sacramentItems.length > 0 && (
                 <div className="vf-stack">
-                  {filtered.map((s) => (
+                  {sacramentItems.map((s) => (
                     <section key={s.id} className="vf-sacrament-item">
                       <h3 className="vf-section-subtitle">{s.name}</h3>
                       {s.meaning && (
                         <p className="vf-sacrament-meaning">{s.meaning}</p>
                       )}
-                      {s.biblicalFoundation && (
-                        <p className="vf-sacrament-field">
-                          <strong>Biblical foundation:</strong> {s.biblicalFoundation}
-                        </p>
-                      )}
-                      {s.preparation && (
-                        <p className="vf-sacrament-field">
-                          <strong>How to prepare:</strong> {s.preparation}
-                        </p>
-                      )}
-                      {s.whatToExpect && (
-                        <p className="vf-sacrament-field">
-                          <strong>What to expect:</strong> {s.whatToExpect}
-                        </p>
-                      )}
-                      {Array.isArray(s.commonQuestions) &&
-                        s.commonQuestions.length > 0 && (
-                          <ul className="vf-sacrament-questions">
-                            {s.commonQuestions.map((qItem, idx) => (
-                              <li key={idx}>{qItem}</li>
-                            ))}
-                          </ul>
-                        )}
+
+                      {renderSacramentBiblicalFoundation(s.biblicalFoundation)}
+                      {renderSacramentPreparation(s.preparation)}
+                      {renderSacramentWhatToExpect(s.whatToExpect)}
+                      {renderSacramentQuestions(s.commonQuestions)}
                     </section>
                   ))}
                 </div>
               )}
-
-              {!loadingSacraments &&
-                sacramentItems.length > 0 &&
-                filtered.length === 0 && <p>No sacraments match that search.</p>}
             </div>
           </article>
         </section>
@@ -1358,16 +1475,6 @@ function AppShell() {
   }
 
   function renderGuides() {
-    const q = guidesSearch.trim().toLowerCase();
-    const filtered =
-      q.length === 0
-        ? guideItems
-        : guideItems.filter((g) => {
-            const text =
-              (g.title || "") + " " + (g.summary || "") + " " + (g.body || "");
-            return text.toLowerCase().includes(q);
-          });
-
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1380,52 +1487,29 @@ function AppShell() {
               </p>
             </header>
 
-            <form
-              className="vf-search-bar"
-              onSubmit={(e) => {
-                e.preventDefault();
-              }}
-            >
-              <label className="vf-field-label" htmlFor="guides-search">
-                Search guides
-              </label>
-              <div className="vf-search-input-wrap">
-                <input
-                  id="guides-search"
-                  type="search"
-                  placeholder="Search by guide title or topic"
-                  value={guidesSearch}
-                  onChange={(e) => setGuidesSearch(e.target.value)}
-                />
-              </div>
-            </form>
-
             <div className="vf-card-body">
               {loadingGuides && guideItems.length === 0 && <p>Loading guides…</p>}
 
               {!loadingGuides && guideItems.length === 0 && (
                 <p>
-                  Guides will appear here as soon as content is seeded for this language.
+                  Guides will appear here as soon as content is available for this language.
                 </p>
               )}
 
-              {filtered.length > 0 && (
+              {guideItems.length > 0 && (
                 <div className="vf-stack">
-                  {filtered.map((g) => (
+                  {guideItems.map((g) => (
                     <section key={g.id} className="vf-guide-item">
                       <h3 className="vf-section-subtitle">{g.title}</h3>
                       {g.summary && (
                         <p className="vf-guide-summary">{g.summary}</p>
                       )}
-                      {g.body && <p className="vf-guide-body">{g.body}</p>}
+                      {renderGuideBodyContent(g.body)}
+                      {renderGuideChecklist(g.checklistTemplate)}
                     </section>
                   ))}
                 </div>
               )}
-
-              {!loadingGuides &&
-                guideItems.length > 0 &&
-                filtered.length === 0 && <p>No guides match that search.</p>}
             </div>
           </article>
         </section>
