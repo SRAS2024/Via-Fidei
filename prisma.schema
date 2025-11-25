@@ -420,7 +420,7 @@ model SiteContent {
   content Json
 
   // Composite unique used across the app and in seed.js
-  @@unique([language, key])
+  @@unique([language, key], name: "language_key")
 }
 
 enum SiteContentKey {
