@@ -124,6 +124,46 @@ function builtInPrayers(language) {
         "Hail, holy Queen, Mother of mercy, our life, our sweetness, and our hope. To you do we cry, poor banished children of Eve; to you do we send up our sighs, mourning and weeping in this valley of tears. Turn then, most gracious advocate, your eyes of mercy toward us, and after this our exile, show unto us the blessed fruit of your womb, Jesus. O clement, O loving, O sweet Virgin Mary. Amen.",
       source: "built-in",
       sourceAttribution: "Traditional Salve Regina"
+    },
+    {
+      slug: "memorare",
+      title: "Memorare",
+      category: "Marian",
+      tags: ["memorare", "mary", "intercession"],
+      content:
+        "Remember, O most gracious Virgin Mary, that never was it known that anyone who fled to your protection, implored your help, or sought your intercession was left unaided. Inspired by this confidence, I fly unto you, O Virgin of virgins, my Mother. To you do I come, before you I stand, sinful and sorrowful. O Mother of the Word Incarnate, despise not my petitions, but in your mercy hear and answer me. Amen.",
+      source: "built-in",
+      sourceAttribution: "Traditional Memorare"
+    },
+    {
+      slug: "anima-christi",
+      title: "Anima Christi",
+      category: "Christ centered",
+      tags: ["eucharist", "anima christi", "devotion"],
+      content:
+        "Soul of Christ, sanctify me. Body of Christ, save me. Blood of Christ, inebriate me. Water from the side of Christ, wash me. Passion of Christ, strengthen me. O good Jesus, hear me. Within your wounds hide me. Separated from you let me never be. From the evil one defend me. At the hour of my death call me and close to you bid me, that with your saints I may be praising you forever and ever. Amen.",
+      source: "built-in",
+      sourceAttribution: "Traditional Anima Christi"
+    },
+    {
+      slug: "morning-offering",
+      title: "Morning Offering",
+      category: "Daily",
+      tags: ["morning", "offering", "daily prayer"],
+      content:
+        "O Jesus, through the Immaculate Heart of Mary, I offer you my prayers, works, joys, and sufferings of this day, for all the intentions of your Sacred Heart, in union with the Holy Sacrifice of the Mass throughout the world, in reparation for sins, for the intentions of all my relatives and friends, and in particular for the intentions of the Holy Father. Amen.",
+      source: "built-in",
+      sourceAttribution: "Common Catholic Morning Offering"
+    },
+    {
+      slug: "guardian-angel",
+      title: "Guardian Angel Prayer",
+      category: "Angelic",
+      tags: ["guardian angel", "angel", "protection"],
+      content:
+        "Angel of God, my guardian dear, to whom God’s love commits me here, ever this day be at my side, to light and guard, to rule and guide. Amen.",
+      source: "built-in",
+      sourceAttribution: "Traditional Guardian Angel Prayer"
     }
   ];
 
@@ -369,7 +409,19 @@ router.get("/search/local", async (req, res) => {
       })
       .sort((a, b) => b.score - a.score);
 
-    const ordered = scored.map((x) => publicPrayer(x.p));
+    // Deduplicate by slug, then by id, so DB and external copies of the same prayer
+    // do not show up twice in suggestions and results
+    const seen = new Set();
+    const ordered = [];
+    for (const item of scored) {
+      const p = item.p;
+      const key = p.slug || p.id;
+      if (!key) continue;
+      const k = `${language}:${key}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      ordered.push(publicPrayer(p));
+    }
 
     const suggestions = ordered.slice(0, 3).map((p) => ({
       id: p.id,
