@@ -4,9 +4,10 @@ import { createRoot } from "react-dom/client";
 // Tabs in primary navigation
 const TABS = [
   { id: "home", label: "Home" },
-  { id: "history", label: "History" },
+  { id: "history", label: "Liturgy and History" },
   { id: "prayers", label: "Prayers" },
-  { id: "saints", label: "Saints and Our Lady" },
+  { id: "saints", label: "Saints" },
+  { id: "ourlady", label: "Our Lady" },
   { id: "sacraments", label: "Sacraments" },
   { id: "guides", label: "Guides" }
 ];
@@ -33,6 +34,33 @@ const SETTINGS_STATES = {
   OPEN: "open"
 };
 
+const ADMIN_ROUTE_PATH = "/admin";
+
+const FALLBACK_MISSION = {
+  heading: "Via Fidei",
+  subheading: "A Catholic space for clarity, beauty, and depth",
+  body: [
+    "Via Fidei is a quiet and reverent space where the devout faithful can grow in their relationship with God and where those who are searching can encounter trusted Catholic teaching at a gentle pace.",
+    "The mission of Via Fidei is to be a place where both the non religious and the faithful alike can find the prayers, saints, sacraments, and guides they need to deepen in faith. It is a tool for spiritual growth, not noise.",
+    "All content is curated, catechism aligned, and presented in a way that is readable, calm, and ordered from top to bottom, left to right."
+  ]
+};
+
+const FALLBACK_ABOUT = {
+  paragraphs: [
+    "Via Fidei is designed to be simple, symmetrical, and approachable. The interface favors clarity over clutter so that you can focus on prayer, study, and discernment.",
+    "Every section is carefully localized and paired with visual elements like icons and artwork so that the whole experience feels rooted in the life of the Church.",
+    "All interactive features are personal and private. There is no social feed or messaging, only tools that support your sacramental life, your goals, and your spiritual journal."
+  ],
+  quickLinks: [
+    { label: "Sacraments", target: "sacraments" },
+    { label: "OCIA", target: "guides-ocia" },
+    { label: "Rosary", target: "guides-rosary" },
+    { label: "Confession", target: "guides-confession" },
+    { label: "Guides", target: "guides-root" }
+  ]
+};
+
 function applyTheme(theme) {
   const html = document.documentElement;
   if (!theme || theme === "system") {
@@ -54,9 +82,31 @@ function AppShell() {
   const [loadingUser, setLoadingUser] = useState(true);
 
   const [theme, setTheme] = useState("light");
+  const [seasonTheme, setSeasonTheme] = useState("normal");
+
   const [language, setLanguage] = useState(
     window.localStorage.getItem("vf_language") || "en"
   );
+
+  const [isAdminRoute] = useState(() =>
+    window.location.pathname.startsWith(ADMIN_ROUTE_PATH)
+  );
+  const [adminAuthenticated, setAdminAuthenticated] = useState(
+    () => window.sessionStorage.getItem("vf_admin_authed") === "yes"
+  );
+  const [adminUsername, setAdminUsername] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminAuthError, setAdminAuthError] = useState("");
+
+  // Admin editing state
+  const [adminMissionDraft, setAdminMissionDraft] = useState(null);
+  const [adminAboutDraft, setAdminAboutDraft] = useState(null);
+  const [adminNoticesDraft, setAdminNoticesDraft] = useState([]);
+  const [newNoticeTitle, setNewNoticeTitle] = useState("");
+  const [newNoticeBody, setNewNoticeBody] = useState("");
+  const [adminSavingCopy, setAdminSavingCopy] = useState(false);
+  const [adminSavingTheme, setAdminSavingTheme] = useState(false);
+  const [collageUploading, setCollageUploading] = useState(false);
 
   // Home content
   const [homeData, setHomeData] = useState(null);
@@ -66,14 +116,17 @@ function AppShell() {
   const [historyItems, setHistoryItems] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historySearch, setHistorySearch] = useState("");
 
   const [sacramentItems, setSacramentItems] = useState([]);
   const [loadingSacraments, setLoadingSacraments] = useState(false);
   const [sacramentsLoaded, setSacramentsLoaded] = useState(false);
+  const [sacramentsSearch, setSacramentsSearch] = useState("");
 
   const [guideItems, setGuideItems] = useState([]);
   const [loadingGuides, setLoadingGuides] = useState(false);
   const [guidesLoaded, setGuidesLoaded] = useState(false);
+  const [guidesSearch, setGuidesSearch] = useState("");
 
   // Prayers search
   const [prayersSearch, setPrayersSearch] = useState("");
@@ -83,10 +136,12 @@ function AppShell() {
   // Saints search
   const [saintsSearch, setSaintsSearch] = useState("");
   const [saintsSuggestions, setSaintsSuggestions] = useState([]);
-  const [saintsResults, setSaintsResults] = useState({
-    saints: [],
-    apparitions: []
-  });
+  const [saintsResults, setSaintsResults] = useState([]);
+
+  // Our Lady search
+  const [ourLadySearch, setOurLadySearch] = useState("");
+  const [ourLadySuggestions, setOurLadySuggestions] = useState([]);
+  const [ourLadyResults, setOurLadyResults] = useState([]);
 
   // Fetch current user and settings
   useEffect(() => {
@@ -166,6 +221,10 @@ function AppShell() {
         const res = await fetch(`/api/home?${params.toString()}`);
         const data = await res.json();
         setHomeData(data);
+
+        if (data && data.liturgicalTheme) {
+          setSeasonTheme(data.liturgicalTheme);
+        }
       } catch (err) {
         console.error("Failed to load home content", err);
       } finally {
@@ -178,6 +237,24 @@ function AppShell() {
   useEffect(() => {
     loadHome(language);
   }, [language, loadHome]);
+
+  // Keep admin drafts in sync with home data
+  useEffect(() => {
+    if (!adminAuthenticated) return;
+    const mission = homeData?.mission || FALLBACK_MISSION;
+    const about = homeData?.about || FALLBACK_ABOUT;
+    const notices = homeData?.notices || [];
+    const collage = homeData?.collagePhotos || [];
+
+    setAdminMissionDraft(mission);
+    setAdminAboutDraft(about);
+    setAdminNoticesDraft(notices);
+    if (homeData?.liturgicalTheme) {
+      setSeasonTheme(homeData.liturgicalTheme);
+    }
+    // collage is read in render from homeData
+    void collage;
+  }, [adminAuthenticated, homeData]);
 
   // Fetch history sections on demand
   const loadHistory = useCallback(
@@ -369,7 +446,14 @@ function AppShell() {
     }
   }
 
-  // Local search in Saints and Our Lady
+  function handlePrayersSuggestionClick(suggestion) {
+    setPrayersSearch(suggestion.title || "");
+    setPrayersSuggestions([]);
+    // Trigger a full search for the selected suggestion
+    submitPrayersSearch();
+  }
+
+  // Local search in Saints
   useEffect(() => {
     let cancelled = false;
 
@@ -377,7 +461,7 @@ function AppShell() {
       const q = saintsSearch.trim();
       if (!q) {
         setSaintsSuggestions([]);
-        setSaintsResults({ saints: [], apparitions: [] });
+        setSaintsResults([]);
         return;
       }
 
@@ -385,7 +469,7 @@ function AppShell() {
         const params = new URLSearchParams();
         params.set("q", q);
         params.set("mode", "suggest");
-        params.set("type", "all");
+        params.set("type", "saint");
         params.set("language", language);
 
         const res = await fetch(`/api/saints/search/local?${params.toString()}`);
@@ -415,18 +499,96 @@ function AppShell() {
       const params = new URLSearchParams();
       params.set("q", q);
       params.set("mode", "full");
-      params.set("type", "all");
+      params.set("type", "saint");
       params.set("language", language);
 
       const res = await fetch(`/api/saints/search/local?${params.toString()}`);
       const data = await res.json();
-      setSaintsResults({
-        saints: Array.isArray(data.resultsSaints) ? data.resultsSaints : [],
-        apparitions: Array.isArray(data.resultsApparitions) ? data.resultsApparitions : []
-      });
+      const results =
+        Array.isArray(data.resultsSaints) && data.resultsSaints.length
+          ? data.resultsSaints
+          : Array.isArray(data.results)
+          ? data.results
+          : [];
+      setSaintsResults(results);
     } catch (err) {
       console.error("Saints full search failed", err);
     }
+  }
+
+  function handleSaintsSuggestionClick(suggestion) {
+    setSaintsSearch(suggestion.title || suggestion.name || "");
+    setSaintsSuggestions([]);
+    submitSaintsSearch();
+  }
+
+  // Local search in Our Lady
+  useEffect(() => {
+    let cancelled = false;
+
+    async function runSearch() {
+      const q = ourLadySearch.trim();
+      if (!q) {
+        setOurLadySuggestions([]);
+        setOurLadyResults([]);
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams();
+        params.set("q", q);
+        params.set("mode", "suggest");
+        params.set("type", "apparition");
+        params.set("language", language);
+
+        const res = await fetch(`/api/saints/search/local?${params.toString()}`);
+        const data = await res.json();
+        if (cancelled) return;
+
+        setOurLadySuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+      } catch (err) {
+        console.error("Our Lady suggest search failed", err);
+      }
+    }
+
+    const id = setTimeout(runSearch, 200);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [ourLadySearch, language]);
+
+  async function submitOurLadySearch(e) {
+    if (e) e.preventDefault();
+    const q = ourLadySearch.trim();
+    if (!q) return;
+
+    try {
+      const params = new URLSearchParams();
+      params.set("q", q);
+      params.set("mode", "full");
+      params.set("type", "apparition");
+      params.set("language", language);
+
+      const res = await fetch(`/api/saints/search/local?${params.toString()}`);
+      const data = await res.json();
+      const results =
+        Array.isArray(data.resultsApparitions) && data.resultsApparitions.length
+          ? data.resultsApparitions
+          : Array.isArray(data.results)
+          ? data.results
+          : [];
+      setOurLadyResults(results);
+    } catch (err) {
+      console.error("Our Lady full search failed", err);
+    }
+  }
+
+  function handleOurLadySuggestionClick(suggestion) {
+    setOurLadySearch(suggestion.title || suggestion.name || "");
+    setOurLadySuggestions([]);
+    submitOurLadySearch();
   }
 
   // Header layout and menus
@@ -434,7 +596,12 @@ function AppShell() {
     return (
       <header className="vf-header">
         <div className="vf-header-inner">
-          <div className="vf-header-banner" aria-hidden="true">
+          <div
+            className={
+              "vf-header-banner vf-header-banner-" + (seasonTheme || "normal")
+            }
+            aria-hidden="true"
+          >
             <div className="vf-banner-mark" />
           </div>
 
@@ -444,7 +611,7 @@ function AppShell() {
               <h1 className="vf-site-title">Via Fidei</h1>
             </div>
             <p className="vf-site-subtitle">
-              Multilingual Catholic prayers, saints, sacraments, and guides
+              Catholic prayers, saints, sacraments, and guides for spiritual growth
             </p>
           </div>
 
@@ -606,6 +773,12 @@ function AppShell() {
                     </div>
                   )}
                 </div>
+
+                {isAdminRoute && (
+                  <span className="vf-admin-pill" aria-label="Admin mode">
+                    Admin
+                  </span>
+                )}
               </div>
             </div>
           </nav>
@@ -632,34 +805,10 @@ function AppShell() {
     const missionFromApi = homeData?.mission;
     const aboutFromApi = homeData?.about;
     const notices = homeData?.notices || [];
+    const collagePhotos = homeData?.collagePhotos || [];
 
-    const fallbackMission = {
-      heading: "Via Fidei",
-      subheading: "A Catholic space for clarity, beauty, and depth",
-      body: [
-        "Via Fidei is a quiet and reverent space where the devout faithful can grow in their relationship with God and where those who are searching can encounter trusted Catholic teaching at a gentle pace.",
-        "The mission of Via Fidei is to be a place where both the non religious and the faithful alike can find the prayers, saints, sacraments, and guides they need to deepen in faith. It is a tool for spiritual growth, not noise.",
-        "All content is curated, catechism aligned, and presented in a way that is readable, calm, and ordered from top to bottom, left to right."
-      ]
-    };
-
-    const fallbackAbout = {
-      paragraphs: [
-        "Via Fidei is designed to be simple, symmetrical, and approachable. The interface favors clarity over clutter so that you can focus on prayer, study, and discernment.",
-        "Every section is multilingual and carefully localized. Prayers, saints, sacraments, history, and guides are paired with visual elements like icons and artwork so that the whole experience feels rooted in the life of the Church.",
-        "All interactive features are personal and private. There is no social feed or messaging, only tools that support your sacramental life, your goals, and your spiritual journal."
-      ],
-      quickLinks: [
-        { label: "Sacraments", target: "sacraments" },
-        { label: "OCIA", target: "guides-ocia" },
-        { label: "Rosary", target: "guides-rosary" },
-        { label: "Confession", target: "guides-confession" },
-        { label: "Guides", target: "guides-root" }
-      ]
-    };
-
-    const mission = missionFromApi || fallbackMission;
-    const about = aboutFromApi || fallbackAbout;
+    const mission = missionFromApi || FALLBACK_MISSION;
+    const about = aboutFromApi || FALLBACK_ABOUT;
 
     return (
       <main className="vf-main">
@@ -720,23 +869,70 @@ function AppShell() {
               )}
             </div>
           </article>
+
+          {collagePhotos.length > 0 && (
+            <section className="vf-collage-section">
+              <div className="vf-collage-grid">
+                {collagePhotos.slice(0, 6).map((photo) => (
+                  <figure key={photo.id || photo.url} className="vf-collage-item">
+                    <img src={photo.url} alt={photo.alt || "Via Fidei photo"} />
+                  </figure>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
       </main>
     );
   }
 
   function renderHistory() {
+    const q = historySearch.trim().toLowerCase();
+    const filtered =
+      q.length === 0
+        ? historyItems
+        : historyItems.filter((section) => {
+            const text =
+              (section.title || "") +
+              " " +
+              (section.summary || "") +
+              " " +
+              (section.body || "");
+            return text.toLowerCase().includes(q);
+          });
+
     return (
       <main className="vf-main">
         <section className="vf-section">
           <article className="vf-card">
             <header className="vf-card-header">
-              <h2 className="vf-card-title">Church History</h2>
+              <h2 className="vf-card-title">Liturgy and History</h2>
               <p className="vf-card-subtitle">
                 Apostolic Age, Early Church, Councils, Middle Ages, Reformation, Modern era,
                 Vatican Councils, and the Contemporary Church.
               </p>
             </header>
+
+            <form
+              className="vf-search-bar"
+              onSubmit={(e) => {
+                e.preventDefault();
+              }}
+            >
+              <label className="vf-field-label" htmlFor="history-search">
+                Search liturgy and history
+              </label>
+              <div className="vf-search-input-wrap">
+                <input
+                  id="history-search"
+                  type="search"
+                  placeholder="Search councils, eras, or topics"
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                />
+              </div>
+            </form>
+
             <div className="vf-card-body">
               {loadingHistory && historyItems.length === 0 && (
                 <p>Loading history overview…</p>
@@ -749,9 +945,9 @@ function AppShell() {
                 </p>
               )}
 
-              {historyItems.length > 0 && (
+              {filtered.length > 0 && (
                 <div className="vf-stack">
-                  {historyItems.map((section) => (
+                  {filtered.map((section) => (
                     <section key={section.id} className="vf-history-section">
                       <h3 className="vf-section-subtitle">{section.title}</h3>
                       {section.summary && (
@@ -763,6 +959,10 @@ function AppShell() {
                     </section>
                   ))}
                 </div>
+              )}
+
+              {!loadingHistory && historyItems.length > 0 && filtered.length === 0 && (
+                <p>No history items match that search.</p>
               )}
             </div>
           </article>
@@ -783,7 +983,6 @@ function AppShell() {
               </p>
             </header>
 
-            {/* Local search bar inside Prayers */}
             <form className="vf-search-bar" onSubmit={submitPrayersSearch}>
               <label className="vf-field-label" htmlFor="prayers-search">
                 Search prayers
@@ -803,7 +1002,11 @@ function AppShell() {
               {prayersSuggestions.length > 0 && (
                 <ul className="vf-search-suggestions">
                   {prayersSuggestions.slice(0, 3).map((p) => (
-                    <li key={p.id} className="vf-search-suggestion">
+                    <li
+                      key={p.id}
+                      className="vf-search-suggestion"
+                      onClick={() => handlePrayersSuggestionClick(p)}
+                    >
                       <span className="vf-search-suggestion-title">{p.title}</span>
                       {p.category && (
                         <span className="vf-search-suggestion-meta">{p.category}</span>
@@ -847,22 +1050,21 @@ function AppShell() {
         <section className="vf-section">
           <article className="vf-card">
             <header className="vf-card-header">
-              <h2 className="vf-card-title">Saints and Our Lady</h2>
+              <h2 className="vf-card-title">Saints</h2>
               <p className="vf-card-subtitle">
-                Lives of the saints and approved Marian apparitions with print friendly About pages.
+                Lives of the saints with print friendly About pages, patronages, and prayers.
               </p>
             </header>
 
-            {/* Local search bar inside Saints and Our Lady */}
             <form className="vf-search-bar" onSubmit={submitSaintsSearch}>
               <label className="vf-field-label" htmlFor="saints-search">
-                Search saints and Marian apparitions
+                Search saints
               </label>
               <div className="vf-search-input-wrap">
                 <input
                   id="saints-search"
                   type="search"
-                  placeholder="Search by name, title, or patronage"
+                  placeholder="Search by name or patronage"
                   value={saintsSearch}
                   onChange={(e) => setSaintsSearch(e.target.value)}
                 />
@@ -873,10 +1075,13 @@ function AppShell() {
               {saintsSuggestions.length > 0 && (
                 <ul className="vf-search-suggestions">
                   {saintsSuggestions.slice(0, 3).map((s) => (
-                    <li key={`${s.kind}-${s.id}`} className="vf-search-suggestion">
-                      <span className="vf-search-suggestion-title">{s.title}</span>
-                      <span className="vf-search-suggestion-meta">
-                        {s.kind === "saint" ? "Saint" : "Our Lady"}
+                    <li
+                      key={s.id || s.slug || s.title}
+                      className="vf-search-suggestion"
+                      onClick={() => handleSaintsSuggestionClick(s)}
+                    >
+                      <span className="vf-search-suggestion-title">
+                        {s.title || s.name}
                       </span>
                     </li>
                   ))}
@@ -885,19 +1090,16 @@ function AppShell() {
             </form>
 
             <div className="vf-card-body">
-              {saintsResults.saints.length === 0 &&
-                saintsResults.apparitions.length === 0 && (
-                  <p>
-                    Search above to discover saints and Marian apparitions. Selecting an entry
-                    in the full app will open a dedicated About page with image, story, and
-                    official prayer.
-                  </p>
-                )}
+              {saintsResults.length === 0 && (
+                <p>
+                  Search above to discover saints. Selecting an entry will show a short
+                  biography and essential details.
+                </p>
+              )}
 
-              {saintsResults.saints.length > 0 && (
+              {saintsResults.length > 0 && (
                 <section className="vf-stack">
-                  <h3 className="vf-section-subtitle">Saints</h3>
-                  {saintsResults.saints.map((s) => (
+                  {saintsResults.map((s) => (
                     <article key={s.id} className="vf-saint-item">
                       <div className="vf-saint-header">
                         {s.imageUrl && (
@@ -917,18 +1119,100 @@ function AppShell() {
                               {new Date(s.feastDay).toLocaleDateString()}
                             </p>
                           )}
+                          {Array.isArray(s.patronages) && s.patronages.length > 0 && (
+                            <p className="vf-saint-meta">
+                              Patronage: {s.patronages.join(", ")}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <p className="vf-saint-bio">{s.biography}</p>
+                      {s.biography && <p className="vf-saint-bio">{s.biography}</p>}
                     </article>
                   ))}
                 </section>
               )}
+            </div>
+          </article>
+        </section>
+      </main>
+    );
+  }
 
-              {saintsResults.apparitions.length > 0 && (
+  function renderOurLady() {
+    return (
+      <main className="vf-main">
+        <section className="vf-section">
+          <article className="vf-card">
+            <header className="vf-card-header">
+              <h2 className="vf-card-title">Our Lady</h2>
+              <p className="vf-card-subtitle">
+                Approved Marian apparitions and titles of Mary, Mother of the Church.
+              </p>
+            </header>
+
+            <section className="vf-card-body vf-mary-about">
+              <h3 className="vf-section-subtitle">Mary, Mother of God and Mother of the Church</h3>
+              <p>
+                Mary is the Mother of God, the Mother of the Church, and the perfect model of
+                discipleship. She leads the faithful to her Son with a heart that is humble,
+                obedient, and filled with faith.
+              </p>
+              <p>
+                In the mystery of the Holy Family, Mary and Saint Joseph cared for Jesus with
+                reverence and trust in the will of God. Joseph, her chaste spouse, guarded and
+                protected the child Jesus and serves as a quiet example of fidelity and hidden
+                holiness.
+              </p>
+              <p>
+                Through approved apparitions, Our Lady continues to call the faithful to
+                conversion, prayer, and deeper love for Christ and his Church.
+              </p>
+            </section>
+
+            <form className="vf-search-bar" onSubmit={submitOurLadySearch}>
+              <label className="vf-field-label" htmlFor="ourlady-search">
+                Search Marian apparitions and titles
+              </label>
+              <div className="vf-search-input-wrap">
+                <input
+                  id="ourlady-search"
+                  type="search"
+                  placeholder="Search by title or location"
+                  value={ourLadySearch}
+                  onChange={(e) => setOurLadySearch(e.target.value)}
+                />
+                <button type="submit" className="vf-btn vf-btn-blue">
+                  Search
+                </button>
+              </div>
+              {ourLadySuggestions.length > 0 && (
+                <ul className="vf-search-suggestions">
+                  {ourLadySuggestions.slice(0, 3).map((a) => (
+                    <li
+                      key={a.id || a.slug || a.title}
+                      className="vf-search-suggestion"
+                      onClick={() => handleOurLadySuggestionClick(a)}
+                    >
+                      <span className="vf-search-suggestion-title">
+                        {a.title || a.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </form>
+
+            <div className="vf-card-body">
+              {ourLadyResults.length === 0 && (
+                <p>
+                  Search above to discover approved apparitions and Marian titles with their
+                  stories, locations, and official prayers.
+                </p>
+              )}
+
+              {ourLadyResults.length > 0 && (
                 <section className="vf-stack vf-stack-apparitions">
-                  <h3 className="vf-section-subtitle">Our Lady</h3>
-                  {saintsResults.apparitions.map((a) => (
+                  {ourLadyResults.map((a) => (
                     <article key={a.id} className="vf-saint-item">
                       <div className="vf-saint-header">
                         {a.imageUrl && (
@@ -945,9 +1229,14 @@ function AppShell() {
                           {a.location && (
                             <p className="vf-saint-meta">Location: {a.location}</p>
                           )}
+                          {a.feastDay && (
+                            <p className="vf-saint-meta">
+                              Feast: {new Date(a.feastDay).toLocaleDateString()}
+                            </p>
+                          )}
                         </div>
                       </div>
-                      <p className="vf-saint-bio">{a.story}</p>
+                      {a.story && <p className="vf-saint-bio">{a.story}</p>}
                     </article>
                   ))}
                 </section>
@@ -960,6 +1249,24 @@ function AppShell() {
   }
 
   function renderSacraments() {
+    const q = sacramentsSearch.trim().toLowerCase();
+    const filtered =
+      q.length === 0
+        ? sacramentItems
+        : sacramentItems.filter((s) => {
+            const text =
+              (s.name || "") +
+              " " +
+              (s.meaning || "") +
+              " " +
+              (s.biblicalFoundation || "") +
+              " " +
+              (s.preparation || "") +
+              " " +
+              (s.whatToExpect || "");
+            return text.toLowerCase().includes(q);
+          });
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -971,6 +1278,27 @@ function AppShell() {
                 for each of the seven sacraments.
               </p>
             </header>
+
+            <form
+              className="vf-search-bar"
+              onSubmit={(e) => {
+                e.preventDefault();
+              }}
+            >
+              <label className="vf-field-label" htmlFor="sacraments-search">
+                Search sacraments
+              </label>
+              <div className="vf-search-input-wrap">
+                <input
+                  id="sacraments-search"
+                  type="search"
+                  placeholder="Search by sacrament or topic"
+                  value={sacramentsSearch}
+                  onChange={(e) => setSacramentsSearch(e.target.value)}
+                />
+              </div>
+            </form>
+
             <div className="vf-card-body">
               {loadingSacraments && sacramentItems.length === 0 && (
                 <p>Loading sacraments…</p>
@@ -983,9 +1311,9 @@ function AppShell() {
                 </p>
               )}
 
-              {sacramentItems.length > 0 && (
+              {filtered.length > 0 && (
                 <div className="vf-stack">
-                  {sacramentItems.map((s) => (
+                  {filtered.map((s) => (
                     <section key={s.id} className="vf-sacrament-item">
                       <h3 className="vf-section-subtitle">{s.name}</h3>
                       {s.meaning && (
@@ -1009,8 +1337,8 @@ function AppShell() {
                       {Array.isArray(s.commonQuestions) &&
                         s.commonQuestions.length > 0 && (
                           <ul className="vf-sacrament-questions">
-                            {s.commonQuestions.map((q, idx) => (
-                              <li key={idx}>{q}</li>
+                            {s.commonQuestions.map((qItem, idx) => (
+                              <li key={idx}>{qItem}</li>
                             ))}
                           </ul>
                         )}
@@ -1018,6 +1346,10 @@ function AppShell() {
                   ))}
                 </div>
               )}
+
+              {!loadingSacraments &&
+                sacramentItems.length > 0 &&
+                filtered.length === 0 && <p>No sacraments match that search.</p>}
             </div>
           </article>
         </section>
@@ -1026,6 +1358,16 @@ function AppShell() {
   }
 
   function renderGuides() {
+    const q = guidesSearch.trim().toLowerCase();
+    const filtered =
+      q.length === 0
+        ? guideItems
+        : guideItems.filter((g) => {
+            const text =
+              (g.title || "") + " " + (g.summary || "") + " " + (g.body || "");
+            return text.toLowerCase().includes(q);
+          });
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1037,10 +1379,29 @@ function AppShell() {
                 and vocations.
               </p>
             </header>
+
+            <form
+              className="vf-search-bar"
+              onSubmit={(e) => {
+                e.preventDefault();
+              }}
+            >
+              <label className="vf-field-label" htmlFor="guides-search">
+                Search guides
+              </label>
+              <div className="vf-search-input-wrap">
+                <input
+                  id="guides-search"
+                  type="search"
+                  placeholder="Search by guide title or topic"
+                  value={guidesSearch}
+                  onChange={(e) => setGuidesSearch(e.target.value)}
+                />
+              </div>
+            </form>
+
             <div className="vf-card-body">
-              {loadingGuides && guideItems.length === 0 && (
-                <p>Loading guides…</p>
-              )}
+              {loadingGuides && guideItems.length === 0 && <p>Loading guides…</p>}
 
               {!loadingGuides && guideItems.length === 0 && (
                 <p>
@@ -1048,9 +1409,9 @@ function AppShell() {
                 </p>
               )}
 
-              {guideItems.length > 0 && (
+              {filtered.length > 0 && (
                 <div className="vf-stack">
-                  {guideItems.map((g) => (
+                  {filtered.map((g) => (
                     <section key={g.id} className="vf-guide-item">
                       <h3 className="vf-section-subtitle">{g.title}</h3>
                       {g.summary && (
@@ -1061,6 +1422,10 @@ function AppShell() {
                   ))}
                 </div>
               )}
+
+              {!loadingGuides &&
+                guideItems.length > 0 &&
+                filtered.length === 0 && <p>No guides match that search.</p>}
             </div>
           </article>
         </section>
@@ -1123,9 +1488,9 @@ function AppShell() {
             </header>
             <div className="vf-card-body">
               <p>
-                This area will show My Prayers, Journal, Goals, and Milestones, with clear
-                confirmations for removal and deletion, plus settings for theme, language,
-                and privacy overview.
+                Your profile gathers My Prayers, Journal, Goals, and Milestones, along with
+                settings for theme, language, and privacy, so that everything supporting your
+                spiritual life stays in one place.
               </p>
             </div>
           </article>
@@ -1144,8 +1509,9 @@ function AppShell() {
             </header>
             <div className="vf-card-body">
               <p>
-                The full authentication forms will live here, matching the specification for
-                Create Account, Login, and Reset Password with the no email reset flow.
+                The authentication forms for Create Account, Login, and Reset Password integrate
+                with the Via Fidei account system so that interactive features remain personal
+                and private.
               </p>
             </div>
           </article>
@@ -1159,6 +1525,7 @@ function AppShell() {
     if (currentTab === "history") return renderHistory();
     if (currentTab === "prayers") return renderPrayers();
     if (currentTab === "saints") return renderSaints();
+    if (currentTab === "ourlady") return renderOurLady();
     if (currentTab === "sacraments") return renderSacraments();
     if (currentTab === "guides") return renderGuides();
     if (currentTab === "profile") return renderProfile();
@@ -1166,10 +1533,431 @@ function AppShell() {
     return renderHome();
   }
 
+  // Admin helpers
+  function handleAdminLoginSubmit(e) {
+    e.preventDefault();
+    const username = adminUsername.trim();
+    const password = adminPassword;
+
+    if (username === "Ryan Simonds" && password === "Santidade") {
+      setAdminAuthenticated(true);
+      window.sessionStorage.setItem("vf_admin_authed", "yes");
+      setAdminAuthError("");
+    } else {
+      setAdminAuthError("Invalid admin credentials.");
+    }
+  }
+
+  async function handleAdminSaveCopy() {
+    if (!adminMissionDraft || !adminAboutDraft) return;
+    try {
+      setAdminSavingCopy(true);
+      await fetch("/api/admin/home", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          mission: adminMissionDraft,
+          about: adminAboutDraft
+        })
+      });
+      await loadHome(language);
+    } catch (err) {
+      console.error("Failed to save home copy", err);
+    } finally {
+      setAdminSavingCopy(false);
+    }
+  }
+
+  async function handleAdminAddNotice(e) {
+    e.preventDefault();
+    const title = newNoticeTitle.trim();
+    const body = newNoticeBody.trim();
+    if (!title || !body) return;
+
+    try {
+      await fetch("/api/admin/notices", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ title, body })
+      });
+      setNewNoticeTitle("");
+      setNewNoticeBody("");
+      await loadHome(language);
+    } catch (err) {
+      console.error("Failed to add notice", err);
+    }
+  }
+
+  async function handleAdminSeasonThemeChange(nextTheme) {
+    try {
+      setSeasonTheme(nextTheme);
+      setAdminSavingTheme(true);
+      await fetch("/api/admin/theme", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ liturgicalTheme: nextTheme })
+      });
+      await loadHome(language);
+    } catch (err) {
+      console.error("Failed to save liturgical theme", err);
+    } finally {
+      setAdminSavingTheme(false);
+    }
+  }
+
+  async function handleAdminCollageUpload(e) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const formData = new FormData();
+    Array.from(files)
+      .slice(0, 6)
+      .forEach((file) => {
+        formData.append("images", file);
+      });
+
+    try {
+      setCollageUploading(true);
+      await fetch("/api/admin/collage", {
+        method: "POST",
+        credentials: "include",
+        body: formData
+      });
+      await loadHome(language);
+    } catch (err) {
+      console.error("Failed to upload collage photos", err);
+    } finally {
+      setCollageUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  function renderAdminLogin() {
+    return (
+      <main className="vf-main">
+        <section className="vf-section vf-admin-section">
+          <article className="vf-card vf-admin-card">
+            <header className="vf-card-header">
+              <h2 className="vf-card-title">Admin Login</h2>
+              <p className="vf-card-subtitle">
+                This area allows updates to the home page, notices, images, and seasonal theme.
+              </p>
+            </header>
+            <div className="vf-card-body">
+              <form onSubmit={handleAdminLoginSubmit} className="vf-form">
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="admin-username">
+                    Username
+                  </label>
+                  <input
+                    id="admin-username"
+                    type="text"
+                    value={adminUsername}
+                    onChange={(e) => setAdminUsername(e.target.value)}
+                    autoComplete="username"
+                  />
+                </div>
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="admin-password">
+                    Password
+                  </label>
+                  <input
+                    id="admin-password"
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
+                </div>
+                {adminAuthError && (
+                  <p className="vf-form-error" role="alert">
+                    {adminAuthError}
+                  </p>
+                )}
+                <div className="vf-form-actions">
+                  <button type="submit" className="vf-btn vf-btn-blue">
+                    Enter Admin
+                  </button>
+                </div>
+              </form>
+            </div>
+          </article>
+        </section>
+      </main>
+    );
+  }
+
+  function renderAdmin() {
+    if (!adminAuthenticated) {
+      return renderAdminLogin();
+    }
+
+    const mission = adminMissionDraft || homeData?.mission || FALLBACK_MISSION;
+    const about = adminAboutDraft || homeData?.about || FALLBACK_ABOUT;
+    const notices = adminNoticesDraft || homeData?.notices || [];
+    const collagePhotos = homeData?.collagePhotos || [];
+
+    return (
+      <main className="vf-main vf-admin-main">
+        <section className="vf-section">
+          <article className="vf-card vf-card-hero vf-admin-hero">
+            <header className="vf-card-header">
+              <h2 className="vf-card-title">Admin Home</h2>
+              <p className="vf-card-subtitle">
+                Edit the mission, About section, seasonal theme, notices, and home page photos.
+              </p>
+            </header>
+            <div className="vf-card-body vf-admin-grid">
+              <section className="vf-admin-panel">
+                <h3 className="vf-section-subtitle">Mission statement</h3>
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="admin-mission-heading">
+                    Heading
+                  </label>
+                  <input
+                    id="admin-mission-heading"
+                    type="text"
+                    value={mission.heading || ""}
+                    onChange={(e) =>
+                      setAdminMissionDraft({
+                        ...mission,
+                        heading: e.target.value
+                      })
+                    }
+                  />
+                </div>
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="admin-mission-subheading">
+                    Subheading
+                  </label>
+                  <input
+                    id="admin-mission-subheading"
+                    type="text"
+                    value={mission.subheading || ""}
+                    onChange={(e) =>
+                      setAdminMissionDraft({
+                        ...mission,
+                        subheading: e.target.value
+                      })
+                    }
+                  />
+                </div>
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="admin-mission-body">
+                    Body paragraphs
+                  </label>
+                  <textarea
+                    id="admin-mission-body"
+                    rows={6}
+                    value={Array.isArray(mission.body) ? mission.body.join("\n\n") : ""}
+                    onChange={(e) =>
+                      setAdminMissionDraft({
+                        ...mission,
+                        body: e.target.value.split(/\n\s*\n/)
+                      })
+                    }
+                  />
+                  <p className="vf-field-help">
+                    Separate paragraphs with a blank line. This is exactly what visitors see
+                    at the top of the home page.
+                  </p>
+                </div>
+              </section>
+
+              <section className="vf-admin-panel">
+                <h3 className="vf-section-subtitle">About Via Fidei</h3>
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="admin-about-body">
+                    About paragraphs
+                  </label>
+                  <textarea
+                    id="admin-about-body"
+                    rows={8}
+                    value={
+                      Array.isArray(about.paragraphs)
+                        ? about.paragraphs.join("\n\n")
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setAdminAboutDraft({
+                        ...about,
+                        paragraphs: e.target.value.split(/\n\s*\n/)
+                      })
+                    }
+                  />
+                  <p className="vf-field-help">
+                    Separate paragraphs with a blank line. The content appears in the About
+                    card on the home page.
+                  </p>
+                </div>
+                <div className="vf-form-actions">
+                  <button
+                    type="button"
+                    className="vf-btn vf-btn-blue"
+                    onClick={handleAdminSaveCopy}
+                    disabled={adminSavingCopy}
+                  >
+                    {adminSavingCopy ? "Saving…" : "Save home text"}
+                  </button>
+                </div>
+              </section>
+            </div>
+          </article>
+
+          <article className="vf-card vf-admin-card">
+            <header className="vf-card-header">
+              <h3 className="vf-card-title">Seasonal banner theme</h3>
+              <p className="vf-card-subtitle">
+                Choose which liturgical theme appears in the top banner across the site.
+              </p>
+            </header>
+            <div className="vf-card-body vf-admin-theme">
+              <div className="vf-theme-toggle-group">
+                <button
+                  type="button"
+                  className={
+                    "vf-btn" +
+                    (seasonTheme === "normal" ? " vf-btn-blue" : " vf-btn-outline")
+                  }
+                  onClick={() => handleAdminSeasonThemeChange("normal")}
+                  disabled={adminSavingTheme}
+                >
+                  Normal time
+                </button>
+                <button
+                  type="button"
+                  className={
+                    "vf-btn" +
+                    (seasonTheme === "advent" ? " vf-btn-blue" : " vf-btn-outline")
+                  }
+                  onClick={() => handleAdminSeasonThemeChange("advent")}
+                  disabled={adminSavingTheme}
+                >
+                  Advent
+                </button>
+                <button
+                  type="button"
+                  className={
+                    "vf-btn" +
+                    (seasonTheme === "easter" ? " vf-btn-blue" : " vf-btn-outline")
+                  }
+                  onClick={() => handleAdminSeasonThemeChange("easter")}
+                  disabled={adminSavingTheme}
+                >
+                  Easter
+                </button>
+              </div>
+              <p className="vf-field-help">
+                Normal shows a wooden cross, Advent shows the Holy Family, and Easter shows a
+                beautiful crucifix in the site banner.
+              </p>
+            </div>
+          </article>
+
+          <article className="vf-card vf-admin-card">
+            <header className="vf-card-header">
+              <h3 className="vf-card-title">Homepage notices</h3>
+              <p className="vf-card-subtitle">
+                Notices appear at the very top of the home page, under the banner and above
+                the mission.
+              </p>
+            </header>
+            <div className="vf-card-body vf-admin-notices">
+              <form className="vf-form vf-notice-form" onSubmit={handleAdminAddNotice}>
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="notice-title">
+                    New notice title
+                  </label>
+                  <input
+                    id="notice-title"
+                    type="text"
+                    value={newNoticeTitle}
+                    onChange={(e) => setNewNoticeTitle(e.target.value)}
+                  />
+                </div>
+                <div className="vf-form-row">
+                  <label className="vf-field-label" htmlFor="notice-body">
+                    New notice text
+                  </label>
+                  <textarea
+                    id="notice-body"
+                    rows={3}
+                    value={newNoticeBody}
+                    onChange={(e) => setNewNoticeBody(e.target.value)}
+                  />
+                </div>
+                <div className="vf-form-actions">
+                  <button type="submit" className="vf-btn vf-btn-blue">
+                    Add notice
+                  </button>
+                </div>
+              </form>
+
+              {notices.length > 0 && (
+                <div className="vf-stack vf-admin-notices-list">
+                  {notices.map((n) => (
+                    <article key={n.id} className="vf-notice-card">
+                      <h4 className="vf-notice-title">{n.title}</h4>
+                      <p className="vf-notice-body">{n.body}</p>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+
+          <article className="vf-card vf-admin-card">
+            <header className="vf-card-header">
+              <h3 className="vf-card-title">Home page photos</h3>
+              <p className="vf-card-subtitle">
+                Add one to six photos that appear as a collage at the bottom of the home page.
+              </p>
+            </header>
+            <div className="vf-card-body">
+              <div className="vf-form-row">
+                <label className="vf-field-label" htmlFor="collage-upload">
+                  Add photos
+                </label>
+                <input
+                  id="collage-upload"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  capture="environment"
+                  onChange={handleAdminCollageUpload}
+                />
+                <p className="vf-field-help">
+                  You can choose Take Photo, Photo Library, or Files from your device. Up to
+                  six images will appear in a collage with no background frame.
+                </p>
+                {collageUploading && <p>Uploading photos…</p>}
+              </div>
+
+              {collagePhotos && collagePhotos.length > 0 && (
+                <div className="vf-collage-preview">
+                  <div className="vf-collage-grid">
+                    {collagePhotos.slice(0, 6).map((photo) => (
+                      <figure key={photo.id || photo.url} className="vf-collage-item">
+                        <img src={photo.url} alt={photo.alt || "Via Fidei photo"} />
+                      </figure>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </article>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <div className="vf-shell">
       {renderHeader()}
-      {renderCurrentTab()}
+      {isAdminRoute ? renderAdmin() : renderCurrentTab()}
       <footer className="vf-footer">
         <div className="vf-footer-inner">
           <span>© {new Date().getFullYear()} Via Fidei. All rights reserved.</span>
