@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 
+const PAGE_SIZE = 10;
+
 // Tabs in primary navigation
 const TABS = [
   { id: "home", label: "Home" },
@@ -216,10 +218,7 @@ function renderGuideBodyContent(body) {
     <div className="vf-guide-body">
       {intro && <p>{intro}</p>}
       {sections.map((section, idx) => (
-        <section
-          key={section.title || idx}
-          className="vf-guide-section"
-        >
+        <section key={section.title || idx} className="vf-guide-section">
           {section.title && (
             <h4 className="vf-guide-section-title">{section.title}</h4>
           )}
@@ -286,6 +285,35 @@ function renderGuideChecklist(checklistTemplate) {
   );
 }
 
+function renderPagination(currentPage, totalPages, onPageChange, idPrefix) {
+  if (!totalPages || totalPages <= 1) return null;
+
+  const pages = [];
+  for (let page = 1; page <= totalPages; page += 1) {
+    const isActive = page === currentPage;
+    pages.push(
+      <li key={`${idPrefix}-${page}`} className="vf-page-item">
+        <button
+          type="button"
+          className={
+            "vf-page-button" + (isActive ? " vf-page-button-active" : "")
+          }
+          onClick={() => onPageChange(page)}
+          aria-current={isActive ? "page" : undefined}
+        >
+          {page}
+        </button>
+      </li>
+    );
+  }
+
+  return (
+    <nav className="vf-pagination" aria-label="Pagination">
+      <ul className="vf-pagination-list">{pages}</ul>
+    </nav>
+  );
+}
+
 function AppShell() {
   const [currentTab, setCurrentTab] = useState("home");
 
@@ -330,29 +358,41 @@ function AppShell() {
   const [historyItems, setHistoryItems] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
 
   const [sacramentItems, setSacramentItems] = useState([]);
   const [loadingSacraments, setLoadingSacraments] = useState(false);
   const [sacramentsLoaded, setSacramentsLoaded] = useState(false);
+  const [sacramentsPage, setSacramentsPage] = useState(1);
 
   const [guideItems, setGuideItems] = useState([]);
   const [loadingGuides, setLoadingGuides] = useState(false);
   const [guidesLoaded, setGuidesLoaded] = useState(false);
+  const [guidesPage, setGuidesPage] = useState(1);
 
-  // Prayers search
+  // Prayers search and library
   const [prayersSearch, setPrayersSearch] = useState("");
   const [prayersSuggestions, setPrayersSuggestions] = useState([]);
   const [prayersResults, setPrayersResults] = useState([]);
+  const [prayersList, setPrayersList] = useState([]);
+  const [loadingPrayers, setLoadingPrayers] = useState(false);
+  const [prayersPage, setPrayersPage] = useState(1);
 
-  // Saints search
+  // Saints search and library
   const [saintsSearch, setSaintsSearch] = useState("");
   const [saintsSuggestions, setSaintsSuggestions] = useState([]);
   const [saintsResults, setSaintsResults] = useState([]);
+  const [saintsList, setSaintsList] = useState([]);
+  const [loadingSaints, setLoadingSaints] = useState(false);
+  const [saintsPage, setSaintsPage] = useState(1);
 
-  // Our Lady search
+  // Our Lady search and library
   const [ourLadySearch, setOurLadySearch] = useState("");
   const [ourLadySuggestions, setOurLadySuggestions] = useState([]);
   const [ourLadyResults, setOurLadyResults] = useState([]);
+  const [apparitionsList, setApparitionsList] = useState([]);
+  const [loadingApparitions, setLoadingApparitions] = useState(false);
+  const [ourLadyPage, setOurLadyPage] = useState(1);
 
   // Fetch current user and settings
   useEffect(() => {
@@ -374,7 +414,10 @@ function AppShell() {
           }
           if (data.user.languageOverride) {
             setLanguage(data.user.languageOverride);
-            window.localStorage.setItem("vf_language", data.user.languageOverride);
+            window.localStorage.setItem(
+              "vf_language",
+              data.user.languageOverride
+            );
           }
         } else {
           const storedTheme = window.localStorage.getItem("vf_theme");
@@ -412,38 +455,53 @@ function AppShell() {
   useEffect(() => {
     setHistoryLoaded(false);
     setHistoryItems([]);
+    setHistoryPage(1);
 
     setSacramentsLoaded(false);
     setSacramentItems([]);
+    setSacramentsPage(1);
 
     setGuidesLoaded(false);
     setGuideItems([]);
+    setGuidesPage(1);
+
+    setPrayersList([]);
+    setPrayersResults([]);
+    setPrayersSuggestions([]);
+    setPrayersPage(1);
+
+    setSaintsList([]);
+    setSaintsResults([]);
+    setSaintsSuggestions([]);
+    setSaintsPage(1);
+
+    setApparitionsList([]);
+    setOurLadyResults([]);
+    setOurLadySuggestions([]);
+    setOurLadyPage(1);
   }, [language]);
 
   // Fetch home content
-  const loadHome = useCallback(
-    async (lang) => {
-      try {
-        setLoadingHome(true);
-        const params = new URLSearchParams();
-        if (lang) {
-          params.set("language", lang);
-        }
-        const res = await fetch(`/api/home?${params.toString()}`);
-        const data = await res.json();
-        setHomeData(data);
-
-        if (data && data.liturgicalTheme) {
-          setSeasonTheme(data.liturgicalTheme);
-        }
-      } catch (err) {
-        console.error("Failed to load home content", err);
-      } finally {
-        setLoadingHome(false);
+  const loadHome = useCallback(async (lang) => {
+    try {
+      setLoadingHome(true);
+      const params = new URLSearchParams();
+      if (lang) {
+        params.set("language", lang);
       }
-    },
-    []
-  );
+      const res = await fetch(`/api/home?${params.toString()}`);
+      const data = await res.json();
+      setHomeData(data);
+
+      if (data && data.liturgicalTheme) {
+        setSeasonTheme(data.liturgicalTheme);
+      }
+    } catch (err) {
+      console.error("Failed to load home content", err);
+    } finally {
+      setLoadingHome(false);
+    }
+  }, []);
 
   useEffect(() => {
     loadHome(language);
@@ -532,6 +590,74 @@ function AppShell() {
     []
   );
 
+  // Fetch prayers library on demand
+  const loadPrayers = useCallback(
+    async (lang) => {
+      try {
+        setLoadingPrayers(true);
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        params.set("take", "100");
+        const res = await fetch(`/api/prayers?${params.toString()}`);
+        const data = await res.json();
+        setPrayersList(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        console.error("Failed to load prayers library", err);
+      } finally {
+        setLoadingPrayers(false);
+      }
+    },
+    []
+  );
+
+  // Fetch saints library on demand
+  const loadSaints = useCallback(
+    async (lang) => {
+      try {
+        setLoadingSaints(true);
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        params.set("take", "100");
+        const res = await fetch(`/api/saints/saints?${params.toString()}`);
+        const data = await res.json();
+        setSaintsList(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        console.error("Failed to load saints library", err);
+      } finally {
+        setLoadingSaints(false);
+      }
+    },
+    []
+  );
+
+  // Fetch Marian apparitions library on demand
+  const loadApparitions = useCallback(
+    async (lang) => {
+      try {
+        setLoadingApparitions(true);
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        params.set("take", "100");
+        const res = await fetch(
+          `/api/saints/apparitions?${params.toString()}`
+        );
+        const data = await res.json();
+        setApparitionsList(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        console.error("Failed to load Marian apparitions library", err);
+      } finally {
+        setLoadingApparitions(false);
+      }
+    },
+    []
+  );
+
   // Trigger language dependent loads when tab is opened for the first time
   useEffect(() => {
     if (currentTab === "history" && !historyLoaded && !loadingHistory) {
@@ -543,6 +669,19 @@ function AppShell() {
     if (currentTab === "guides" && !guidesLoaded && !loadingGuides) {
       loadGuides(language);
     }
+    if (currentTab === "prayers" && !loadingPrayers && prayersList.length === 0) {
+      loadPrayers(language);
+    }
+    if (currentTab === "saints" && !loadingSaints && saintsList.length === 0) {
+      loadSaints(language);
+    }
+    if (
+      currentTab === "ourlady" &&
+      !loadingApparitions &&
+      apparitionsList.length === 0
+    ) {
+      loadApparitions(language);
+    }
   }, [
     currentTab,
     language,
@@ -552,9 +691,18 @@ function AppShell() {
     loadingHistory,
     loadingSacraments,
     loadingGuides,
+    loadingPrayers,
+    loadingSaints,
+    loadingApparitions,
+    prayersList,
+    saintsList,
+    apparitionsList,
     loadHistory,
     loadSacraments,
-    loadGuides
+    loadGuides,
+    loadPrayers,
+    loadSaints,
+    loadApparitions
   ]);
 
   // Account actions
@@ -610,6 +758,7 @@ function AppShell() {
       if (!q) {
         setPrayersSuggestions([]);
         setPrayersResults([]);
+        setPrayersPage(1);
         return;
       }
 
@@ -619,11 +768,15 @@ function AppShell() {
         params.set("mode", "suggest");
         params.set("language", language);
 
-        const res = await fetch(`/api/prayers/search/local?${params.toString()}`);
+        const res = await fetch(
+          `/api/prayers/search/local?${params.toString()}`
+        );
         const data = await res.json();
         if (cancelled) return;
 
-        setPrayersSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+        setPrayersSuggestions(
+          Array.isArray(data.suggestions) ? data.suggestions : []
+        );
       } catch (err) {
         console.error("Prayers suggest search failed", err);
       }
@@ -648,9 +801,14 @@ function AppShell() {
       params.set("mode", "full");
       params.set("language", language);
 
-      const res = await fetch(`/api/prayers/search/local?${params.toString()}`);
+      const res = await fetch(
+        `/api/prayers/search/local?${params.toString()}`
+      );
       const data = await res.json();
-      setPrayersResults(Array.isArray(data.results) ? data.results : []);
+      setPrayersResults(
+        Array.isArray(data.results) ? data.results : []
+      );
+      setPrayersPage(1);
     } catch (err) {
       console.error("Prayers full search failed", err);
     }
@@ -659,6 +817,7 @@ function AppShell() {
   function handlePrayersSuggestionClick(suggestion) {
     setPrayersSearch(suggestion.title || "");
     setPrayersSuggestions([]);
+    setPrayersPage(1);
     submitPrayersSearch();
   }
 
@@ -671,6 +830,7 @@ function AppShell() {
       if (!q) {
         setSaintsSuggestions([]);
         setSaintsResults([]);
+        setSaintsPage(1);
         return;
       }
 
@@ -681,11 +841,15 @@ function AppShell() {
         params.set("type", "saint");
         params.set("language", language);
 
-        const res = await fetch(`/api/saints/search/local?${params.toString()}`);
+        const res = await fetch(
+          `/api/saints/search/local?${params.toString()}`
+        );
         const data = await res.json();
         if (cancelled) return;
 
-        setSaintsSuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+        setSaintsSuggestions(
+          Array.isArray(data.suggestions) ? data.suggestions : []
+        );
       } catch (err) {
         console.error("Saints suggest search failed", err);
       }
@@ -696,7 +860,7 @@ function AppShell() {
     return () => {
       cancelled = true;
       clearTimeout(id);
-      };
+    };
   }, [saintsSearch, language]);
 
   async function submitSaintsSearch(e) {
@@ -711,7 +875,9 @@ function AppShell() {
       params.set("type", "saint");
       params.set("language", language);
 
-      const res = await fetch(`/api/saints/search/local?${params.toString()}`);
+      const res = await fetch(
+        `/api/saints/search/local?${params.toString()}`
+      );
       const data = await res.json();
       const results =
         Array.isArray(data.resultsSaints) && data.resultsSaints.length
@@ -720,6 +886,7 @@ function AppShell() {
           ? data.results
           : [];
       setSaintsResults(results);
+      setSaintsPage(1);
     } catch (err) {
       console.error("Saints full search failed", err);
     }
@@ -728,6 +895,7 @@ function AppShell() {
   function handleSaintsSuggestionClick(suggestion) {
     setSaintsSearch(suggestion.title || suggestion.name || "");
     setSaintsSuggestions([]);
+    setSaintsPage(1);
     submitSaintsSearch();
   }
 
@@ -740,6 +908,7 @@ function AppShell() {
       if (!q) {
         setOurLadySuggestions([]);
         setOurLadyResults([]);
+        setOurLadyPage(1);
         return;
       }
 
@@ -750,11 +919,15 @@ function AppShell() {
         params.set("type", "apparition");
         params.set("language", language);
 
-        const res = await fetch(`/api/saints/search/local?${params.toString()}`);
+        const res = await fetch(
+          `/api/saints/search/local?${params.toString()}`
+        );
         const data = await res.json();
         if (cancelled) return;
 
-        setOurLadySuggestions(Array.isArray(data.suggestions) ? data.suggestions : []);
+        setOurLadySuggestions(
+          Array.isArray(data.suggestions) ? data.suggestions : []
+        );
       } catch (err) {
         console.error("Our Lady suggest search failed", err);
       }
@@ -780,15 +953,19 @@ function AppShell() {
       params.set("type", "apparition");
       params.set("language", language);
 
-      const res = await fetch(`/api/saints/search/local?${params.toString()}`);
+      const res = await fetch(
+        `/api/saints/search/local?${params.toString()}`
+      );
       const data = await res.json();
       const results =
-        Array.isArray(data.resultsApparitions) && data.resultsApparitions.length
+        Array.isArray(data.resultsApparitions) &&
+        data.resultsApparitions.length
           ? data.resultsApparitions
           : Array.isArray(data.results)
           ? data.results
           : [];
       setOurLadyResults(results);
+      setOurLadyPage(1);
     } catch (err) {
       console.error("Our Lady full search failed", err);
     }
@@ -797,17 +974,26 @@ function AppShell() {
   function handleOurLadySuggestionClick(suggestion) {
     setOurLadySearch(suggestion.title || suggestion.name || "");
     setOurLadySuggestions([]);
+    setOurLadyPage(1);
     submitOurLadySearch();
   }
 
   // Header layout and menus
   function renderHeader() {
+    const currentSeason = seasonTheme || "normal";
+    const logoClass =
+      currentSeason === "advent"
+        ? "vf-logo-holy-family"
+        : currentSeason === "easter"
+        ? "vf-logo-crucifix"
+        : "vf-logo-cross";
+
     return (
       <header className="vf-header">
         <div className="vf-header-inner">
           <div
             className={
-              "vf-header-banner vf-header-banner-" + (seasonTheme || "normal")
+              "vf-header-banner vf-header-banner-" + currentSeason
             }
             aria-hidden="true"
           >
@@ -816,11 +1002,12 @@ function AppShell() {
 
           <div className="vf-header-title-block">
             <div className="vf-title-row">
-              <span className="vf-logo-cross" aria-hidden="true" />
+              <span className={logoClass} aria-hidden="true" />
               <h1 className="vf-site-title">Via Fidei</h1>
             </div>
             <p className="vf-site-subtitle">
-              Catholic prayers, saints, sacraments, and guides for spiritual growth
+              Catholic prayers, saints, sacraments, and guides for spiritual
+              growth
             </p>
           </div>
 
@@ -831,7 +1018,8 @@ function AppShell() {
                   <button
                     type="button"
                     className={
-                      "vf-nav-tab" + (currentTab === tab.id ? " vf-nav-tab-active" : "")
+                      "vf-nav-tab" +
+                      (currentTab === tab.id ? " vf-nav-tab-active" : "")
                     }
                     onClick={() => setCurrentTab(tab.id)}
                   >
@@ -934,7 +1122,8 @@ function AppShell() {
                       <button
                         type="button"
                         className={
-                          "vf-menu-item" + (theme === "light" ? " vf-menu-item-active" : "")
+                          "vf-menu-item" +
+                          (theme === "light" ? " vf-menu-item-active" : "")
                         }
                         role="menuitem"
                         onClick={() => handleThemeChange("light")}
@@ -944,7 +1133,8 @@ function AppShell() {
                       <button
                         type="button"
                         className={
-                          "vf-menu-item" + (theme === "dark" ? " vf-menu-item-active" : "")
+                          "vf-menu-item" +
+                          (theme === "dark" ? " vf-menu-item-active" : "")
                         }
                         role="menuitem"
                         onClick={() => handleThemeChange("dark")}
@@ -969,7 +1159,9 @@ function AppShell() {
                       <div className="vf-menu-inline-field">
                         <select
                           value={language}
-                          onChange={(e) => handleLanguageChange(e.target.value)}
+                          onChange={(e) =>
+                            handleLanguageChange(e.target.value)
+                          }
                           className="vf-lang-select"
                         >
                           {SUPPORTED_LANGS.map((lang) => (
@@ -1083,8 +1275,14 @@ function AppShell() {
             <section className="vf-collage-section">
               <div className="vf-collage-grid">
                 {collagePhotos.slice(0, 6).map((photo) => (
-                  <figure key={photo.id || photo.url} className="vf-collage-item">
-                    <img src={photo.url} alt={photo.alt || "Via Fidei photo"} />
+                  <figure
+                    key={photo.id || photo.url}
+                    className="vf-collage-item"
+                  >
+                    <img
+                      src={photo.url}
+                      alt={photo.alt || "Via Fidei photo"}
+                    />
                   </figure>
                 ))}
               </div>
@@ -1096,6 +1294,17 @@ function AppShell() {
   }
 
   function renderHistory() {
+    const totalPages = Math.max(
+      1,
+      Math.ceil(historyItems.length / PAGE_SIZE)
+    );
+    const safePage = Math.min(historyPage, totalPages);
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    const pagedItems = historyItems.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1103,8 +1312,9 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Liturgy and History</h2>
               <p className="vf-card-subtitle">
-                Apostolic Age, Early Church, Councils, Middle Ages, Reformation, modern era,
-                the councils of the last century, and the contemporary life of the Church.
+                Apostolic Age, Early Church, Councils, Middle Ages,
+                Reformation, modern era, the councils of the last century,
+                and the contemporary life of the Church.
               </p>
             </header>
 
@@ -1114,19 +1324,23 @@ function AppShell() {
               )}
 
               {!loadingHistory && historyItems.length === 0 && (
-                <p>
-                  History sections will appear here as soon as content is available for this
-                  language.
-                </p>
+                <p>No history sections are available yet in this language.</p>
               )}
 
-              {historyItems.length > 0 && (
+              {pagedItems.length > 0 && (
                 <div className="vf-stack">
-                  {historyItems.map((section) => (
-                    <section key={section.id} className="vf-history-section">
-                      <h3 className="vf-section-subtitle">{section.title}</h3>
+                  {pagedItems.map((section) => (
+                    <section
+                      key={section.id}
+                      className="vf-history-section"
+                    >
+                      <h3 className="vf-section-subtitle">
+                        {section.title}
+                      </h3>
                       {section.summary && (
-                        <p className="vf-history-summary">{section.summary}</p>
+                        <p className="vf-history-summary">
+                          {section.summary}
+                        </p>
                       )}
                       {section.body && (
                         <p className="vf-history-body">{section.body}</p>
@@ -1134,6 +1348,13 @@ function AppShell() {
                     </section>
                   ))}
                 </div>
+              )}
+
+              {renderPagination(
+                safePage,
+                totalPages,
+                setHistoryPage,
+                "history"
               )}
             </div>
           </article>
@@ -1143,6 +1364,21 @@ function AppShell() {
   }
 
   function renderPrayers() {
+    const activePrayers =
+      prayersResults.length > 0 ? prayersResults : prayersList;
+
+    const totalPages = Math.max(
+      1,
+      Math.ceil(activePrayers.length / PAGE_SIZE)
+    );
+    const safePage = Math.min(prayersPage, totalPages);
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    const pagedPrayers = activePrayers.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+    const showingSearchResults = prayersResults.length > 0;
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1150,7 +1386,8 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Prayers</h2>
               <p className="vf-card-subtitle">
-                A curated library of approved Catholic prayers in many languages.
+                A curated library of approved Catholic prayers in many
+                languages.
               </p>
             </header>
 
@@ -1178,9 +1415,13 @@ function AppShell() {
                       className="vf-search-suggestion"
                       onClick={() => handlePrayersSuggestionClick(p)}
                     >
-                      <span className="vf-search-suggestion-title">{p.title}</span>
+                      <span className="vf-search-suggestion-title">
+                        {p.title}
+                      </span>
                       {p.category && (
-                        <span className="vf-search-suggestion-meta">{p.category}</span>
+                        <span className="vf-search-suggestion-meta">
+                          {p.category}
+                        </span>
                       )}
                     </li>
                   ))}
@@ -1189,24 +1430,46 @@ function AppShell() {
             </form>
 
             <div className="vf-card-body">
-              {prayersResults.length === 0 && (
-                <p>
-                  Begin typing above to see suggestions. Submit the search to see the closest
-                  matches from the Via Fidei prayer library in your chosen language.
-                </p>
+              {loadingPrayers && activePrayers.length === 0 && (
+                <p>Loading prayers…</p>
               )}
-              {prayersResults.length > 0 && (
-                <div className="vf-stack">
-                  {prayersResults.map((p) => (
-                    <article key={p.id} className="vf-prayer-item">
-                      <h3 className="vf-prayer-title">{p.title}</h3>
-                      {p.category && (
-                        <p className="vf-prayer-category">{p.category}</p>
-                      )}
-                      <p className="vf-prayer-body">{p.content}</p>
-                    </article>
-                  ))}
-                </div>
+
+              {!loadingPrayers && activePrayers.length === 0 && (
+                <p>No prayers are available yet in this language.</p>
+              )}
+
+              {pagedPrayers.length > 0 && (
+                <>
+                  {showingSearchResults && (
+                    <p className="vf-search-results-label">
+                      Showing {pagedPrayers.length} of{" "}
+                      {activePrayers.length} matching prayers
+                    </p>
+                  )}
+                  <div className="vf-stack">
+                    {pagedPrayers.map((p) => (
+                      <article
+                        key={p.id}
+                        className="vf-prayer-item"
+                      >
+                        <h3 className="vf-prayer-title">{p.title}</h3>
+                        {p.category && (
+                          <p className="vf-prayer-category">
+                            {p.category}
+                          </p>
+                        )}
+                        <p className="vf-prayer-body">{p.content}</p>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {renderPagination(
+                safePage,
+                totalPages,
+                setPrayersPage,
+                "prayers"
               )}
             </div>
           </article>
@@ -1216,6 +1479,21 @@ function AppShell() {
   }
 
   function renderSaints() {
+    const activeSaints =
+      saintsResults.length > 0 ? saintsResults : saintsList;
+
+    const totalPages = Math.max(
+      1,
+      Math.ceil(activeSaints.length / PAGE_SIZE)
+    );
+    const safePage = Math.min(saintsPage, totalPages);
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    const pagedSaints = activeSaints.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+    const showingSearchResults = saintsResults.length > 0;
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1223,7 +1501,8 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Saints</h2>
               <p className="vf-card-subtitle">
-                Lives of the saints with print friendly About pages, patronages, and prayers.
+                Lives of the saints with print friendly About pages,
+                patronages, and prayers.
               </p>
             </header>
 
@@ -1261,50 +1540,75 @@ function AppShell() {
             </form>
 
             <div className="vf-card-body">
-              {saintsResults.length === 0 && (
-                <p>
-                  Search above to discover saints. Selecting an entry will show a short
-                  biography and essential details.
-                </p>
+              {loadingSaints && activeSaints.length === 0 && (
+                <p>Loading saints…</p>
               )}
 
-              {saintsResults.length > 0 && (
-                <section className="vf-stack">
-                  {saintsResults.map((s) => (
-                    <article key={s.id} className="vf-saint-item vf-saint-detail">
-                      <div className="vf-saint-header">
-                        {s.imageUrl && (
-                          <div className="vf-saint-avatar-wrap">
-                            <img
-                              src={s.imageUrl}
-                              alt={s.name}
-                              className="vf-saint-avatar"
-                            />
+              {!loadingSaints && activeSaints.length === 0 && (
+                <p>No saints are available yet in this language.</p>
+              )}
+
+              {pagedSaints.length > 0 && (
+                <>
+                  {showingSearchResults && (
+                    <p className="vf-search-results-label">
+                      Showing {pagedSaints.length} of{" "}
+                      {activeSaints.length} matching saints
+                    </p>
+                  )}
+                  <section className="vf-stack">
+                    {pagedSaints.map((s) => (
+                      <article
+                        key={s.id}
+                        className="vf-saint-item vf-saint-detail"
+                      >
+                        <div className="vf-saint-header">
+                          {s.imageUrl && (
+                            <div className="vf-saint-avatar-wrap">
+                              <img
+                                src={s.imageUrl}
+                                alt={s.name}
+                                className="vf-saint-avatar"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="vf-saint-name">
+                              {s.name}
+                            </h4>
+                            {s.feastDay && (
+                              <p className="vf-saint-meta">
+                                Feast day:{" "}
+                                {new Date(
+                                  s.feastDay
+                                ).toLocaleDateString()}
+                              </p>
+                            )}
+                            {Array.isArray(s.patronages) &&
+                              s.patronages.length > 0 && (
+                                <p className="vf-saint-meta">
+                                  Patronage:{" "}
+                                  {s.patronages.join(", ")}
+                                </p>
+                              )}
                           </div>
-                        )}
-                        <div>
-                          <h4 className="vf-saint-name">{s.name}</h4>
-                          {s.feastDay && (
-                            <p className="vf-saint-meta">
-                              Feast day:{" "}
-                              {new Date(s.feastDay).toLocaleDateString()}
-                            </p>
-                          )}
-                          {Array.isArray(s.patronages) && s.patronages.length > 0 && (
-                            <p className="vf-saint-meta">
-                              Patronage: {s.patronages.join(", ")}
-                            </p>
-                          )}
                         </div>
-                      </div>
-                      {s.biography && (
-                        <p className="vf-saint-bio">
-                          {s.biography}
-                        </p>
-                      )}
-                    </article>
-                  ))}
-                </section>
+                        {s.biography && (
+                          <p className="vf-saint-bio">
+                            {s.biography}
+                          </p>
+                        )}
+                      </article>
+                    ))}
+                  </section>
+                </>
+              )}
+
+              {renderPagination(
+                safePage,
+                totalPages,
+                setSaintsPage,
+                "saints"
               )}
             </div>
           </article>
@@ -1314,6 +1618,21 @@ function AppShell() {
   }
 
   function renderOurLady() {
+    const activeApparitions =
+      ourLadyResults.length > 0 ? ourLadyResults : apparitionsList;
+
+    const totalPages = Math.max(
+      1,
+      Math.ceil(activeApparitions.length / PAGE_SIZE)
+    );
+    const safePage = Math.min(ourLadyPage, totalPages);
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    const pagedApparitions = activeApparitions.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+    const showingSearchResults = ourLadyResults.length > 0;
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1321,7 +1640,8 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Our Lady</h2>
               <p className="vf-card-subtitle">
-                Approved Marian apparitions and titles of Mary, Mother of the Church.
+                Approved Marian apparitions and titles of Mary, Mother of
+                the Church.
               </p>
             </header>
 
@@ -1330,19 +1650,22 @@ function AppShell() {
                 Mary, Mother of God and Mother of the Church
               </h3>
               <p>
-                Mary is the Mother of God, the Mother of the Church, and the perfect model of
-                discipleship. She leads the faithful to her Son with a heart that is humble,
-                obedient, and filled with faith.
+                Mary is the Mother of God, the Mother of the Church, and
+                the perfect model of discipleship. She leads the faithful
+                to her Son with a heart that is humble, obedient, and
+                filled with faith.
               </p>
               <p>
-                In the mystery of the Holy Family, Mary and Saint Joseph cared for Jesus with
-                reverence and trust in the will of God. Joseph, her chaste spouse, guarded and
-                protected the child Jesus and serves as a quiet example of fidelity and hidden
-                holiness.
+                In the mystery of the Holy Family, Mary and Saint Joseph
+                cared for Jesus with reverence and trust in the will of
+                God. Joseph, her chaste spouse, guarded and protected the
+                child Jesus and serves as a quiet example of fidelity and
+                hidden holiness.
               </p>
               <p>
-                Through approved apparitions, Our Lady continues to call the faithful to
-                conversion, prayer, and deeper love for Christ and his Church.
+                Through approved apparitions, Our Lady continues to call
+                the faithful to conversion, prayer, and deeper love for
+                Christ and his Church.
               </p>
             </section>
 
@@ -1380,43 +1703,75 @@ function AppShell() {
             </form>
 
             <div className="vf-card-body">
-              {ourLadyResults.length === 0 && (
-                <p>
-                  Search above to discover approved apparitions and Marian titles with their
-                  stories, locations, and official prayers.
-                </p>
+              {loadingApparitions && activeApparitions.length === 0 && (
+                <p>Loading Marian titles and apparitions…</p>
               )}
 
-              {ourLadyResults.length > 0 && (
-                <section className="vf-stack vf-stack-apparitions">
-                  {ourLadyResults.map((a) => (
-                    <article key={a.id} className="vf-saint-item vf-saint-detail">
-                      <div className="vf-saint-header">
-                        {a.imageUrl && (
-                          <div className="vf-saint-avatar-wrap">
-                            <img
-                              src={a.imageUrl}
-                              alt={a.title}
-                              className="vf-saint-avatar"
-                            />
+              {!loadingApparitions &&
+                activeApparitions.length === 0 && (
+                  <p>
+                    No Marian titles or apparitions are available yet in
+                    this language.
+                  </p>
+                )}
+
+              {pagedApparitions.length > 0 && (
+                <>
+                  {showingSearchResults && (
+                    <p className="vf-search-results-label">
+                      Showing {pagedApparitions.length} of{" "}
+                      {activeApparitions.length} matching entries
+                    </p>
+                  )}
+                  <section className="vf-stack vf-stack-apparitions">
+                    {pagedApparitions.map((a) => (
+                      <article
+                        key={a.id}
+                        className="vf-saint-item vf-saint-detail"
+                      >
+                        <div className="vf-saint-header">
+                          {a.imageUrl && (
+                            <div className="vf-saint-avatar-wrap">
+                              <img
+                                src={a.imageUrl}
+                                alt={a.title}
+                                className="vf-saint-avatar"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <h4 className="vf-saint-name">
+                              {a.title}
+                            </h4>
+                            {a.location && (
+                              <p className="vf-saint-meta">
+                                Location: {a.location}
+                              </p>
+                            )}
+                            {a.feastDay && (
+                              <p className="vf-saint-meta">
+                                Feast:{" "}
+                                {new Date(
+                                  a.feastDay
+                                ).toLocaleDateString()}
+                              </p>
+                            )}
                           </div>
-                        )}
-                        <div>
-                          <h4 className="vf-saint-name">{a.title}</h4>
-                          {a.location && (
-                            <p className="vf-saint-meta">Location: {a.location}</p>
-                          )}
-                          {a.feastDay && (
-                            <p className="vf-saint-meta">
-                              Feast: {new Date(a.feastDay).toLocaleDateString()}
-                            </p>
-                          )}
                         </div>
-                      </div>
-                      {a.story && <p className="vf-saint-bio">{a.story}</p>}
-                    </article>
-                  ))}
-                </section>
+                        {a.story && (
+                          <p className="vf-saint-bio">{a.story}</p>
+                        )}
+                      </article>
+                    ))}
+                  </section>
+                </>
+              )}
+
+              {renderPagination(
+                safePage,
+                totalPages,
+                setOurLadyPage,
+                "ourlady"
               )}
             </div>
           </article>
@@ -1426,6 +1781,17 @@ function AppShell() {
   }
 
   function renderSacraments() {
+    const totalPages = Math.max(
+      1,
+      Math.ceil(sacramentItems.length / PAGE_SIZE)
+    );
+    const safePage = Math.min(sacramentsPage, totalPages);
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    const pagedSacraments = sacramentItems.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1433,8 +1799,8 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Sacraments</h2>
               <p className="vf-card-subtitle">
-                Meaning, biblical foundation, preparation, what to expect, and common questions
-                for each of the seven sacraments.
+                Meaning, biblical foundation, preparation, what to expect,
+                and common questions for each of the seven sacraments.
               </p>
             </header>
 
@@ -1445,27 +1811,40 @@ function AppShell() {
 
               {!loadingSacraments && sacramentItems.length === 0 && (
                 <p>
-                  Sacrament details will appear here as soon as content is available for this
-                  language.
+                  No sacrament details are available yet in this language.
                 </p>
               )}
 
-              {sacramentItems.length > 0 && (
+              {pagedSacraments.length > 0 && (
                 <div className="vf-stack">
-                  {sacramentItems.map((s) => (
-                    <section key={s.id} className="vf-sacrament-item">
+                  {pagedSacraments.map((s) => (
+                    <section
+                      key={s.id}
+                      className="vf-sacrament-item"
+                    >
                       <h3 className="vf-section-subtitle">{s.name}</h3>
                       {s.meaning && (
-                        <p className="vf-sacrament-meaning">{s.meaning}</p>
+                        <p className="vf-sacrament-meaning">
+                          {s.meaning}
+                        </p>
                       )}
 
-                      {renderSacramentBiblicalFoundation(s.biblicalFoundation)}
+                      {renderSacramentBiblicalFoundation(
+                        s.biblicalFoundation
+                      )}
                       {renderSacramentPreparation(s.preparation)}
                       {renderSacramentWhatToExpect(s.whatToExpect)}
                       {renderSacramentQuestions(s.commonQuestions)}
                     </section>
                   ))}
                 </div>
+              )}
+
+              {renderPagination(
+                safePage,
+                totalPages,
+                setSacramentsPage,
+                "sacraments"
               )}
             </div>
           </article>
@@ -1475,6 +1854,17 @@ function AppShell() {
   }
 
   function renderGuides() {
+    const totalPages = Math.max(
+      1,
+      Math.ceil(guideItems.length / PAGE_SIZE)
+    );
+    const safePage = Math.min(guidesPage, totalPages);
+    const startIndex = (safePage - 1) * PAGE_SIZE;
+    const pagedGuides = guideItems.slice(
+      startIndex,
+      startIndex + PAGE_SIZE
+    );
+
     return (
       <main className="vf-main">
         <section className="vf-section">
@@ -1482,33 +1872,47 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Guides</h2>
               <p className="vf-card-subtitle">
-                Step by step guides for OCIA, Confession, Rosary, Adoration, consecrations,
-                and vocations.
+                Step by step guides for OCIA, Confession, Rosary,
+                Adoration, consecrations, and vocations.
               </p>
             </header>
 
             <div className="vf-card-body">
-              {loadingGuides && guideItems.length === 0 && <p>Loading guides…</p>}
-
-              {!loadingGuides && guideItems.length === 0 && (
-                <p>
-                  Guides will appear here as soon as content is available for this language.
-                </p>
+              {loadingGuides && guideItems.length === 0 && (
+                <p>Loading guides…</p>
               )}
 
-              {guideItems.length > 0 && (
+              {!loadingGuides && guideItems.length === 0 && (
+                <p>No guides are available yet in this language.</p>
+              )}
+
+              {pagedGuides.length > 0 && (
                 <div className="vf-stack">
-                  {guideItems.map((g) => (
-                    <section key={g.id} className="vf-guide-item">
-                      <h3 className="vf-section-subtitle">{g.title}</h3>
+                  {pagedGuides.map((g) => (
+                    <section
+                      key={g.id}
+                      className="vf-guide-item"
+                    >
+                      <h3 className="vf-section-subtitle">
+                        {g.title}
+                      </h3>
                       {g.summary && (
-                        <p className="vf-guide-summary">{g.summary}</p>
+                        <p className="vf-guide-summary">
+                          {g.summary}
+                        </p>
                       )}
                       {renderGuideBodyContent(g.body)}
                       {renderGuideChecklist(g.checklistTemplate)}
                     </section>
                   ))}
                 </div>
+              )}
+
+              {renderPagination(
+                safePage,
+                totalPages,
+                setGuidesPage,
+                "guides"
               )}
             </div>
           </article>
@@ -1572,9 +1976,10 @@ function AppShell() {
             </header>
             <div className="vf-card-body">
               <p>
-                Your profile gathers My Prayers, Journal, Goals, and Milestones, along with
-                settings for theme, language, and privacy, so that everything supporting your
-                spiritual life stays in one place.
+                Your profile gathers My Prayers, Journal, Goals, and
+                Milestones, along with settings for theme, language, and
+                privacy, so that everything supporting your spiritual life
+                stays in one place.
               </p>
             </div>
           </article>
@@ -1593,9 +1998,9 @@ function AppShell() {
             </header>
             <div className="vf-card-body">
               <p>
-                The authentication forms for Create Account, Login, and Reset Password integrate
-                with the Via Fidei account system so that interactive features remain personal
-                and private.
+                The authentication forms for Create Account, Login, and
+                Reset Password integrate with the Via Fidei account system
+                so that interactive features remain personal and private.
               </p>
             </div>
           </article>
@@ -1618,17 +2023,40 @@ function AppShell() {
   }
 
   // Admin helpers
-  function handleAdminLoginSubmit(e) {
+  async function handleAdminLoginSubmit(e) {
     e.preventDefault();
     const username = adminUsername.trim();
     const password = adminPassword;
 
-    if (username === "Ryan Simonds" && password === "Santidade") {
+    if (!username || !password) {
+      setAdminAuthError("Username and password are required.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setAdminAuthenticated(false);
+        window.sessionStorage.removeItem("vf_admin_authed");
+        setAdminAuthError(
+          data.error || "Invalid admin credentials."
+        );
+        return;
+      }
+
       setAdminAuthenticated(true);
       window.sessionStorage.setItem("vf_admin_authed", "yes");
       setAdminAuthError("");
-    } else {
-      setAdminAuthError("Invalid admin credentials.");
+    } catch (err) {
+      console.error("Admin login failed", err);
+      setAdminAuthError("Admin login failed. Please try again.");
     }
   }
 
@@ -1727,7 +2155,8 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Admin Login</h2>
               <p className="vf-card-subtitle">
-                This area allows updates to the home page, notices, images, and seasonal theme.
+                This area allows updates to the home page, notices,
+                images, and seasonal theme.
               </p>
             </header>
             <div className="vf-card-body">
@@ -1740,7 +2169,9 @@ function AppShell() {
                     id="admin-username"
                     type="text"
                     value={adminUsername}
-                    onChange={(e) => setAdminUsername(e.target.value)}
+                    onChange={(e) =>
+                      setAdminUsername(e.target.value)
+                    }
                     autoComplete="username"
                   />
                 </div>
@@ -1752,7 +2183,9 @@ function AppShell() {
                     id="admin-password"
                     type="password"
                     value={adminPassword}
-                    onChange={(e) => setAdminPassword(e.target.value)}
+                    onChange={(e) =>
+                      setAdminPassword(e.target.value)
+                    }
                     autoComplete="current-password"
                   />
                 </div>
@@ -1791,14 +2224,18 @@ function AppShell() {
             <header className="vf-card-header">
               <h2 className="vf-card-title">Admin Home</h2>
               <p className="vf-card-subtitle">
-                Edit the mission, About section, seasonal theme, notices, and home page photos.
+                Edit the mission, About section, seasonal theme, notices,
+                and home page photos.
               </p>
             </header>
             <div className="vf-card-body vf-admin-grid">
               <section className="vf-admin-panel">
                 <h3 className="vf-section-subtitle">Mission statement</h3>
                 <div className="vf-form-row">
-                  <label className="vf-field-label" htmlFor="admin-mission-heading">
+                  <label
+                    className="vf-field-label"
+                    htmlFor="admin-mission-heading"
+                  >
                     Heading
                   </label>
                   <input
@@ -1814,7 +2251,10 @@ function AppShell() {
                   />
                 </div>
                 <div className="vf-form-row">
-                  <label className="vf-field-label" htmlFor="admin-mission-subheading">
+                  <label
+                    className="vf-field-label"
+                    htmlFor="admin-mission-subheading"
+                  >
                     Subheading
                   </label>
                   <input
@@ -1830,13 +2270,20 @@ function AppShell() {
                   />
                 </div>
                 <div className="vf-form-row">
-                  <label className="vf-field-label" htmlFor="admin-mission-body">
+                  <label
+                    className="vf-field-label"
+                    htmlFor="admin-mission-body"
+                  >
                     Body paragraphs
                   </label>
                   <textarea
                     id="admin-mission-body"
                     rows={6}
-                    value={Array.isArray(mission.body) ? mission.body.join("\n\n") : ""}
+                    value={
+                      Array.isArray(mission.body)
+                        ? mission.body.join("\n\n")
+                        : ""
+                    }
                     onChange={(e) =>
                       setAdminMissionDraft({
                         ...mission,
@@ -1845,8 +2292,8 @@ function AppShell() {
                     }
                   />
                   <p className="vf-field-help">
-                    Separate paragraphs with a blank line. This is exactly what visitors see
-                    at the top of the home page.
+                    Separate paragraphs with a blank line. This is exactly
+                    what visitors see at the top of the home page.
                   </p>
                 </div>
               </section>
@@ -1854,7 +2301,10 @@ function AppShell() {
               <section className="vf-admin-panel">
                 <h3 className="vf-section-subtitle">About Via Fidei</h3>
                 <div className="vf-form-row">
-                  <label className="vf-field-label" htmlFor="admin-about-body">
+                  <label
+                    className="vf-field-label"
+                    htmlFor="admin-about-body"
+                  >
                     About paragraphs
                   </label>
                   <textarea
@@ -1873,8 +2323,8 @@ function AppShell() {
                     }
                   />
                   <p className="vf-field-help">
-                    Separate paragraphs with a blank line. The content appears in the About
-                    card on the home page.
+                    Separate paragraphs with a blank line. The content
+                    appears in the About card on the home page.
                   </p>
                 </div>
                 <div className="vf-form-actions">
@@ -1895,7 +2345,8 @@ function AppShell() {
             <header className="vf-card-header">
               <h3 className="vf-card-title">Seasonal banner theme</h3>
               <p className="vf-card-subtitle">
-                Choose which liturgical theme appears in the top banner across the site.
+                Choose which liturgical theme appears in the top banner
+                across the site.
               </p>
             </header>
             <div className="vf-card-body vf-admin-theme">
@@ -1904,18 +2355,22 @@ function AppShell() {
                   type="button"
                   className={
                     "vf-btn" +
-                    (seasonTheme === "normal" ? " vf-btn-blue" : " vf-btn-outline")
+                    (seasonTheme === "normal"
+                      ? " vf-btn-blue"
+                      : " vf-btn-outline")
                   }
                   onClick={() => handleAdminSeasonThemeChange("normal")}
                   disabled={adminSavingTheme}
                 >
-                  Normal time
+                  Normal
                 </button>
                 <button
                   type="button"
                   className={
                     "vf-btn" +
-                    (seasonTheme === "advent" ? " vf-btn-blue" : " vf-btn-outline")
+                    (seasonTheme === "advent"
+                      ? " vf-btn-blue"
+                      : " vf-btn-outline")
                   }
                   onClick={() => handleAdminSeasonThemeChange("advent")}
                   disabled={adminSavingTheme}
@@ -1926,7 +2381,9 @@ function AppShell() {
                   type="button"
                   className={
                     "vf-btn" +
-                    (seasonTheme === "easter" ? " vf-btn-blue" : " vf-btn-outline")
+                    (seasonTheme === "easter"
+                      ? " vf-btn-blue"
+                      : " vf-btn-outline")
                   }
                   onClick={() => handleAdminSeasonThemeChange("easter")}
                   disabled={adminSavingTheme}
@@ -1935,8 +2392,10 @@ function AppShell() {
                 </button>
               </div>
               <p className="vf-field-help">
-                Normal shows a wooden cross, Advent shows the Holy Family, and Easter shows a
-                beautiful crucifix in the site banner.
+                Normal shows a wooden cross with a tan and gray banner,
+                Advent shows the Holy Family with a gray and red banner,
+                and Easter shows a crucifix with blue, gray, and gold
+                accents.
               </p>
             </div>
           </article>
@@ -1945,32 +2404,45 @@ function AppShell() {
             <header className="vf-card-header">
               <h3 className="vf-card-title">Homepage notices</h3>
               <p className="vf-card-subtitle">
-                Notices appear at the very top of the home page, under the banner and above
-                the mission.
+                Notices appear at the very top of the home page, under the
+                banner and above the mission.
               </p>
             </header>
             <div className="vf-card-body vf-admin-notices">
-              <form className="vf-form vf-notice-form" onSubmit={handleAdminAddNotice}>
+              <form
+                className="vf-form vf-notice-form"
+                onSubmit={handleAdminAddNotice}
+              >
                 <div className="vf-form-row">
-                  <label className="vf-field-label" htmlFor="notice-title">
+                  <label
+                    className="vf-field-label"
+                    htmlFor="notice-title"
+                  >
                     New notice title
                   </label>
                   <input
                     id="notice-title"
                     type="text"
                     value={newNoticeTitle}
-                    onChange={(e) => setNewNoticeTitle(e.target.value)}
+                    onChange={(e) =>
+                      setNewNoticeTitle(e.target.value)
+                    }
                   />
                 </div>
                 <div className="vf-form-row">
-                  <label className="vf-field-label" htmlFor="notice-body">
+                  <label
+                    className="vf-field-label"
+                    htmlFor="notice-body"
+                  >
                     New notice text
                   </label>
                   <textarea
                     id="notice-body"
                     rows={3}
                     value={newNoticeBody}
-                    onChange={(e) => setNewNoticeBody(e.target.value)}
+                    onChange={(e) =>
+                      setNewNoticeBody(e.target.value)
+                    }
                   />
                 </div>
                 <div className="vf-form-actions">
@@ -1983,7 +2455,10 @@ function AppShell() {
               {notices.length > 0 && (
                 <div className="vf-stack vf-admin-notices-list">
                   {notices.map((n) => (
-                    <article key={n.id} className="vf-notice-card">
+                    <article
+                      key={n.id}
+                      className="vf-notice-card"
+                    >
                       <h4 className="vf-notice-title">{n.title}</h4>
                       <p className="vf-notice-body">{n.body}</p>
                     </article>
@@ -1997,12 +2472,16 @@ function AppShell() {
             <header className="vf-card-header">
               <h3 className="vf-card-title">Home page photos</h3>
               <p className="vf-card-subtitle">
-                Add one to six photos that appear as a collage at the bottom of the home page.
+                Add one to six photos that appear as a collage at the
+                bottom of the home page.
               </p>
             </header>
             <div className="vf-card-body">
               <div className="vf-form-row">
-                <label className="vf-field-label" htmlFor="collage-upload">
+                <label
+                  className="vf-field-label"
+                  htmlFor="collage-upload"
+                >
                   Add photos
                 </label>
                 <input
@@ -2014,8 +2493,9 @@ function AppShell() {
                   onChange={handleAdminCollageUpload}
                 />
                 <p className="vf-field-help">
-                  You can choose Take Photo, Photo Library, or Files from your device. Up to
-                  six images will appear in a collage with no background frame.
+                  You can choose Take Photo, Photo Library, or Files from
+                  your device. Up to six images will appear in a collage
+                  with no background frame.
                 </p>
                 {collageUploading && <p>Uploading photos…</p>}
               </div>
@@ -2024,8 +2504,14 @@ function AppShell() {
                 <div className="vf-collage-preview">
                   <div className="vf-collage-grid">
                     {collagePhotos.slice(0, 6).map((photo) => (
-                      <figure key={photo.id || photo.url} className="vf-collage-item">
-                        <img src={photo.url} alt={photo.alt || "Via Fidei photo"} />
+                      <figure
+                        key={photo.id || photo.url}
+                        className="vf-collage-item"
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.alt || "Via Fidei photo"}
+                        />
                       </figure>
                     ))}
                   </div>
@@ -2044,7 +2530,9 @@ function AppShell() {
       {isAdminRoute ? renderAdmin() : renderCurrentTab()}
       <footer className="vf-footer">
         <div className="vf-footer-inner">
-          <span>© {new Date().getFullYear()} Via Fidei. All rights reserved.</span>
+          <span>
+            © {new Date().getFullYear()} Via Fidei. All rights reserved.
+          </span>
         </div>
       </footer>
     </div>
