@@ -158,8 +158,8 @@ function publicNotice(n) {
     title: n.title,
     body: n.body,
     displayOrder: n.displayOrder,
-    startsAt: n.startsAt,
-    endsAt: n.endsAt
+    startsAt: n.startsAt || null,
+    endsAt: n.endsAt || null
   };
 }
 
