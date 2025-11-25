@@ -45,13 +45,13 @@ function publicSection(h) {
     language: h.language,
     slug: h.slug,
     title: h.title,
-    summary: h.summary,
+    summary: h.summary || null,
     body: h.body,
-    timeline: h.timeline,
-    tags: h.tags,
-    source: h.source,
-    sourceUrl: h.sourceUrl,
-    sourceAttribution: h.sourceAttribution,
+    timeline: Array.isArray(h.timeline) ? h.timeline : [],
+    tags: Array.isArray(h.tags) ? h.tags : [],
+    source: h.source || null,
+    sourceUrl: h.sourceUrl || null,
+    sourceAttribution: h.sourceAttribution || null,
     updatedAt: h.updatedAt
   };
 }
@@ -92,6 +92,13 @@ const HISTORY_SECTIONS_CONFIG = [
   }
 ];
 
+// Canonical ordering helper
+function canonicalHistoryIndex(slug) {
+  if (!slug) return 999;
+  const idx = HISTORY_SECTIONS_CONFIG.findIndex((s) => s.slug === slug);
+  return idx === -1 ? 999 : idx;
+}
+
 // Map our supported languages to Wikipedia language codes
 const WIKIPEDIA_LANG_MAP = {
   en: "en",
@@ -117,7 +124,7 @@ async function fetchWikipediaSummary(langCode, title) {
   try {
     const res = await fetch(url, {
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "User-Agent": "ViaFidei/1.0 (server history preload)"
       }
     });
@@ -174,7 +181,7 @@ async function fetchExternalHistorySections(language) {
           summary.title || config.wikiTitle
         )}`,
       sourceAttribution: "Content summary based on Wikipedia",
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date()
     };
 
     sections.push(section);
@@ -185,20 +192,43 @@ async function fetchExternalHistorySections(language) {
   return sections;
 }
 
-// Try to load sections from PostgreSQL first
-// If no active sections exist for this language, fall back to public data
+// Load and merge history sections from PostgreSQL and public data
+// Database entries win, then we keep canonical order
 async function loadHistorySections(prisma, language) {
-  const sections = await prisma.historySection.findMany({
-    where: { language, isActive: true },
-    orderBy: { slug: "asc" }
-  });
+  const [dbSections, externalSections] = await Promise.all([
+    prisma.historySection.findMany({
+      where: { language, isActive: true }
+    }),
+    fetchExternalHistorySections(language)
+  ]);
 
-  if (sections && sections.length > 0) {
-    return sections;
+  const allRaw = [...dbSections, ...externalSections];
+  const seen = new Set();
+  const merged = [];
+
+  for (const h of allRaw) {
+    if (!h) continue;
+    const slug = h.slug || null;
+    const key = slug || h.id;
+    if (!key) continue;
+    const composite = `${language}:${key}`;
+    if (seen.has(composite)) continue;
+    seen.add(composite);
+    merged.push(h);
   }
 
-  const external = await fetchExternalHistorySections(language);
-  return external;
+  merged.sort((a, b) => {
+    const ai = canonicalHistoryIndex(a.slug);
+    const bi = canonicalHistoryIndex(b.slug);
+    if (ai === bi) {
+      const at = (a.title || "").toString();
+      const bt = (b.title || "").toString();
+      return at.localeCompare(bt);
+    }
+    return ai - bi;
+  });
+
+  return merged;
 }
 
 // List all history sections for the chosen language in canonical order
@@ -248,11 +278,11 @@ router.get("/:idOrSlug", async (req, res) => {
       return res.json({ section: publicSection(section) });
     }
 
-    // If not found in DB, check external cache or fetch from public data
-    const externalSections = await loadHistorySections(prisma, language);
+    // If not found or not active in DB, check merged set for this language
+    const mergedSections = await loadHistorySections(prisma, language);
     const extMatch =
-      externalSections.find((s) => s.id === idOrSlug) ||
-      externalSections.find((s) => s.slug === idOrSlug);
+      mergedSections.find((s) => s.id === idOrSlug) ||
+      mergedSections.find((s) => s.slug === idOrSlug);
 
     if (!extMatch) {
       return res.status(404).json({ error: "History section not found" });
