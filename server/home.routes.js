@@ -3,7 +3,6 @@
 // Mission statement, About Via Fidei, Notices, optional photo collage
 
 const express = require("express");
-const { SiteContentKey } = require("@prisma/client");
 
 const router = express.Router();
 
@@ -40,12 +39,12 @@ function resolveLanguage(req) {
 }
 
 // Helper to load a SiteContent block with language and English fallback
-async function loadSiteBlock(prisma, preferredLanguage, keyEnum) {
+async function loadSiteBlock(prisma, preferredLanguage, keyName) {
   // Try preferred language first
   const primary = await prisma.siteContent.findFirst({
     where: {
       language: preferredLanguage,
-      key: keyEnum
+      key: keyName
     }
   });
 
@@ -56,7 +55,7 @@ async function loadSiteBlock(prisma, preferredLanguage, keyEnum) {
     const fallback = await prisma.siteContent.findFirst({
       where: {
         language: "en",
-        key: keyEnum
+        key: keyName
       }
     });
     if (fallback) return fallback;
@@ -71,9 +70,9 @@ router.get("/api/home", async (req, res) => {
 
   try {
     const [mission, about, collage, notices] = await Promise.all([
-      loadSiteBlock(prisma, language, SiteContentKey.MISSION),
-      loadSiteBlock(prisma, language, SiteContentKey.ABOUT),
-      loadSiteBlock(prisma, language, SiteContentKey.PHOTO_COLLAGE),
+      loadSiteBlock(prisma, language, "MISSION"),
+      loadSiteBlock(prisma, language, "ABOUT"),
+      loadSiteBlock(prisma, language, "PHOTO_COLLAGE"),
       prisma.notice.findMany({
         where: {
           language,
@@ -83,7 +82,7 @@ router.get("/api/home", async (req, res) => {
           displayOrder: "asc"
         }
       })
-    ]);
+    });
 
     // If there are no notices for the requested language, fall back to English
     let resolvedNotices = notices;
