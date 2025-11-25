@@ -119,6 +119,32 @@ html[data-theme="dark"] .vf-banner-mark {
   background: linear-gradient(90deg, #161620 0, #27202a 40%, #161620 100%);
 }
 
+/* Seasonal variants */
+
+.vf-header-banner-normal .vf-banner-mark {
+  background: linear-gradient(90deg, #ffffff 0, #f7f3e9 45%, #ffffff 100%);
+}
+
+html[data-theme="dark"] .vf-header-banner-normal .vf-banner-mark {
+  background: linear-gradient(90deg, #161620 0, #27202a 40%, #161620 100%);
+}
+
+.vf-header-banner-advent .vf-banner-mark {
+  background: linear-gradient(90deg, #f9f5ff 0, #fbe3e3 40%, #ffffff 100%);
+}
+
+html[data-theme="dark"] .vf-header-banner-advent .vf-banner-mark {
+  background: linear-gradient(90deg, #211827 0, #30161c 40%, #181824 100%);
+}
+
+.vf-header-banner-easter .vf-banner-mark {
+  background: linear-gradient(90deg, #e9f1ff 0, #f9f3dd 35%, #ffffff 100%);
+}
+
+html[data-theme="dark"] .vf-header-banner-easter .vf-banner-mark {
+  background: linear-gradient(90deg, #142033 0, #2a2630 35%, #181824 100%);
+}
+
 /* Soft inner glow and moving highlight */
 
 .vf-banner-mark::before {
@@ -179,6 +205,8 @@ html[data-theme="dark"] .vf-banner-mark::after {
   gap: 10px;
 }
 
+/* Normal season cross */
+
 .vf-logo-cross {
   width: 20px;
   height: 20px;
@@ -212,6 +240,79 @@ html[data-theme="dark"] .vf-logo-cross {
 html[data-theme="dark"] .vf-logo-cross::before,
 html[data-theme="dark"] .vf-logo-cross::after {
   background: #fdf6e5;
+}
+
+/* Advent: Holy Family icon */
+
+.vf-logo-holy-family {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 20% 15%, #ffffff, #fbe3e3 50%, #c62828 100%);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+
+html[data-theme="dark"] .vf-logo-holy-family {
+  background: radial-gradient(circle at 20% 15%, #ffffff, #8b2733 45%, #3b1017 100%);
+}
+
+.vf-logo-holy-family::before,
+.vf-logo-holy-family::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+}
+
+/* Mary and Joseph silhouettes */
+
+.vf-logo-holy-family::before {
+  left: 4px;
+  top: 5px;
+  width: 8px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 6px 0 0 rgba(255, 255, 255, 0.8);
+}
+
+.vf-logo-holy-family::after {
+  left: 7px;
+  top: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+}
+
+/* Easter: crucifix icon */
+
+.vf-logo-crucifix {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  background: radial-gradient(circle at 20% 15%, #ffffff, #e9f1ff 40%, #b28a30 100%);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+  position: relative;
+}
+
+html[data-theme="dark"] .vf-logo-crucifix {
+  background: radial-gradient(circle at 20% 15%, #ffffff, #3a5478 40%, #b28a30 100%);
+}
+
+.vf-logo-crucifix::before,
+.vf-logo-crucifix::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 999px;
+}
+
+.vf-logo-crucifix::before {
+  inset: 4px 9px;
+}
+
+.vf-logo-crucifix::after {
+  inset: 8px 4px;
 }
 
 .vf-site-title {
@@ -288,6 +389,23 @@ html[data-theme="dark"] .vf-nav-tab-active {
   gap: 10px;
 }
 
+/* Admin pill */
+
+.vf-admin-pill {
+  border-radius: 999px;
+  border: 1px solid var(--vf-border-subtle);
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vf-accent-gray);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+html[data-theme="dark"] .vf-admin-pill {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 /* Language select, used from Settings menu */
 
 .vf-lang-select {
@@ -311,7 +429,7 @@ html[data-theme="dark"] .vf-nav-tab-active {
   position: relative;
 }
 
-/* Account button on the right, rectangular with subtle presence */
+/* Account button on the right */
 
 .vf-account-button {
   border-radius: 999px;
@@ -586,6 +704,16 @@ html[data-theme="dark"] .vf-card-hero {
   filter: brightness(1.05);
 }
 
+.vf-btn-outline {
+  background: transparent;
+  color: var(--vf-text-main);
+  border-color: var(--vf-border-subtle);
+}
+
+.vf-btn-outline:hover {
+  background: var(--vf-bg-muted);
+}
+
 /* Search bars */
 
 .vf-search-bar {
@@ -631,6 +759,7 @@ html[data-theme="dark"] .vf-card-hero {
   display: flex;
   justify-content: space-between;
   font-size: 0.86rem;
+  cursor: pointer;
 }
 
 .vf-search-suggestion + .vf-search-suggestion {
@@ -642,6 +771,12 @@ html[data-theme="dark"] .vf-card-hero {
 }
 
 .vf-search-suggestion-meta {
+  color: var(--vf-text-soft);
+}
+
+.vf-search-results-label {
+  margin: 4px 0 8px;
+  font-size: 0.82rem;
   color: var(--vf-text-soft);
 }
 
@@ -697,6 +832,10 @@ html[data-theme="dark"] .vf-card-hero {
   border-radius: 16px;
   border: 1px solid var(--vf-border-subtle);
   background: var(--vf-bg-elevated);
+}
+
+.vf-saint-detail {
+  position: relative;
 }
 
 .vf-saint-header {
@@ -777,10 +916,46 @@ html[data-theme="dark"] .vf-card-hero {
   font-size: 0.9rem;
 }
 
-.vf-sacrament-questions {
-  margin: 6px 0 0;
-  padding-left: 18px;
+.vf-sacrament-list {
+  margin: 4px 0 4px 18px;
+  padding: 0;
+  font-size: 0.9rem;
+}
+
+.vf-sacrament-text {
+  margin: 2px 0 4px;
+}
+
+.vf-sacrament-qa {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px dashed var(--vf-border-subtle);
+}
+
+.vf-sacrament-qa-title {
+  font-size: 0.9rem;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+
+.vf-sacrament-qa-list {
+  margin: 0;
+  padding: 0;
+}
+
+.vf-sacrament-qa-item {
+  margin-bottom: 4px;
+}
+
+.vf-sacrament-qa-item dt {
+  font-weight: 600;
   font-size: 0.88rem;
+}
+
+.vf-sacrament-qa-item dd {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--vf-text-muted);
 }
 
 /* Guides */
@@ -801,6 +976,94 @@ html[data-theme="dark"] .vf-card-hero {
   margin: 0;
   font-size: 0.9rem;
   color: var(--vf-text-muted);
+}
+
+.vf-guide-section {
+  margin-top: 8px;
+}
+
+.vf-guide-section-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+  color: var(--vf-text-main);
+}
+
+.vf-guide-paragraph {
+  margin: 2px 0 4px;
+}
+
+.vf-guide-steps {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 0.9rem;
+}
+
+.vf-guide-step {
+  margin-bottom: 6px;
+}
+
+.vf-guide-step-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vf-guide-step-label {
+  font-weight: 600;
+}
+
+.vf-guide-step-description {
+  color: var(--vf-text-muted);
+}
+
+.vf-guide-step-prayer {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: var(--vf-bg-muted);
+}
+
+.vf-guide-step-prayer-title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+
+.vf-guide-step-prayer-text {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.vf-guide-checklist {
+  margin-top: 10px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--vf-border-subtle);
+}
+
+.vf-guide-checklist-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.vf-guide-checklist ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.88rem;
+}
+
+/* Our Lady intro */
+
+.vf-mary-about {
+  padding: 10px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--vf-border-subtle);
+  background: linear-gradient(145deg, rgba(233, 241, 255, 0.65), rgba(247, 247, 247, 0.9));
+}
+
+html[data-theme="dark"] .vf-mary-about {
+  background: linear-gradient(145deg, rgba(35, 46, 73, 0.6), rgba(19, 19, 24, 0.9));
 }
 
 /* Profile */
@@ -875,6 +1138,185 @@ html[data-theme="dark"] .vf-card-hero {
 .vf-auth-card {
   max-width: 420px;
   margin: 0 auto;
+}
+
+/* Pagination */
+
+.vf-pagination {
+  margin-top: 14px;
+  text-align: center;
+}
+
+.vf-pagination-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.vf-page-item {
+  margin: 0;
+}
+
+.vf-page-button {
+  border-radius: 999px;
+  border: 1px solid var(--vf-border-subtle);
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: var(--vf-bg-elevated);
+  color: var(--vf-text-main);
+}
+
+.vf-page-button:hover {
+  background: var(--vf-bg-muted);
+}
+
+.vf-page-button-active {
+  background: var(--vf-accent-blue);
+  border-color: var(--vf-accent-blue);
+  color: #ffffff;
+}
+
+/* Admin layout */
+
+.vf-admin-main {
+  padding-top: 18px;
+}
+
+.vf-admin-section {
+  max-width: var(--vf-max-width);
+  margin: 0 auto;
+}
+
+.vf-admin-card {
+  border-top: 2px solid rgba(158, 158, 158, 0.25);
+}
+
+.vf-admin-hero {
+  margin-bottom: 6px;
+}
+
+.vf-admin-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .vf-admin-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+}
+
+.vf-admin-panel {
+  border-radius: 16px;
+  border: 1px dashed var(--vf-border-subtle);
+  padding: 10px 12px 12px;
+}
+
+/* Forms */
+
+.vf-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vf-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vf-form-row input,
+.vf-form-row textarea {
+  border-radius: 10px;
+  border: 1px solid var(--vf-border-subtle);
+  padding: 7px 10px;
+  font-size: 0.9rem;
+  background: var(--vf-bg-elevated);
+  color: var(--vf-text-main);
+  resize: vertical;
+}
+
+.vf-form-actions {
+  margin-top: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vf-form-error {
+  margin: 2px 0 0;
+  font-size: 0.82rem;
+  color: var(--vf-accent-red);
+}
+
+.vf-field-help {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  color: var(--vf-text-soft);
+}
+
+/* Admin theme card */
+
+.vf-admin-theme {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vf-theme-toggle-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Admin notices */
+
+.vf-admin-notices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.vf-notice-form {
+  border-radius: 14px;
+  border: 1px dashed var(--vf-border-subtle);
+  padding: 10px 12px 12px;
+}
+
+.vf-admin-notices-list {
+  margin-top: 4px;
+}
+
+/* Collage */
+
+.vf-collage-section {
+  margin-top: 10px;
+}
+
+.vf-collage-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.vf-collage-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.vf-collage-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vf-collage-preview {
+  margin-top: 10px;
 }
 
 /* Footer */
