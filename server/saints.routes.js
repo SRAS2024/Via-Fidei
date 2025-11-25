@@ -703,24 +703,46 @@ router.get("/search/local", async (req, res) => {
       ...externalAppMatches.map((a) => ({ a, origin: "external" }))
     ];
 
-    const scoredSaints = combinedSaints
+    const scoredSaintsRaw = combinedSaints
       .map(({ s, origin }) => ({ s, score: scoreSaint(s, origin) }))
-      .sort((a, b) => b.score - a.score)
-      .map((x) => publicSaint(x.s));
+      .sort((a, b) => b.score - a.score);
 
-    const scoredApps = combinedApps
+    const scoredAppsRaw = combinedApps
       .map(({ a, origin }) => ({ a, score: scoreApparition(a, origin) }))
-      .sort((a, b) => b.score - a.score)
-      .map((x) => publicApparition(x.a));
+      .sort((a, b) => b.score - a.score);
 
-    const merged = [
-      ...scoredSaints.map((s) => ({
+    // Deduplicate saints by slug then id so DB and external copies do not appear twice
+    const saintSeen = new Set();
+    const uniqueSaints = [];
+    for (const { s } of scoredSaintsRaw) {
+      const key = s.slug || s.id || s.name.toLowerCase();
+      if (!key) continue;
+      const k = `${language}:saint:${key}`;
+      if (saintSeen.has(k)) continue;
+      saintSeen.add(k);
+      uniqueSaints.push(publicSaint(s));
+    }
+
+    // Deduplicate apparitions by slug then id
+    const appSeen = new Set();
+    const uniqueApps = [];
+    for (const { a } of scoredAppsRaw) {
+      const key = a.slug || a.id || a.title.toLowerCase();
+      if (!key) continue;
+      const k = `${language}:apparition:${key}`;
+      if (appSeen.has(k)) continue;
+      appSeen.add(k);
+      uniqueApps.push(publicApparition(a));
+    }
+
+    const mergedForSuggestions = [
+      ...uniqueSaints.map((s) => ({
         kind: "saint",
         id: s.id,
         title: s.name,
         slug: s.slug
       })),
-      ...scoredApps.map((a) => ({
+      ...uniqueApps.map((a) => ({
         kind: "apparition",
         id: a.id,
         title: a.title,
@@ -728,14 +750,14 @@ router.get("/search/local", async (req, res) => {
       }))
     ];
 
-    const suggestions = merged.slice(0, 3);
+    const suggestions = mergedForSuggestions.slice(0, 3);
 
     res.json({
       language,
       query: q,
       suggestions,
-      resultsSaints: mode === "full" ? scoredSaints : [],
-      resultsApparitions: mode === "full" ? scoredApps : []
+      resultsSaints: mode === "full" ? uniqueSaints : [],
+      resultsApparitions: mode === "full" ? uniqueApps : []
     });
   } catch (error) {
     console.error("[Via Fidei] Saints search error", error);
