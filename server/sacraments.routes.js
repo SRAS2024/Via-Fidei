@@ -584,25 +584,43 @@ router.get("/", async (req, res) => {
   const language = resolveLanguage(req);
 
   try {
-    const sacraments = await prisma.sacrament.findMany({
-      where: { language, isActive: true },
-      // Keep stable ordering when DB is used, but built in set enforces canonical order
-      orderBy: [{ name: "asc" }]
+    const [dbSacraments, external] = await Promise.all([
+      prisma.sacrament.findMany({
+        where: { language, isActive: true }
+      }),
+      fetchExternalSacraments(language)
     });
 
-    if (sacraments.length > 0) {
-      return res.json({
-        language,
-        items: sacraments.map(publicSacrament)
-      });
+    // Merge db with external or built in sacraments
+    // Database entries win on collisions and we display in canonical order
+    const allRaw = [...dbSacraments, ...external];
+    const seen = new Set();
+    const merged = [];
+
+    for (const s of allRaw) {
+      if (!s) continue;
+      const key = s.slug || s.id || s.name.toLowerCase();
+      if (!key) continue;
+      const k = `${language}:${key}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      merged.push(s);
     }
 
-    // Fallback to external or built in canonical list
-    const external = await fetchExternalSacraments(language);
+    merged.sort((a, b) => {
+      const ai = sacramentOrderIndex(a.slug);
+      const bi = sacramentOrderIndex(b.slug);
+      if (ai === bi) {
+        const an = (a.name || "").toString();
+        const bn = (b.name || "").toString();
+        return an.localeCompare(bn);
+      }
+      return ai - bi;
+    });
 
     return res.json({
       language,
-      items: external.map(publicSacrament)
+      items: merged.map(publicSacrament)
     });
   } catch (error) {
     console.error("[Via Fidei] Sacraments list error", error);
