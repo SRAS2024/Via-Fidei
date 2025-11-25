@@ -3,23 +3,21 @@
 // Mission statement, About Via Fidei, Notices, optional photo collage
 
 const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 
 const router = express.Router();
 
-const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
+// Use a singleton Prisma client here so this route
+// does not depend on req.prisma being attached
+const prisma = new PrismaClient();
 
-function getPrisma(req) {
-  if (!req.prisma) {
-    throw new Error("Prisma client not attached to request");
-  }
-  return req.prisma;
-}
+const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
 
 function resolveLanguage(req) {
   const override =
     req.query.language ||
     req.query.lang ||
-    req.user?.languageOverride ||
+    (req.user && req.user.languageOverride) ||
     process.env.DEFAULT_LANGUAGE ||
     "en";
 
@@ -39,11 +37,13 @@ function resolveLanguage(req) {
 }
 
 // Helper to load a SiteContent block with language and English fallback
-async function loadSiteBlock(prisma, preferredLanguage, keyName) {
+async function loadSiteBlock(preferredLanguage, keyName) {
   // Try preferred language first
   const primary = await prisma.siteContent.findFirst({
     where: {
       language: preferredLanguage,
+      // key is an enum in Prisma, but the underlying values are strings
+      // "MISSION", "ABOUT", "PHOTO_COLLAGE", etc
       key: keyName
     }
   });
@@ -65,14 +65,13 @@ async function loadSiteBlock(prisma, preferredLanguage, keyName) {
 }
 
 router.get("/api/home", async (req, res) => {
-  const prisma = getPrisma(req);
   const language = resolveLanguage(req);
 
   try {
     const [mission, about, collage, notices] = await Promise.all([
-      loadSiteBlock(prisma, language, "MISSION"),
-      loadSiteBlock(prisma, language, "ABOUT"),
-      loadSiteBlock(prisma, language, "PHOTO_COLLAGE"),
+      loadSiteBlock(language, "MISSION"),
+      loadSiteBlock(language, "ABOUT"),
+      loadSiteBlock(language, "PHOTO_COLLAGE"),
       prisma.notice.findMany({
         where: {
           language,
@@ -82,7 +81,7 @@ router.get("/api/home", async (req, res) => {
           displayOrder: "asc"
         }
       })
-    });
+    ]);
 
     // If there are no notices for the requested language, fall back to English
     let resolvedNotices = notices;
@@ -115,9 +114,9 @@ router.get("/api/home", async (req, res) => {
 
     res.json({
       language,
-      mission: mission?.content ?? null,
-      about: about?.content ?? null,
-      collage: collage?.content ?? null,
+      mission: mission ? mission.content : null,
+      about: about ? about.content : null,
+      collage: collage ? collage.content : null,
       notices: resolvedNotices,
       summaryCounts: {
         prayers: prayerCount,
