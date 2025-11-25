@@ -3,6 +3,7 @@
 // Mission statement, About Via Fidei, Notices, optional photo collage
 
 const express = require("express");
+const { SiteContentKey } = require("@prisma/client");
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ function getPrisma(req) {
 function resolveLanguage(req) {
   const override =
     req.query.language ||
+    req.query.lang ||
     req.user?.languageOverride ||
     process.env.DEFAULT_LANGUAGE ||
     "en";
@@ -38,12 +40,12 @@ function resolveLanguage(req) {
 }
 
 // Helper to load a SiteContent block with language and English fallback
-async function loadSiteBlock(prisma, preferredLanguage, key) {
+async function loadSiteBlock(prisma, preferredLanguage, keyEnum) {
   // Try preferred language first
   const primary = await prisma.siteContent.findFirst({
     where: {
       language: preferredLanguage,
-      key
+      key: keyEnum
     }
   });
 
@@ -54,7 +56,7 @@ async function loadSiteBlock(prisma, preferredLanguage, key) {
     const fallback = await prisma.siteContent.findFirst({
       where: {
         language: "en",
-        key
+        key: keyEnum
       }
     });
     if (fallback) return fallback;
@@ -69,9 +71,9 @@ router.get("/api/home", async (req, res) => {
 
   try {
     const [mission, about, collage, notices] = await Promise.all([
-      loadSiteBlock(prisma, language, "MISSION"),
-      loadSiteBlock(prisma, language, "ABOUT"),
-      loadSiteBlock(prisma, language, "PHOTO_COLLAGE"),
+      loadSiteBlock(prisma, language, SiteContentKey.MISSION),
+      loadSiteBlock(prisma, language, SiteContentKey.ABOUT),
+      loadSiteBlock(prisma, language, SiteContentKey.PHOTO_COLLAGE),
       prisma.notice.findMany({
         where: {
           language,
@@ -83,22 +85,41 @@ router.get("/api/home", async (req, res) => {
       })
     ]);
 
+    // If there are no notices for the requested language, fall back to English
+    let resolvedNotices = notices;
+    if (!resolvedNotices || resolvedNotices.length === 0) {
+      resolvedNotices = await prisma.notice.findMany({
+        where: {
+          language: "en",
+          isActive: true
+        },
+        orderBy: {
+          displayOrder: "asc"
+        }
+      });
+    }
+
     // Basic counts for the tabs so the UI is not empty
-    const [prayerCount, saintCount, apparitionCount, sacramentCount, guideCount] =
-      await Promise.all([
-        prisma.prayer.count({ where: { language, isActive: true } }),
-        prisma.saint.count({ where: { language, isActive: true } }),
-        prisma.apparition.count({ where: { language, isActive: true } }),
-        prisma.sacrament.count({ where: { language, isActive: true } }),
-        prisma.guide.count({ where: { language, isActive: true } })
-      ]);
+    const [
+      prayerCount,
+      saintCount,
+      apparitionCount,
+      sacramentCount,
+      guideCount
+    ] = await Promise.all([
+      prisma.prayer.count({ where: { language, isActive: true } }),
+      prisma.saint.count({ where: { language, isActive: true } }),
+      prisma.apparition.count({ where: { language, isActive: true } }),
+      prisma.sacrament.count({ where: { language, isActive: true } }),
+      prisma.guide.count({ where: { language, isActive: true } })
+    ]);
 
     res.json({
       language,
       mission: mission?.content ?? null,
       about: about?.content ?? null,
       collage: collage?.content ?? null,
-      notices,
+      notices: resolvedNotices,
       summaryCounts: {
         prayers: prayerCount,
         saints: saintCount,
@@ -116,5 +137,4 @@ router.get("/api/home", async (req, res) => {
   }
 });
 
-// Optionally export for app.js / index.js
 module.exports = router;
