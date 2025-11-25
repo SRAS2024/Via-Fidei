@@ -169,25 +169,23 @@ router.get("/", async (req, res) => {
 
   try {
     const [missionRow, aboutRow, collageRow, notices, themeRow] = await Promise.all([
-      prisma.siteContent.findUnique({
-        where: { language_key: { language, key: "MISSION" } }
+      prisma.siteContent.findFirst({
+        where: { language, key: "MISSION" }
       }),
-      prisma.siteContent.findUnique({
-        where: { language_key: { language, key: "ABOUT" } }
+      prisma.siteContent.findFirst({
+        where: { language, key: "ABOUT" }
       }),
-      prisma.siteContent.findUnique({
-        where: { language_key: { language, key: "PHOTO_COLLAGE" } }
+      prisma.siteContent.findFirst({
+        where: { language, key: "PHOTO_COLLAGE" }
       }),
       prisma.notice.findMany({
         where: { language, isActive: true },
         orderBy: { displayOrder: "asc" }
       }),
-      prisma.siteContent.findUnique({
+      prisma.siteContent.findFirst({
         where: {
-          language_key: {
-            language: "global",
-            key: "LITURGICAL_THEME"
-          }
+          language: "global",
+          key: "LITURGICAL_THEME"
         }
       })
     ]);
@@ -196,8 +194,14 @@ router.get("/", async (req, res) => {
     const about = normalizeAbout(aboutRow, language);
     const collage = collageRow?.content || null;
     const collagePhotos = normalizeCollage(collageRow);
+
+    const themeContent = safeJsonParse(themeRow?.content);
     const liturgicalTheme =
-      themeRow?.content?.liturgicalTheme || "normal";
+      themeContent?.liturgicalTheme === "advent" ||
+      themeContent?.liturgicalTheme === "easter" ||
+      themeContent?.liturgicalTheme === "normal"
+        ? themeContent.liturgicalTheme
+        : "normal";
 
     res.json({
       language,
