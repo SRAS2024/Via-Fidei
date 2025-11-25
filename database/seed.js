@@ -518,7 +518,7 @@ async function seedSacraments() {
         whatToExpect:
           "In the ordination liturgy the candidate is called, examined, promises are made, the litany of the saints is sung, hands are laid on, and the prayer of ordination is offered.",
         commonQuestions:
-          "Who can be ordained, what are the differences among bishop, priest, and deacon, how long formation takes, and how to begin discerning.",
+          "Who can be ordained, what are the differences among bishop, priest, and deacon, how long formation takes, and how to begin discerning."
       }
     ],
     skipDuplicates: true
