@@ -69,6 +69,24 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+// Small helper so all SiteContent writes are consistent
+async function upsertSiteContent(prisma, language, key, content) {
+  const existing = await prisma.siteContent.findFirst({
+    where: { language, key }
+  });
+
+  if (existing) {
+    return prisma.siteContent.update({
+      where: { id: existing.id },
+      data: { content }
+    });
+  }
+
+  return prisma.siteContent.create({
+    data: { language, key, content }
+  });
+}
+
 // Admin login
 router.post("/login", (req, res) => {
   const { username, password } = req.body || {};
@@ -161,39 +179,37 @@ router.get("/home", requireAdmin, async (req, res) => {
   const language = resolveLanguage(req);
 
   try {
-    const [mission, about, collage, notices, themeRow] = await Promise.all([
-      prisma.siteContent.findUnique({
-        where: { language_key: { language, key: "MISSION" } }
+    const [missionRow, aboutRow, collageRow, notices, themeRow] = await Promise.all([
+      prisma.siteContent.findFirst({
+        where: { language, key: "MISSION" }
       }),
-      prisma.siteContent.findUnique({
-        where: { language_key: { language, key: "ABOUT" } }
+      prisma.siteContent.findFirst({
+        where: { language, key: "ABOUT" }
       }),
-      prisma.siteContent.findUnique({
-        where: { language_key: { language, key: "PHOTO_COLLAGE" } }
+      prisma.siteContent.findFirst({
+        where: { language, key: "PHOTO_COLLAGE" }
       }),
       prisma.notice.findMany({
         where: { language, isActive: true },
         orderBy: { displayOrder: "asc" }
       }),
       // Global liturgical theme, shared across languages
-      prisma.siteContent.findUnique({
-        where: {
-          language_key: {
-            language: "global",
-            key: "LITURGICAL_THEME"
-          }
-        }
+      prisma.siteContent.findFirst({
+        where: { language: "global", key: "LITURGICAL_THEME" }
       })
     ]);
 
-    const liturgicalTheme =
-      themeRow?.content?.liturgicalTheme || "normal";
+    const themeContent = themeRow?.content || {};
+    const allowed = ["normal", "advent", "easter"];
+    const liturgicalTheme = allowed.includes(themeContent.liturgicalTheme)
+      ? themeContent.liturgicalTheme
+      : "normal";
 
     res.json({
       language,
-      mission: mission?.content || null,
-      about: about?.content || null,
-      collage: collage?.content || null,
+      mission: missionRow?.content || null,
+      about: aboutRow?.content || null,
+      collage: collageRow?.content || null,
       liturgicalTheme,
       notices
     });
@@ -211,35 +227,17 @@ router.put("/home", requireAdmin, async (req, res) => {
 
   try {
     const ops = [];
-
     if (mission) {
-      ops.push(
-        prisma.siteContent.upsert({
-          where: { language_key: { language, key: "MISSION" } },
-          create: { language, key: "MISSION", content: mission },
-          update: { content: mission }
-        })
-      );
+      ops.push(upsertSiteContent(prisma, language, "MISSION", mission));
     }
-
     if (about) {
-      ops.push(
-        prisma.siteContent.upsert({
-          where: { language_key: { language, key: "ABOUT" } },
-          create: { language, key: "ABOUT", content: about },
-          update: { content: about }
-        })
-      );
+      ops.push(upsertSiteContent(prisma, language, "ABOUT", about));
     }
 
     const results = await Promise.all(ops);
 
-    const updatedMission = results.find(
-      (row) => row.key === "MISSION"
-    );
-    const updatedAbout = results.find(
-      (row) => row.key === "ABOUT"
-    );
+    const updatedMission = results.find((row) => row.key === "MISSION");
+    const updatedAbout = results.find((row) => row.key === "ABOUT");
 
     res.json({
       mission: updatedMission?.content || mission || null,
@@ -258,12 +256,7 @@ router.put("/mission", requireAdmin, async (req, res) => {
   const content = req.body.content || {};
 
   try {
-    const mission = await prisma.siteContent.upsert({
-      where: { language_key: { language, key: "MISSION" } },
-      create: { language, key: "MISSION", content },
-      update: { content }
-    });
-
+    const mission = await upsertSiteContent(prisma, language, "MISSION", content);
     res.json({ mission });
   } catch (error) {
     console.error("[Via Fidei] Admin mission update error", error);
@@ -278,12 +271,7 @@ router.put("/about", requireAdmin, async (req, res) => {
   const content = req.body.content || {};
 
   try {
-    const about = await prisma.siteContent.upsert({
-      where: { language_key: { language, key: "ABOUT" } },
-      create: { language, key: "ABOUT", content },
-      update: { content }
-    });
-
+    const about = await upsertSiteContent(prisma, language, "ABOUT", content);
     res.json({ about });
   } catch (error) {
     console.error("[Via Fidei] Admin about update error", error);
@@ -299,12 +287,7 @@ router.put("/photo-collage", requireAdmin, async (req, res) => {
   const content = req.body.content || {};
 
   try {
-    const collage = await prisma.siteContent.upsert({
-      where: { language_key: { language, key: "PHOTO_COLLAGE" } },
-      create: { language, key: "PHOTO_COLLAGE", content },
-      update: { content }
-    });
-
+    const collage = await upsertSiteContent(prisma, language, "PHOTO_COLLAGE", content);
     res.json({ collage });
   } catch (error) {
     console.error("[Via Fidei] Admin collage update error", error);
@@ -327,21 +310,8 @@ router.put("/theme", requireAdmin, async (req, res) => {
   }
 
   try {
-    const row = await prisma.siteContent.upsert({
-      where: {
-        language_key: {
-          language: "global",
-          key: "LITURGICAL_THEME"
-        }
-      },
-      create: {
-        language: "global",
-        key: "LITURGICAL_THEME",
-        content: { liturgicalTheme }
-      },
-      update: {
-        content: { liturgicalTheme }
-      }
+    const row = await upsertSiteContent(prisma, "global", "LITURGICAL_THEME", {
+      liturgicalTheme
     });
 
     res.json({ liturgicalTheme: row.content.liturgicalTheme });
