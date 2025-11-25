@@ -537,33 +537,49 @@ router.get("/", async (req, res) => {
   const guideType = req.query.guideType || null;
 
   try {
-    const guides = await prisma.guide.findMany({
-      where: {
-        language,
-        isActive: true,
-        ...(guideType ? { guideType } : {})
-      },
-      orderBy: [
-        { guideType: "asc" },
-        { title: "asc" }
-      ]
-    });
+    const [dbGuides, external] = await Promise.all([
+      prisma.guide.findMany({
+        where: {
+          language,
+          isActive: true,
+          ...(guideType ? { guideType } : {})
+        }
+      }),
+      fetchExternalGuides(language)
+    ]);
 
-    if (guides.length > 0) {
-      return res.json({
-        language,
-        items: guides.map(publicGuide)
-      });
+    // Merge db and external or built in
+    // Prefer database entries when there is a slug or id collision
+    const allRaw = [...dbGuides, ...external];
+
+    const seen = new Set();
+    const merged = [];
+
+    for (const g of allRaw) {
+      if (!g) continue;
+      if (guideType && g.guideType !== guideType) continue;
+
+      const key = g.slug || g.id || g.title.toLowerCase();
+      if (!key) continue;
+      const k = `${language}:${key}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      merged.push(g);
     }
 
-    const external = await fetchExternalGuides(language);
-    const filtered = guideType
-      ? external.filter((g) => g.guideType === guideType)
-      : external;
+    merged.sort((a, b) => {
+      const at = (a.guideType || "").toString();
+      const bt = (b.guideType || "").toString();
+      if (at < bt) return -1;
+      if (at > bt) return 1;
+      const an = (a.title || "").toString();
+      const bn = (b.title || "").toString();
+      return an.localeCompare(bn);
+    });
 
     return res.json({
       language,
-      items: filtered.map(publicGuide)
+      items: merged.map(publicGuide)
     });
   } catch (error) {
     console.error("[Via Fidei] Guides list error", error);
