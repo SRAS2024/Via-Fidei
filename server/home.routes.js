@@ -1,6 +1,6 @@
 // server/home.routes.js
 // Public Home data for Via Fidei
-// Mission statement, About Via Fidei, Notices, optional photo collage
+// Mission, About Via Fidei, Notices, optional photo collage
 
 const express = require("express");
 
@@ -49,25 +49,26 @@ function safeJsonParse(value) {
   }
 }
 
-// Default mission text, currently authored in English and reused as fallback
+// Default mission text, reused as fallback when there is no DB content
 function defaultMission(language) {
   return {
     heading: "Via Fidei",
     subheading: "A space for the devout faithful and the searching soul",
     body: [
-      "Via Fidei’s mission is to be a space where the devout faithful can grow in their friendship with God and where those who are curious, distant, or unsure can encounter the beauty and clarity of the Catholic faith without noise or pressure.",
-      "It gathers prayers, the lives of the saints, guides for sacramental life, and tools for personal reflection into one reverent and trustworthy place. The focus is clarity, depth, and peace rather than distraction or debate.",
-      "Whether someone is preparing for the sacraments, deepening a lifelong vocation, or taking a first step back toward the Lord, Via Fidei exists as a quiet companion and a tool for spiritual growth."
+      "Via Fidei exists to be a quiet place where the devout faithful can grow more deeply in their relationship with God.",
+      "It is also a place where those who are searching or curious can receive clear and trustworthy teaching about the Catholic faith.",
+      "In every supported language, the heart of Via Fidei is to help people encounter Christ and his Church with clarity, beauty, and depth."
     ]
   };
 }
 
+// Default About content, reused as fallback
 function defaultAbout(language) {
   return {
     paragraphs: [
-      "Via Fidei is a Catholic website and app that aims to be clear, calm, and beautifully ordered. It is designed to be welcoming for newcomers who need a gentle introduction and stable for lifelong Catholics who want a complete and trustworthy reference without feeling overwhelmed.",
-      "The platform gathers a curated library of approved prayers, guides for sacramental life and vocation, a private spiritual journal, and a profile system for milestones and goals. Everything is organized top to bottom and left to right, with careful typography, reverent imagery, and a quiet visual rhythm.",
-      "All content is meant to be easy to read, prayerful to sit with, and simple to print or revisit later. The design is intentionally low noise and symmetrical, with a black and white core palette and minimal purposeful color, so that the focus remains on the Lord, the sacraments, and the wisdom of the Church."
+      "Via Fidei is a Catholic website and app that aims to be calm, clear, and reverent.",
+      "It gathers a curated library of approved prayers, the lives of the saints, guides for the sacramental life, and tools for daily devotion.",
+      "The design is meant to be simple and peaceful so that visitors can pray, study, and rest their minds on the Lord and the wisdom of the Church."
     ],
     quickLinks: [
       { target: "sacraments", label: "Sacraments" },
@@ -192,16 +193,20 @@ router.get("/", async (req, res) => {
 
     const mission = normalizeMission(missionRow, language);
     const about = normalizeAbout(aboutRow, language);
-    const collage = collageRow?.content || null;
     const collagePhotos = normalizeCollage(collageRow);
+    const collage = collagePhotos;
 
-    const themeContent = safeJsonParse(themeRow?.content);
-    const liturgicalTheme =
-      themeContent?.liturgicalTheme === "advent" ||
-      themeContent?.liturgicalTheme === "easter" ||
-      themeContent?.liturgicalTheme === "normal"
-        ? themeContent.liturgicalTheme
-        : "normal";
+    let liturgicalTheme = "normal";
+    if (themeRow && themeRow.content) {
+      const parsedTheme = safeJsonParse(themeRow.content) || themeRow.content;
+      if (
+        parsedTheme &&
+        typeof parsedTheme === "object" &&
+        typeof parsedTheme.liturgicalTheme === "string"
+      ) {
+        liturgicalTheme = parsedTheme.liturgicalTheme;
+      }
+    }
 
     res.json({
       language,
