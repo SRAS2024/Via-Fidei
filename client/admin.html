@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <title>Via Fidei Admin · Home Content, Notices, Collage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <meta
+      name="description"
+      content="Admin console for Via Fidei. Edit the home mission, About section, seasonal banner theme, notices, and collage photos that appear on the public site."
+    />
+
+    <link rel="icon" type="image/svg+xml" href="/via-fidei-icon.svg" />
+    <link rel="apple-touch-icon" href="/via-fidei-icon-192.png" />
+
+    <!-- Base fonts: liturgical serif for headings, clean sans for body -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Global styles for classy, clean, symmetrical layout -->
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="root">
+      <!--
+        Via Fidei Admin React app mounts here.
+
+        This screen mirrors the public home layout:
+        - Seasonal banner across the top with cross, Holy Family, or crucifix.
+        - Centered Via Fidei title and subtitle.
+        - Same navigation tabs as the main site.
+        - Account and Settings controls on the right, plus an Admin indicator.
+
+        When the browser path is /admin, the React shell renders the Admin view:
+        - Mission and About text editors.
+        - Notices editor that controls the "Notices" section at the top of Home.
+        - Seasonal banner theme selector for Normal, Advent, and Easter.
+        - Collage upload with "Take Photo, Photo Library, Files" where supported.
+          Images are saved through the backend and shown at the bottom of Home.
+        - Admin login and logout, returning to the standard Home view after logout.
+
+        All admin changes are saved through the API and propagate to the Home
+        screen for all visitors as soon as they are stored.
+      -->
+      <noscript>
+        Via Fidei uses JavaScript to render the admin console. Please enable JavaScript in your browser.
+      </noscript>
+    </div>
+
+    <!-- React entry point (same bundle as main site) -->
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
