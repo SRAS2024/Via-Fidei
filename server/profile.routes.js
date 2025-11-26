@@ -76,6 +76,9 @@ router.get("/", requireAuth, async (req, res) => {
   const user = req.user;
 
   try {
+    // Keep goal status counts fresh
+    await refreshGoalStatuses(prisma, user.id);
+
     const [
       savedPrayersCount,
       savedSaintsCount,
@@ -196,7 +199,7 @@ router.get("/my-prayers", requireAuth, async (req, res) => {
           title: s.prayer.title,
           content: s.prayer.content,
           category: s.prayer.category,
-          tags: s.prayer.tags
+          tags: s.prayer.tags || []
         }
       }));
 
@@ -261,7 +264,7 @@ router.post("/journal", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Journal body is required" });
   }
 
-  try {
+  try:
     const entry = await prisma.journalEntry.create({
       data: {
         userId: user.id,
