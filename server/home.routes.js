@@ -31,8 +31,8 @@ function resolveLanguage(req) {
     return SUPPORTED_LANGS.includes(lower) ? lower : null;
   };
 
-  const userPref = req.user && req.user.languageOverride;
-  const queryPref = req.query && (req.query.language || req.query.lang);
+  const userPref = req.user?.languageOverride;
+  const queryPref = req.query?.language || req.query?.lang;
   const envPref = process.env.DEFAULT_LANGUAGE;
 
   const fromUser = tryLang(userPref);
@@ -44,7 +44,7 @@ function resolveLanguage(req) {
   const fromEnv = tryLang(envPref);
   if (fromEnv) return fromEnv;
 
-  const header = req.headers && req.headers["accept-language"];
+  const header = req.headers?.["accept-language"];
   if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
@@ -188,7 +188,7 @@ function normalizeCollage(siteContentEntry) {
     result.push({
       id: item.id || url,
       url,
-      alt: item.alt || "Via Fidei photo"
+      alt: (item.alt && String(item.alt)) || "Via Fidei photo"
     });
   }
 
@@ -211,6 +211,7 @@ function publicNotice(n) {
 router.get("/", async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
+  const now = new Date();
 
   try {
     const [missionRow, aboutRow, collageRow, notices, themeRow] =
@@ -225,8 +226,28 @@ router.get("/", async (req, res) => {
           where: { language, key: "PHOTO_COLLAGE" }
         }),
         prisma.notice.findMany({
-          where: { language, isActive: true },
-          orderBy: { displayOrder: "asc" }
+          where: {
+            language,
+            isActive: true,
+            AND: [
+              {
+                OR: [
+                  { startsAt: null },
+                  { startsAt: { lte: now } }
+                ]
+              },
+              {
+                OR: [
+                  { endsAt: null },
+                  { endsAt: { gte: now } }
+                ]
+              }
+            ]
+          },
+          orderBy: [
+            { displayOrder: "asc" },
+            { createdAt: "desc" }
+          ]
         }),
         // Global liturgical theme shared across languages
         prisma.siteContent.findFirst({
