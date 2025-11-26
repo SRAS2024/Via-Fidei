@@ -20,9 +20,10 @@ const PORT = Number(process.env.PORT || 5000);
 const NODE_ENV = process.env.NODE_ENV || "development";
 
 // In local dev with Vite, default the client origin to localhost:5173
-const CLIENT_ORIGIN =
+// In production, prefer CLIENT_ORIGIN env. If not set, allow any origin without credentials.
+const RAW_CLIENT_ORIGIN =
   process.env.CLIENT_ORIGIN ||
-  (NODE_ENV === "development" ? "http://localhost:5173" : "*");
+  (NODE_ENV === "development" ? "http://localhost:5173" : "");
 
 const app = express();
 
@@ -33,15 +34,21 @@ app.set("trust proxy", 1);
 app.disable("x-powered-by");
 
 // Basic middleware
-app.use(
-  cors({
-    origin: CLIENT_ORIGIN,
-    credentials: true
-  })
-);
+const corsOptions =
+  RAW_CLIENT_ORIGIN && RAW_CLIENT_ORIGIN !== "*"
+    ? {
+        origin: RAW_CLIENT_ORIGIN,
+        credentials: true
+      }
+    : {
+        origin: true,
+        credentials: false
+      };
+
+app.use(cors(corsOptions));
 
 // Handle CORS preflight for all API routes
-app.options("/api/*", cors({ origin: CLIENT_ORIGIN, credentials: true }));
+app.options("/api/*", cors(corsOptions));
 
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
@@ -65,7 +72,7 @@ app.get("/api/health", async (req, res) => {
       env: NODE_ENV,
       db: "reachable",
       value5000: SESSION_TOKEN_TTL,
-      clientOrigin: CLIENT_ORIGIN
+      clientOrigin: RAW_CLIENT_ORIGIN || "dynamic"
     });
   } catch (error) {
     console.error("[Via Fidei] Health check database error", error);
@@ -104,6 +111,15 @@ try {
 // Simple 404 JSON for unknown API paths
 app.use("/api", (req, res) => {
   res.status(404).json({ error: "Not found" });
+});
+
+// Central error handler
+app.use((err, req, res, next) => {
+  console.error("[Via Fidei] Unhandled error", err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  res.status(500).json({ error: "Internal server error" });
 });
 
 // Static client in production
