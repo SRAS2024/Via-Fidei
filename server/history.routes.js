@@ -17,19 +17,38 @@ function getPrisma(req) {
   return req.prisma;
 }
 
+/**
+ * Resolve the active language for the request.
+ * Priority:
+ *   1. Authenticated user preference
+ *   2. Explicit query param ?language= or ?lang=
+ *   3. DEFAULT_LANGUAGE env
+ *   4. Accept Language header
+ *   5. English
+ */
 function resolveLanguage(req) {
-  const override =
-    req.query.language ||
-    req.user?.languageOverride ||
-    process.env.DEFAULT_LANGUAGE ||
-    "en";
+  const tryLang = (value) => {
+    if (!value) return null;
+    const lower = String(value).toLowerCase();
+    return SUPPORTED_LANGS.includes(lower) ? lower : null;
+  };
 
-  const lower = String(override).toLowerCase();
+  const userPref = req.user && req.user.languageOverride;
+  const queryPref =
+    req.query && (req.query.language || req.query.lang);
+  const envPref = process.env.DEFAULT_LANGUAGE;
 
-  if (SUPPORTED_LANGS.includes(lower)) return lower;
+  const fromUser = tryLang(userPref);
+  if (fromUser) return fromUser;
 
-  const header = req.headers["accept-language"];
-  if (typeof header === "string") {
+  const fromQuery = tryLang(queryPref);
+  if (fromQuery) return fromQuery;
+
+  const fromEnv = tryLang(envPref);
+  if (fromEnv) return fromEnv;
+
+  const header = req.headers && req.headers["accept-language"];
+  if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
     const base = first.split("-")[0];
@@ -46,7 +65,7 @@ function publicSection(h) {
     slug: h.slug,
     title: h.title,
     summary: h.summary || null,
-    body: h.body,
+    body: h.body || "",
     timeline: Array.isArray(h.timeline) ? h.timeline : [],
     tags: Array.isArray(h.tags) ? h.tags : [],
     source: h.source || null,
