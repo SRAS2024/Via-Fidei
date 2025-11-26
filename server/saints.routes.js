@@ -269,7 +269,11 @@ async function fetchExternalSaints(language) {
       const res = await fetch(url, { headers: { Accept: "application/json" } });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
 
         external = list
           .map((raw, idx) => {
@@ -339,10 +343,16 @@ async function fetchExternalApparitions(language) {
 
   if (url && typeof fetch !== "undefined") {
     try {
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
+      const res = await fetch(url, {
+        headers: { Accept: "application/json" }
+      });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
 
         external = list
           .map((raw, idx) => {
@@ -384,7 +394,11 @@ async function fetchExternalApparitions(language) {
           .filter(Boolean);
       }
     } catch (err) {
-      console.error("[Via Fidei] External apparitions fetch error", language, err);
+      console.error(
+        "[Via Fidei] External apparitions fetch error",
+        language,
+        err
+      );
     }
   }
 
@@ -623,8 +637,12 @@ router.get("/search/local", async (req, res) => {
             orderBy: [{ title: "asc" }, { updatedAt: "desc" }],
             take
           }),
-      type === "apparition" ? Promise.resolve([]) : fetchExternalSaints(language),
-      type === "saint" ? Promise.resolve([]) : fetchExternalApparitions(language)
+      type === "apparition"
+        ? Promise.resolve([])
+        : fetchExternalSaints(language),
+      type === "saint"
+        ? Promise.resolve([])
+        : fetchExternalApparitions(language)
     ]);
 
     const externalSaintMatches = externalSaints.filter((s) => {
@@ -711,7 +729,7 @@ router.get("/search/local", async (req, res) => {
       .map(({ a, origin }) => ({ a, score: scoreApparition(a, origin) }))
       .sort((a, b) => b.score - a.score);
 
-    // Deduplicate saints by slug then id so DB and external copies do not appear twice
+    // Deduplicate saints by slug then id
     const saintSeen = new Set();
     const uniqueSaints = [];
     for (const { s } of scoredSaintsRaw) {
@@ -761,11 +779,13 @@ router.get("/search/local", async (req, res) => {
     });
   } catch (error) {
     console.error("[Via Fidei] Saints search error", error);
-    res.status(500).json({ error: "Failed to search saints and apparitions" });
+    res
+      .status(500)
+      .json({ error: "Failed to search saints and apparitions" });
   }
 });
 
-// Saving saints and apparitions from this section
+// Saving saints and apparitions for the current user
 
 router.post("/saints/:saintId/save", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
@@ -786,23 +806,30 @@ router.post("/saints/:saintId/save", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/apparitions/:apparitionId/save", requireAuth, async (req, res) => {
-  const prisma = getPrisma(req);
-  const userId = req.user.id;
-  const { apparitionId } = req.params;
+router.post(
+  "/apparitions/:apparitionId/save",
+  requireAuth,
+  async (req, res) => {
+    const prisma = getPrisma(req);
+    const userId = req.user.id;
+    const { apparitionId } = req.params;
 
-  try {
-    const saved = await prisma.savedApparition.upsert({
-      where: { userId_apparitionId: { userId, apparitionId } },
-      create: { userId, apparitionId },
-      update: {}
-    });
+    try {
+      const saved = await prisma.savedApparition.upsert({
+        where: { userId_apparitionId: { userId, apparitionId } },
+        create: { userId, apparitionId },
+        update: {}
+      });
 
-    res.status(201).json({ saved });
-  } catch (error) {
-    console.error("[Via Fidei] Save apparition from saints route error", error);
-    res.status(500).json({ error: "Failed to save apparition" });
+      res.status(201).json({ saved });
+    } catch (error) {
+      console.error(
+        "[Via Fidei] Save apparition from saints route error",
+        error
+      );
+      res.status(500).json({ error: "Failed to save apparition" });
+    }
   }
-});
+);
 
 module.exports = router;
