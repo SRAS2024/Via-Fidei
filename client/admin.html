@@ -29,29 +29,29 @@
       <!--
         Via Fidei Admin React app mounts here.
 
-        This screen mirrors the public home layout:
+        This screen mirrors the public visual language:
         - Seasonal banner across the top with cross, Holy Family, or crucifix.
-        - Centered Via Fidei title and subtitle.
-        - Same navigation tabs as the main site.
-        - Account and Settings controls on the right, plus an Admin indicator.
+        - Centered Via Fidei Admin title and subtitle.
+        - Compact admin header with Settings on the right and an Admin indicator.
 
         When the browser path is /admin, the React shell renders the Admin view:
         - Mission and About text editors.
-        - Notices editor that controls the "Notices" section at the top of Home.
+        - Notices editor that controls the Notices section at the top of Home.
         - Seasonal banner theme selector for Normal, Advent, and Easter.
-        - Collage upload with "Take Photo, Photo Library, Files" where supported.
+        - Collage upload with Take Photo, Photo Library, Files where supported.
           Images are saved through the backend and shown at the bottom of Home.
-        - Admin login and logout, returning to the standard Home view after logout.
+        - Admin login and logout. After logout, visitors use the public site only.
 
         All admin changes are saved through the API and propagate to the Home
         screen for all visitors as soon as they are stored.
       -->
       <noscript>
-        Via Fidei uses JavaScript to render the admin console. Please enable JavaScript in your browser.
+        Via Fidei uses JavaScript to render the admin console. Please enable
+        JavaScript in your browser.
       </noscript>
     </div>
 
-    <!-- React entry point (same bundle as main site) -->
-    <script type="module" src="/main.js"></script>
+    <!-- React entry point for the admin console -->
+    <script type="module" src="/admin.js"></script>
   </body>
 </html>
