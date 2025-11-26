@@ -8,6 +8,8 @@ const jwt = require("jsonwebtoken");
 const router = express.Router();
 
 const SESSION_COOKIE_NAME = "vf_session";
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 72;
 
 // Helpers
 
@@ -112,8 +114,20 @@ function toPublicUser(user) {
     themePreference: user.themePreference,
     languageOverride: user.languageOverride,
     profilePictureUrl: user.profilePictureUrl,
-    createdAt: user.createdAt
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt
   };
+}
+
+function validateNewPassword(password) {
+  const pwd = String(password || "");
+  if (pwd.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters long`;
+  }
+  if (pwd.length > MAX_PASSWORD_LENGTH) {
+    return `Password must be at most ${MAX_PASSWORD_LENGTH} characters long`;
+  }
+  return null;
 }
 
 // Routes
@@ -132,6 +146,11 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ error: "Passwords do not match" });
   }
 
+  const passwordError = validateNewPassword(password);
+  if (passwordError) {
+    return res.status(400).json({ error: passwordError });
+  }
+
   const normalizedEmail = String(email).trim().toLowerCase();
 
   try {
@@ -143,7 +162,7 @@ router.post("/register", async (req, res) => {
       return res.status(409).json({ error: "Email is already registered" });
     }
 
-    const passwordHash = await bcrypt.hash(password, 12);
+    const passwordHash = await bcrypt.hash(String(password), 12);
 
     const user = await prisma.user.create({
       data: {
@@ -188,7 +207,7 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
-    const ok = await bcrypt.compare(password, user.passwordHash);
+    const ok = await bcrypt.compare(String(password), user.passwordHash);
     if (!ok) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
@@ -271,6 +290,11 @@ router.post("/reset-password", async (req, res) => {
       .json({ error: "New password fields do not match" });
   }
 
+  const passwordError = validateNewPassword(newPassword);
+  if (passwordError) {
+    return res.status(400).json({ error: passwordError });
+  }
+
   const normalizedEmail = String(email).trim().toLowerCase();
   const normalizedFirst = String(firstName).trim();
   const normalizedLast = String(lastName).trim();
@@ -291,7 +315,7 @@ router.post("/reset-password", async (req, res) => {
       });
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 12);
+    const passwordHash = await bcrypt.hash(String(newPassword), 12);
 
     await prisma.user.update({
       where: { id: user.id },
