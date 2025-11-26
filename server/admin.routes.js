@@ -39,19 +39,55 @@ function adminCookieOptions() {
   };
 }
 
+function safeJsonParse(value) {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  if (typeof value !== "string") return null;
+
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve the active language for the request.
+ * Priority:
+ *   1. Body language / lang
+ *   2. Query language / lang
+ *   3. Authenticated user preference
+ *   4. DEFAULT_LANGUAGE env
+ *   5. Accept Language header
+ *   6. English
+ */
 function resolveLanguage(req) {
-  const override =
-    req.query.language ||
-    req.body?.language ||
-    req.user?.languageOverride ||
-    process.env.DEFAULT_LANGUAGE ||
-    "en";
+  const tryLang = (value) => {
+    if (!value) return null;
+    const lower = String(value).toLowerCase();
+    return SUPPORTED_LANGS.includes(lower) ? lower : null;
+  };
 
-  const lower = String(override).toLowerCase();
-  if (SUPPORTED_LANGS.includes(lower)) return lower;
+  const bodyLang =
+    req.body && (req.body.language || req.body.lang);
+  const queryLang =
+    req.query && (req.query.language || req.query.lang);
+  const userPref = req.user && req.user.languageOverride;
+  const envPref = process.env.DEFAULT_LANGUAGE;
 
-  const header = req.headers["accept-language"];
-  if (typeof header === "string") {
+  const candidates = [bodyLang, queryLang, userPref, envPref];
+
+  for (const candidate of candidates) {
+    const resolved = tryLang(candidate);
+    if (resolved) return resolved;
+  }
+
+  const header = req.headers && req.headers["accept-language"];
+  if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
     const base = first.split("-")[0];
@@ -179,27 +215,29 @@ router.get("/home", requireAdmin, async (req, res) => {
   const language = resolveLanguage(req);
 
   try {
-    const [missionRow, aboutRow, collageRow, notices, themeRow] = await Promise.all([
-      prisma.siteContent.findFirst({
-        where: { language, key: "MISSION" }
-      }),
-      prisma.siteContent.findFirst({
-        where: { language, key: "ABOUT" }
-      }),
-      prisma.siteContent.findFirst({
-        where: { language, key: "PHOTO_COLLAGE" }
-      }),
-      prisma.notice.findMany({
-        where: { language, isActive: true },
-        orderBy: { displayOrder: "asc" }
-      }),
-      // Global liturgical theme, shared across languages
-      prisma.siteContent.findFirst({
-        where: { language: "global", key: "LITURGICAL_THEME" }
-      })
-    ]);
+    const [missionRow, aboutRow, collageRow, notices, themeRow] =
+      await Promise.all([
+        prisma.siteContent.findFirst({
+          where: { language, key: "MISSION" }
+        }),
+        prisma.siteContent.findFirst({
+          where: { language, key: "ABOUT" }
+        }),
+        prisma.siteContent.findFirst({
+          where: { language, key: "PHOTO_COLLAGE" }
+        }),
+        prisma.notice.findMany({
+          where: { language, isActive: true },
+          orderBy: { displayOrder: "asc" }
+        }),
+        // Global liturgical theme, shared across languages
+        prisma.siteContent.findFirst({
+          where: { language: "global", key: "LITURGICAL_THEME" }
+        })
+      ]);
 
-    const themeContent = themeRow?.content || {};
+    const themeContent =
+      safeJsonParse(themeRow && themeRow.content) || {};
     const allowed = ["normal", "advent", "easter"];
     const liturgicalTheme = allowed.includes(themeContent.liturgicalTheme)
       ? themeContent.liturgicalTheme
@@ -279,7 +317,7 @@ router.put("/about", requireAdmin, async (req, res) => {
   }
 });
 
-// Update photo collage configuration
+// Update photo collage configuration via JSON payload
 // Expecting content to be an object like { photos: [{ id, url, alt }, ...] }
 router.put("/photo-collage", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
@@ -287,11 +325,57 @@ router.put("/photo-collage", requireAdmin, async (req, res) => {
   const content = req.body.content || {};
 
   try {
-    const collage = await upsertSiteContent(prisma, language, "PHOTO_COLLAGE", content);
+    const collage = await upsertSiteContent(
+      prisma,
+      language,
+      "PHOTO_COLLAGE",
+      content
+    );
     res.json({ collage });
   } catch (error) {
     console.error("[Via Fidei] Admin collage update error", error);
     res.status(500).json({ error: "Failed to update photo collage" });
+  }
+});
+
+// Collage upload endpoint that matches the React admin FormData upload
+// Expects an upstream upload middleware to populate req.files for field "images"
+router.post("/collage", requireAdmin, async (req, res) => {
+  const prisma = getPrisma(req);
+  const language = req.body?.language || resolveLanguage(req);
+
+  try {
+    let photos = [];
+
+    if (Array.isArray(req.files) && req.files.length > 0) {
+      photos = req.files
+        .map((file) => {
+          const url = file.location || file.url || file.path;
+          if (!url) return null;
+          return {
+            id: file.filename || file.key || url,
+            url,
+            alt: file.originalname || "Via Fidei photo"
+          };
+        })
+        .filter(Boolean);
+    } else if (req.body && Array.isArray(req.body.photos)) {
+      photos = req.body.photos;
+    }
+
+    const content = { photos };
+
+    const collage = await upsertSiteContent(
+      prisma,
+      language,
+      "PHOTO_COLLAGE",
+      content
+    );
+
+    res.json({ collage: collage.content });
+  } catch (error) {
+    console.error("[Via Fidei] Admin collage upload error", error);
+    res.status(500).json({ error: "Failed to save collage photos" });
   }
 });
 
