@@ -19,19 +19,37 @@ function getPrisma(req) {
   return req.prisma;
 }
 
+/**
+ * Resolve the active language for the request.
+ * Priority:
+ *   1. Authenticated user preference
+ *   2. Explicit query param ?language= or ?lang=
+ *   3. DEFAULT_LANGUAGE env
+ *   4. Accept Language header
+ *   5. English
+ */
 function resolveLanguage(req) {
-  const override =
-    req.user?.languageOverride ||
-    req.query.language ||
-    process.env.DEFAULT_LANGUAGE ||
-    "en";
+  const tryLang = (value) => {
+    if (!value) return null;
+    const lower = String(value).toLowerCase();
+    return SUPPORTED_LANGS.includes(lower) ? lower : null;
+  };
 
-  const lower = String(override).toLowerCase();
+  const userPref = req.user && req.user.languageOverride;
+  const queryPref = req.query && (req.query.language || req.query.lang);
+  const envPref = process.env.DEFAULT_LANGUAGE;
 
-  if (SUPPORTED_LANGS.includes(lower)) return lower;
+  const fromUser = tryLang(userPref);
+  if (fromUser) return fromUser;
 
-  const header = req.headers["accept-language"];
-  if (typeof header === "string") {
+  const fromQuery = tryLang(queryPref);
+  if (fromQuery) return fromQuery;
+
+  const fromEnv = tryLang(envPref);
+  if (fromEnv) return fromEnv;
+
+  const header = req.headers && req.headers["accept-language"];
+  if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
     const base = first.split("-")[0];
@@ -109,7 +127,6 @@ function builtInGuides(language) {
     "that while meditating on these mysteries of the most holy Rosary of the Blessed Virgin Mary, " +
     "we may imitate what they contain and obtain what they promise, through the same Christ our Lord. Amen.";
 
-  // Built in guides
   const guides = [
     {
       slug: "entering-the-church-ocia",
@@ -148,11 +165,23 @@ function builtInGuides(language) {
       checklistTemplate: {
         title: "OCIA journey checklist",
         items: [
-          { label: "Contact local parish and schedule an initial conversation", done: false },
-          { label: "Attend regular OCIA formation sessions", done: false },
+          {
+            label: "Contact local parish and schedule an initial conversation",
+            done: false
+          },
+          {
+            label: "Attend regular OCIA formation sessions",
+            done: false
+          },
           { label: "Begin daily prayer and Scripture reading", done: false },
-          { label: "Review the Catechism of the Catholic Church introduction", done: false },
-          { label: "Discern readiness for the sacraments of initiation", done: false }
+          {
+            label: "Review the Catechism of the Catholic Church introduction",
+            done: false
+          },
+          {
+            label: "Discern readiness for the sacraments of initiation",
+            done: false
+          }
         ]
       },
       tags: ["ocia", "rcia", "initiation", "catechesis"],
@@ -201,15 +230,22 @@ function builtInGuides(language) {
         items: [
           { label: "Pray and ask the Holy Spirit for light", done: false },
           { label: "Make an examination of conscience", done: false },
-          { label: "Confess all serious sins in kind and number", done: false },
+          {
+            label: "Confess all serious sins in kind and number",
+            done: false
+          },
           { label: "Pray an Act of Contrition sincerely", done: false },
-          { label: "Complete the penance given by the priest", done: false }
+          {
+            label: "Complete the penance given by the priest",
+            done: false
+          }
         ]
       },
       tags: ["confession", "reconciliation", "mercy"],
       source: "built-in",
       sourceUrl: null,
-      sourceAttribution: "Traditional Catholic practice of the sacrament of Reconciliation",
+      sourceAttribution:
+        "Traditional Catholic practice of the sacrament of Reconciliation",
       updatedAt: now
     },
     {
@@ -232,7 +268,8 @@ function builtInGuides(language) {
             steps: [
               {
                 label: "On the crucifix",
-                description: "Make the Sign of the Cross and pray the Apostles Creed.",
+                description:
+                  "Make the Sign of the Cross and pray the Apostles Creed.",
                 prayerTitle: "Sign of the Cross",
                 prayerText: signOfCross
               },
@@ -260,7 +297,8 @@ function builtInGuides(language) {
               },
               {
                 label: "Three small beads",
-                description: "Pray three Hail Marys, asking for growth in faith, hope, and charity.",
+                description:
+                  "Pray three Hail Marys, asking for growth in faith, hope, and charity.",
                 prayerTitle: "Hail Mary",
                 prayerText: hailMary
               },
@@ -288,7 +326,8 @@ function builtInGuides(language) {
               },
               {
                 label: "Ten small beads of each decade",
-                description: "Pray ten Hail Marys while meditating on the mystery.",
+                description:
+                  "Pray ten Hail Marys while meditating on the mystery.",
                 prayerTitle: "Hail Mary",
                 prayerText: hailMary
               },
@@ -316,7 +355,8 @@ function builtInGuides(language) {
               },
               {
                 label: "Final closing prayer",
-                description: "Pray the concluding prayer and then make the Sign of the Cross.",
+                description:
+                  "Pray the concluding prayer and then make the Sign of the Cross.",
                 prayerTitle: "Closing Prayer and Sign of the Cross",
                 prayerText: rosaryClosingPrayer + "\n\n" + signOfCross
               }
@@ -328,7 +368,7 @@ function builtInGuides(language) {
               "The Joyful Mysteries: The Annunciation, The Visitation, The Nativity, The Presentation in the Temple, The Finding in the Temple.",
               "The Sorrowful Mysteries: The Agony in the Garden, The Scourging at the Pillar, The Crowning with Thorns, The Carrying of the Cross, The Crucifixion.",
               "The Glorious Mysteries: The Resurrection, The Ascension, The Descent of the Holy Spirit, The Assumption of Mary, The Coronation of Mary.",
-              "The Luminous Mysteries (Mysteries of Light): The Baptism of the Lord, The Wedding at Cana, The Proclamation of the Kingdom, The Transfiguration, The Institution of the Eucharist."
+              "The Luminous Mysteries, also called Mysteries of Light: The Baptism of the Lord, The Wedding at Cana, The Proclamation of the Kingdom, The Transfiguration, The Institution of the Eucharist."
             ]
           }
         ]
@@ -347,7 +387,8 @@ function builtInGuides(language) {
       tags: ["rosary", "mary", "devotion", "prayer"],
       source: "built-in",
       sourceUrl: null,
-      sourceAttribution: "Traditional form of the holy Rosary in the Catholic Church",
+      sourceAttribution:
+        "Traditional form of the holy Rosary in the Catholic Church",
       updatedAt: now
     },
     {
@@ -396,7 +437,8 @@ function builtInGuides(language) {
       tags: ["adoration", "eucharist", "prayer"],
       source: "built-in",
       sourceUrl: null,
-      sourceAttribution: "Common pastoral practice for Eucharistic Adoration",
+      sourceAttribution:
+        "Common pastoral practice for Eucharistic Adoration",
       updatedAt: now
     },
     {
@@ -447,12 +489,12 @@ function builtInGuides(language) {
       tags: ["vocation", "discernment", "marriage", "priesthood", "religious life"],
       source: "built-in",
       sourceUrl: null,
-      sourceAttribution: "General principles of Catholic vocational discernment",
+      sourceAttribution:
+        "General principles of Catholic vocational discernment",
       updatedAt: now
     }
   ];
 
-  // Attach ids
   return guides.map((g, idx) => ({
     id: `builtin-guide-${language}-${idx}`,
     language,
@@ -478,7 +520,11 @@ async function fetchExternalGuides(language) {
       const res = await fetch(url, { headers: { Accept: "application/json" } });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
 
         external = list
           .map((raw, idx) => {
@@ -559,7 +605,7 @@ router.get("/", async (req, res) => {
       if (!g) continue;
       if (guideType && g.guideType !== guideType) continue;
 
-      const key = g.slug || g.id || g.title.toLowerCase();
+      const key = g.slug || g.id || (g.title || "").toLowerCase();
       if (!key) continue;
       const k = `${language}:${key}`;
       if (seen.has(k)) continue;
