@@ -27,31 +27,34 @@
   <body>
     <div id="root">
       <!--
-        Via Fidei React app mounts here.
+        Via Fidei public React app mounts here.
 
-        Layout expectations:
+        Layout expectations for the public site:
 
         1. Centered seasonal banner across the top of the page.
-           Normal: wooden cross, tan and grey palette.
-           Advent: Holy Family, grey and deep red palette.
-           Easter: crucifix, blue grey and gold palette.
+           Normal: wooden cross with tan and grey palette.
+           Advent: Holy Family with grey and deep red palette.
+           Easter: crucifix with blue grey and gold palette.
 
-        2. Website title centered beneath the banner.
+        2. Website title centered beneath the banner with subtitle.
         3. Centered navigation tabs beneath the title:
            Home, Liturgy and History, Prayers, Saints, Our Lady, Sacraments, Guides.
-        4. Far right of the header: Account button and Settings gear.
+        4. Far right of the header: Account button and Settings gear, no Admin pill.
 
         The React shell:
-        - Uses a restrained palette with clear accent colors for actions.
-        - Respects theme (light, dark, system) and language selections.
-        - Renders consistently across desktop, tablet, and mobile.
+        uses a restrained palette with clear accent colors for actions,
+        respects theme (light, dark, system) and language selections,
+        and renders consistently across desktop, tablet, and mobile.
+
+        Admin features live on /admin and are loaded through admin.html and admin.js.
       -->
       <noscript>
-        Via Fidei uses JavaScript to render content. Please enable JavaScript in your browser.
+        Via Fidei uses JavaScript to render content. Please enable JavaScript in
+        your browser.
       </noscript>
     </div>
 
-    <!-- React entry point (Vite module) -->
+    <!-- React entry point for the public site -->
     <script type="module" src="/main.js"></script>
   </body>
 </html>
