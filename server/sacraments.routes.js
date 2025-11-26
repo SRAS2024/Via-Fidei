@@ -18,19 +18,37 @@ function getPrisma(req) {
   return req.prisma;
 }
 
+/**
+ * Resolve the active language for the request.
+ * Priority:
+ *   1. Authenticated user preference
+ *   2. Explicit query param ?language= or ?lang=
+ *   3. DEFAULT_LANGUAGE env
+ *   4. Accept Language header
+ *   5. English
+ */
 function resolveLanguage(req) {
-  const override =
-    req.user?.languageOverride ||
-    req.query.language ||
-    process.env.DEFAULT_LANGUAGE ||
-    "en";
+  const tryLang = (value) => {
+    if (!value) return null;
+    const lower = String(value).toLowerCase();
+    return SUPPORTED_LANGS.includes(lower) ? lower : null;
+  };
 
-  const lower = String(override).toLowerCase();
+  const userPref = req.user && req.user.languageOverride;
+  const queryPref = req.query && (req.query.language || req.query.lang);
+  const envPref = process.env.DEFAULT_LANGUAGE;
 
-  if (SUPPORTED_LANGS.includes(lower)) return lower;
+  const fromUser = tryLang(userPref);
+  if (fromUser) return fromUser;
 
-  const header = req.headers["accept-language"];
-  if (typeof header === "string") {
+  const fromQuery = tryLang(queryPref);
+  if (fromQuery) return fromQuery;
+
+  const fromEnv = tryLang(envPref);
+  if (fromEnv) return fromEnv;
+
+  const header = req.headers && req.headers["accept-language"];
+  if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
     const base = first.split("-")[0];
@@ -516,7 +534,11 @@ async function fetchExternalSacraments(language) {
       const res = await fetch(url, { headers: { Accept: "application/json" } });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
 
         external = list
           .map((raw, idx) => {
@@ -558,7 +580,11 @@ async function fetchExternalSacraments(language) {
           .filter(Boolean);
       }
     } catch (err) {
-      console.error("[Via Fidei] External sacraments fetch error", language, err);
+      console.error(
+        "[Via Fidei] External sacraments fetch error",
+        language,
+        err
+      );
     }
   }
 
@@ -570,7 +596,11 @@ async function fetchExternalSacraments(language) {
   external.sort((a, b) => {
     const ai = sacramentOrderIndex(a.slug);
     const bi = sacramentOrderIndex(b.slug);
-    if (ai === bi) return a.name.localeCompare(b.name);
+    if (ai === bi) {
+      const an = (a.name || "").toString();
+      const bn = (b.name || "").toString();
+      return an.localeCompare(bn);
+    }
     return ai - bi;
   });
 
@@ -589,7 +619,7 @@ router.get("/", async (req, res) => {
         where: { language, isActive: true }
       }),
       fetchExternalSacraments(language)
-    });
+    ]);
 
     // Merge db with external or built in sacraments
     // Database entries win on collisions and we display in canonical order
@@ -599,7 +629,7 @@ router.get("/", async (req, res) => {
 
     for (const s of allRaw) {
       if (!s) continue;
-      const key = s.slug || s.id || s.name.toLowerCase();
+      const key = s.slug || s.id || (s.name || "").toLowerCase();
       if (!key) continue;
       const k = `${language}:${key}`;
       if (seen.has(k)) continue;
