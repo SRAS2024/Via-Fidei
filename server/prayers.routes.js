@@ -58,7 +58,7 @@ function publicPrayer(p) {
 }
 
 // Built in fallback library of classic prayers in English
-// This is used only if the database and external JSON sources are empty
+// Used only if the database and external JSON sources are empty
 function builtInPrayers(language) {
   if (language !== "en") return [];
 
@@ -202,7 +202,11 @@ async function fetchExternalPrayers(language) {
       });
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : Array.isArray(data.items) ? data.items : [];
+        const list = Array.isArray(data)
+          ? data
+          : Array.isArray(data.items)
+          ? data.items
+          : [];
 
         external = list
           .map((raw, idx) => {
@@ -215,8 +219,9 @@ async function fetchExternalPrayers(language) {
             return {
               id: String(raw.id || `external-${language}-${idx}`),
               language,
-              slug:
-                String(raw.slug || title.toLowerCase().replace(/\s+/g, "-")).slice(0, 120),
+              slug: String(
+                raw.slug || title.toLowerCase().replace(/\s+/g, "-")
+              ).slice(0, 120),
               title,
               content,
               category: raw.category || "Devotions",
@@ -225,7 +230,8 @@ async function fetchExternalPrayers(language) {
                 : [],
               source: raw.source || "external-json",
               sourceUrl: raw.sourceUrl || null,
-              sourceAttribution: raw.sourceAttribution || "External prayer library",
+              sourceAttribution:
+                raw.sourceAttribution || "External prayer library",
               updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date()
             };
           })
@@ -291,49 +297,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Get a single prayer by id or slug
-router.get("/:idOrSlug", async (req, res) => {
-  const prisma = getPrisma(req);
-  const language = resolveLanguage(req);
-  const { idOrSlug } = req.params;
-
-  try {
-    let prayer = await prisma.prayer.findUnique({
-      where: { id: idOrSlug }
-    });
-
-    if (!prayer) {
-      prayer = await prisma.prayer.findUnique({
-        where: {
-          slug_language: {
-            slug: idOrSlug,
-            language
-          }
-        }
-      });
-    }
-
-    if (prayer && prayer.isActive) {
-      return res.json({ prayer: publicPrayer(prayer) });
-    }
-
-    // If not found in the database, search external and built in sources
-    const external = await fetchExternalPrayers(language);
-    const match =
-      external.find((p) => p.id === idOrSlug) ||
-      external.find((p) => p.slug === idOrSlug);
-
-    if (!match) {
-      return res.status(404).json({ error: "Prayer not found" });
-    }
-
-    return res.json({ prayer: publicPrayer(match) });
-  } catch (error) {
-    console.error("[Via Fidei] Prayer load error", error);
-    res.status(500).json({ error: "Failed to load prayer" });
-  }
-});
-
 // Local search inside Prayers
 // GET /api/prayers/search/local?q=...&mode=suggest|full
 router.get("/search/local", async (req, res) => {
@@ -359,10 +322,7 @@ router.get("/search/local", async (req, res) => {
 
     const dbBase = await prisma.prayer.findMany({
       where,
-      orderBy: [
-        { title: "asc" },
-        { updatedAt: "desc" }
-      ],
+      orderBy: [{ title: "asc" }, { updatedAt: "desc" }],
       take: mode === "suggest" ? 40 : 120
     });
 
@@ -441,6 +401,49 @@ router.get("/search/local", async (req, res) => {
   } catch (error) {
     console.error("[Via Fidei] Prayers search error", error);
     res.status(500).json({ error: "Failed to search prayers" });
+  }
+});
+
+// Get a single prayer by id or slug
+router.get("/:idOrSlug", async (req, res) => {
+  const prisma = getPrisma(req);
+  const language = resolveLanguage(req);
+  const { idOrSlug } = req.params;
+
+  try {
+    let prayer = await prisma.prayer.findUnique({
+      where: { id: idOrSlug }
+    });
+
+    if (!prayer) {
+      prayer = await prisma.prayer.findUnique({
+        where: {
+          slug_language: {
+            slug: idOrSlug,
+            language
+          }
+        }
+      });
+    }
+
+    if (prayer && prayer.isActive) {
+      return res.json({ prayer: publicPrayer(prayer) });
+    }
+
+    // If not found in the database, search external and built in sources
+    const external = await fetchExternalPrayers(language);
+    const match =
+      external.find((p) => p.id === idOrSlug) ||
+      external.find((p) => p.slug === idOrSlug);
+
+    if (!match) {
+      return res.status(404).json({ error: "Prayer not found" });
+    }
+
+    return res.json({ prayer: publicPrayer(match) });
+  } catch (error) {
+    console.error("[Via Fidei] Prayer load error", error);
+    res.status(500).json({ error: "Failed to load prayer" });
   }
 });
 
