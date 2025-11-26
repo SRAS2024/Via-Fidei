@@ -25,20 +25,24 @@ function getPrisma(req) {
  *   5. English
  */
 function resolveLanguage(req) {
-  const candidates = [
-    req.user && req.user.languageOverride,
-    req.query && (req.query.language || req.query.lang),
-    process.env.DEFAULT_LANGUAGE,
-    "en"
-  ];
+  const tryLang = (value) => {
+    if (!value) return null;
+    const lower = String(value).toLowerCase();
+    return SUPPORTED_LANGS.includes(lower) ? lower : null;
+  };
 
-  for (const candidate of candidates) {
-    if (!candidate) continue;
-    const lower = String(candidate).toLowerCase();
-    if (SUPPORTED_LANGS.includes(lower)) {
-      return lower;
-    }
-  }
+  const userPref = req.user && req.user.languageOverride;
+  const queryPref = req.query && (req.query.language || req.query.lang);
+  const envPref = process.env.DEFAULT_LANGUAGE;
+
+  const fromUser = tryLang(userPref);
+  if (fromUser) return fromUser;
+
+  const fromQuery = tryLang(queryPref);
+  if (fromQuery) return fromQuery;
+
+  const fromEnv = tryLang(envPref);
+  if (fromEnv) return fromEnv;
 
   const header = req.headers && req.headers["accept-language"];
   if (typeof header === "string" && header.length > 0) {
@@ -104,28 +108,31 @@ function normalizeMission(siteContentEntry, language) {
   const parsed = safeJsonParse(siteContentEntry && siteContentEntry.content);
 
   if (parsed && typeof parsed === "object") {
+    const fallback = defaultMission(language);
+
     const heading =
       typeof parsed.heading === "string" && parsed.heading.trim()
         ? parsed.heading.trim()
-        : defaultMission(language).heading;
+        : fallback.heading;
 
     const subheading =
       typeof parsed.subheading === "string" && parsed.subheading.trim()
         ? parsed.subheading.trim()
-        : defaultMission(language).subheading;
+        : fallback.subheading;
 
     const body =
       Array.isArray(parsed.body) && parsed.body.length > 0
         ? parsed.body.map((p) => String(p))
-        : defaultMission(language).body;
+        : fallback.body;
 
     return { heading, subheading, body };
   }
 
   if (siteContentEntry && typeof siteContentEntry.content === "string") {
+    const base = defaultMission(language);
     return {
-      heading: defaultMission(language).heading,
-      subheading: defaultMission(language).subheading,
+      heading: base.heading,
+      subheading: base.subheading,
       body: [siteContentEntry.content]
     };
   }
@@ -137,10 +144,12 @@ function normalizeAbout(siteContentEntry, language) {
   const parsed = safeJsonParse(siteContentEntry && siteContentEntry.content);
 
   if (parsed && typeof parsed === "object") {
+    const fallback = defaultAbout(language);
+
     const paragraphs =
       Array.isArray(parsed.paragraphs) && parsed.paragraphs.length > 0
         ? parsed.paragraphs.map((p) => String(p))
-        : defaultAbout(language).paragraphs;
+        : fallback.paragraphs;
 
     const quickLinks =
       Array.isArray(parsed.quickLinks) && parsed.quickLinks.length > 0
@@ -148,7 +157,7 @@ function normalizeAbout(siteContentEntry, language) {
             target: String(link.target || "").trim(),
             label: String(link.label || "").trim()
           }))
-        : defaultAbout(language).quickLinks;
+        : fallback.quickLinks;
 
     return { paragraphs, quickLinks };
   }
