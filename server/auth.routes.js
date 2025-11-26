@@ -102,12 +102,27 @@ async function requireAuth(req, res, next) {
   }
 }
 
+function toPublicUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    themePreference: user.themePreference,
+    languageOverride: user.languageOverride,
+    profilePictureUrl: user.profilePictureUrl,
+    createdAt: user.createdAt
+  };
+}
+
 // Routes
 
 // POST /api/auth/register
 router.post("/register", async (req, res) => {
   const prisma = getPrisma(req);
-  const { firstName, lastName, email, password, passwordConfirm } = req.body || {};
+  const { firstName, lastName, email, password, passwordConfirm } =
+    req.body || {};
 
   if (!firstName || !lastName || !email || !password || !passwordConfirm) {
     return res.status(400).json({ error: "All fields are required" });
@@ -145,16 +160,7 @@ router.post("/register", async (req, res) => {
     issueSession(res, req, user.id);
 
     res.status(201).json({
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        themePreference: user.themePreference,
-        languageOverride: user.languageOverride,
-        profilePictureUrl: user.profilePictureUrl,
-        createdAt: user.createdAt
-      }
+      user: toPublicUser(user)
     });
   } catch (error) {
     console.error("[Via Fidei] Register error", error);
@@ -190,16 +196,7 @@ router.post("/login", async (req, res) => {
     issueSession(res, req, user.id);
 
     res.json({
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        themePreference: user.themePreference,
-        languageOverride: user.languageOverride,
-        profilePictureUrl: user.profilePictureUrl,
-        createdAt: user.createdAt
-      }
+      user: toPublicUser(user)
     });
   } catch (error) {
     console.error("[Via Fidei] Login error", error);
@@ -237,16 +234,7 @@ router.get("/me", async (req, res) => {
     issueSession(res, req, user.id);
 
     res.json({
-      user: {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        themePreference: user.themePreference,
-        languageOverride: user.languageOverride,
-        profilePictureUrl: user.profilePictureUrl,
-        createdAt: user.createdAt
-      }
+      user: toPublicUser(user)
     });
   } catch (error) {
     console.error("[Via Fidei] /me token error", error);
@@ -256,7 +244,7 @@ router.get("/me", async (req, res) => {
 });
 
 // POST /api/auth/reset-password
-// No email service: validate email + firstName + lastName, then reset
+// No email service: validate email plus firstName plus lastName, then reset
 router.post("/reset-password", async (req, res) => {
   const prisma = getPrisma(req);
   const {
@@ -319,3 +307,5 @@ router.post("/reset-password", async (req, res) => {
 
 module.exports = router;
 module.exports.requireAuth = requireAuth;
+module.exports.clearSession = clearSession;
+module.exports.SESSION_COOKIE_NAME = SESSION_COOKIE_NAME;
