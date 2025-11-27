@@ -1,41 +1,45 @@
-# Stage 1  build everything (server deps, client build, Prisma client)
+# syntax=docker/dockerfile:1
+
+# Build stage  client bundle + Prisma client
 FROM node:20 AS builder
 
-# Work inside /app
+# Create app directory
 WORKDIR /app
 
-# Install dependencies first to cache them
+# Install dependencies (includes devDependencies for Vite / Prisma)
 COPY package*.json ./
 RUN npm install
 
-# Copy the rest of the source code
+# Copy the rest of the app
 COPY . .
 
-# Build the React client into /client/dist
+# Build the React client to client/dist
 RUN npm run build:client
 
-# Generate Prisma client
+# Generate Prisma client (uses devDependency "prisma")
 RUN npm run prisma:generate
 
-# Stage 2  lightweight runtime image
+# Runtime stage
 FROM node:20 AS runner
 
 WORKDIR /app
 
-# Copy only what we need from the builder
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/index.js ./index.js
-COPY --from=builder /app/server ./server
-COPY --from=builder /app/prisma.schema ./prisma.schema
-COPY --from=builder /app/database ./database
-COPY --from=builder /app/client/dist ./client/dist
-
 # Environment
 ENV NODE_ENV=production
+ENV PORT=5000
 
-# Railway will inject PORT  do not hard code it here
+# Install all dependencies (including prisma CLI since you use prestart)
+COPY package*.json ./
+RUN npm install
+
+# Copy application source
+COPY . .
+
+# Copy built client from builder stage
+COPY --from=builder /app/client/dist ./client/dist
+
+# Expose app port
 EXPOSE 5000
 
-# Start the server  prestart in package.json will run prisma:migrate
-CMD ["npm", "run", "start"]
+# Start your Node server (prestart will run migrations if defined)
+CMD ["npm", "start"]
