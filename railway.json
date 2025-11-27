@@ -1,7 +1,6 @@
 {
   "build": {
-    "builder": "NODE",
-    "buildCommand": "npm install && npm run build"
+    "builder": "NIXPACKS"
   },
   "deploy": {
     "numReplicas": 1,
