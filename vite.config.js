@@ -1,23 +1,17 @@
 // vite.config.js
 // Via Fidei · Vite config for React client in /client
 
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
-import path from "path";
-import { fileURLToPath } from "url";
+const { defineConfig } = require("vite");
+const react = require("@vitejs/plugin-react");
+const path = require("path");
 
-// Recreate __dirname for ES module context
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-export default defineConfig({
+module.exports = defineConfig({
   // Vite project root is the /client folder
   root: path.resolve(__dirname, "client"),
   plugins: [react()],
   resolve: {
     alias: {
       // You can use "@/..." to refer to files inside client/src
-      // This is optional and only used if you import from "@"
       "@": path.resolve(__dirname, "client", "src")
     }
   },
