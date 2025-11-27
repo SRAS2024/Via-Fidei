@@ -1,27 +1,50 @@
-Dockerfile# Dockerfile
-# Via Fidei container for Railway
+# Dockerfile
+# Via Fidei multi stage build: build client, generate Prisma client, then run Node server.
 
-# 1. Base image
-FROM node:20
+# Stage 1: build client and generate Prisma client
+FROM node:20-alpine AS builder
 
-# 2. Working directory
+# Create app directory
 WORKDIR /app
 
-# 3. Copy package manifests and install dependencies
+# Install dependencies
 COPY package*.json ./
-
-# Install all deps including devDependencies so Vite and Prisma work
 RUN npm install
 
-# 4. Copy the rest of the app code
+# Copy the rest of the project
 COPY . .
 
-# 5. Build the React client (outputs to client/dist via vite.config.js)
+# Build the React client (outputs to client/dist)
 RUN npm run build:client
 
-# 6. Expose the port used by index.js
+# Generate Prisma client so the server can use Prisma in the runtime image
+RUN npm run prisma:generate
+
+# Stage 2: runtime image
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=5000
+
+# Copy only what we need into the runtime image
+COPY package*.json ./
+
+# Bring over node_modules from the builder
+COPY --from=builder /app/node_modules ./node_modules
+
+# Server and backend code
+COPY --from=builder /app/index.js ./index.js
+COPY --from=builder /app/server ./server
+COPY --from=builder /app/database ./database
+COPY --from=builder /app/prisma.schema ./prisma.schema
+
+# Built React client
+COPY --from=builder /app/client/dist ./client/dist
+
+# Expose the port Railway will connect to
 EXPOSE 5000
 
-# 7. Start the server
-# prestart will run prisma migrate, postinstall already ran prisma generate
-CMD ["npm", "run", "start"]
+# Use npm start so your prestart script can run migrations:
+#   "prestart": "npm run prisma:migrate"
+CMD ["npm", "start"]
