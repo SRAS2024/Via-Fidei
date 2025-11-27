@@ -1,27 +1,21 @@
 # syntax=docker/dockerfile:1
 
-# Stage 1: build client and prepare app
+# Stage 1: build client
 FROM node:20 AS build
 
 WORKDIR /app
 
-# Install root dependencies (server, Prisma, etc)
-COPY package.json package-lock.json* ./
+# Install root dependencies (server + client + Vite)
+COPY package*.json ./
 RUN npm install
 
-# Install client dependencies
-WORKDIR /app/client
-COPY client/package.json client/package-lock.json* ./
-RUN npm install
-
-# Copy the rest of the repo and build the client
-WORKDIR /app
+# Copy the rest of the source code
 COPY . .
 
 # Build the React client into client/dist
-RUN npm run build
+RUN npm run build:client
 
-# Stage 2: production image
+# Stage 2: production runtime
 FROM node:20 AS production
 
 WORKDIR /app
@@ -29,13 +23,13 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Copy only what we actually need to run
-COPY package.json package-lock.json* ./
+# Install only production dependencies
+COPY package*.json ./
 RUN npm install --omit=dev
 
-# Application source and built client
-COPY --from=build /app/client/dist ./client/dist
+# Copy app source and built client assets
 COPY . .
+COPY --from=build /app/client/dist ./client/dist
 
 EXPOSE 5000
 
