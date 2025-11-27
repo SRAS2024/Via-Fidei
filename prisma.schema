@@ -46,8 +46,10 @@ model JournalEntry {
   title      String
   body       String
   isFavorite Boolean @default(false)
+  // Used for active vs archived views in profile.routes
+  isArchived Boolean @default(false)
 
-  @@index([userId, createdAt])
+  @@index([userId, isArchived, createdAt])
 }
 
 model Prayer {
@@ -429,3 +431,4 @@ enum SiteContentKey {
   PHOTO_COLLAGE
   LITURGICAL_THEME
 }
+]
