@@ -21,18 +21,21 @@ function publicEntry(e) {
     title: e.title,
     body: e.body,
     isFavorite: Boolean(e.isFavorite),
+    isArchived: Boolean(e.isArchived),
     createdAt: e.createdAt,
     updatedAt: e.updatedAt
   };
 }
 
 // List journal entries for current user
-// GET /api/journal?favorite=false|true|all&take=20&cursor=<id>
+// GET /api/journal?favorite=false|true|all&view=active|archived|all&take=20&cursor=<id>
 router.get("/", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const userId = req.user.id;
 
   const favoriteParam = (req.query.favorite || "all").toString();
+  const viewParam = (req.query.view || "active").toString();
+
   const take = Math.min(Number(req.query.take) || 20, 100);
   const cursor = req.query.cursor || null;
 
@@ -43,10 +46,19 @@ router.get("/", requireAuth, async (req, res) => {
     favoriteFilter = { isFavorite: false };
   }
 
+  let archivedFilter = {};
+  if (viewParam === "active") {
+    archivedFilter = { isArchived: false };
+  } else if (viewParam === "archived") {
+    archivedFilter = { isArchived: true };
+  }
+  // "all" leaves archivedFilter empty
+
   try {
     const where = {
       userId,
-      ...favoriteFilter
+      ...favoriteFilter,
+      ...archivedFilter
     };
 
     const entries = await prisma.journalEntry.findMany({
@@ -96,7 +108,7 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 // Create a new entry
 // POST /api/journal
-// { title?, body?, isFavorite? }
+// { title?, body?, content?, isFavorite? }
 router.post("/", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const userId = req.user.id;
@@ -112,6 +124,10 @@ router.post("/", requireAuth, async (req, res) => {
       ? req.body.content
       : "";
 
+  if (!contentBody.trim()) {
+    return res.status(400).json({ error: "Journal body is required" });
+  }
+
   const isFavorite = Boolean(req.body.isFavorite);
 
   try {
@@ -120,7 +136,8 @@ router.post("/", requireAuth, async (req, res) => {
         userId,
         title,
         body: contentBody,
-        isFavorite
+        isFavorite,
+        isArchived: false
       }
     });
 
@@ -164,6 +181,10 @@ router.put("/:id", requireAuth, async (req, res) => {
 
     if (Object.prototype.hasOwnProperty.call(req.body, "isFavorite")) {
       data.isFavorite = Boolean(req.body.isFavorite);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, "isArchived")) {
+      data.isArchived = Boolean(req.body.isArchived);
     }
 
     const updated = await prisma.journalEntry.update({
