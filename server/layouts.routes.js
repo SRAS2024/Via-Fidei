@@ -22,7 +22,7 @@ function getPrisma(req) {
 /**
  * Resolve the active language for the request.
  * Priority:
- *   1. Authenticated user preference (if available)
+ *   1. Authenticated user preference (if available on req.user)
  *   2. Explicit query param ?language= or ?lang=
  *   3. DEFAULT_LANGUAGE env
  *   4. Accept Language header
@@ -169,15 +169,20 @@ const SECONDARY_NAV = [
 // Global chrome data: language, liturgical theme, nav, and optional user summary
 router.get("/", async (req, res) => {
   const prisma = getPrisma(req);
-  const language = resolveLanguage(req);
 
   try {
-    const [user, themeRow] = await Promise.all([
-      resolveCurrentUser(req, res),
-      prisma.siteContent.findFirst({
-        where: { language: "global", key: "LITURGICAL_THEME" }
-      })
-    ]);
+    // Resolve the user first so resolveLanguage can honor languageOverride.
+    const user = await resolveCurrentUser(req, res);
+    if (user) {
+      // This keeps resolveLanguage consistent with other routes that rely on req.user.
+      req.user = user;
+    }
+
+    const language = resolveLanguage(req);
+
+    const themeRow = await prisma.siteContent.findFirst({
+      where: { language: "global", key: "LITURGICAL_THEME" }
+    });
 
     const themeContent = safeJsonParse(themeRow && themeRow.content);
     const allowedThemes = ["normal", "advent", "easter"];
