@@ -1,15 +1,12 @@
 // server/sacraments.routes.js
 // Seven sacraments, content, and links to milestones and goals
-// Database first, then optional external JSON, then built in canonical content.
+// Database first, then built in canonical content as a safe fallback.
 
 const express = require("express");
 
 const router = express.Router();
 
 const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
-
-// Optional cache for external or built in sacraments
-const externalSacramentsCache = new Map();
 
 function getPrisma(req) {
   if (!req.prisma) {
@@ -34,8 +31,8 @@ function resolveLanguage(req) {
     return SUPPORTED_LANGS.includes(lower) ? lower : null;
   };
 
-  const userPref = req.user && req.user.languageOverride;
-  const queryPref = req.query && (req.query.language || req.query.lang);
+  const userPref = req.user?.languageOverride;
+  const queryPref = req.query?.language || req.query?.lang;
   const envPref = process.env.DEFAULT_LANGUAGE;
 
   const fromUser = tryLang(userPref);
@@ -47,7 +44,7 @@ function resolveLanguage(req) {
   const fromEnv = tryLang(envPref);
   if (fromEnv) return fromEnv;
 
-  const header = req.headers && req.headers["accept-language"];
+  const header = req.headers?.["accept-language"];
   if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
@@ -66,15 +63,19 @@ function publicSacrament(s) {
     name: s.name,
     iconKey: s.iconKey || null,
     meaning: s.meaning,
-    biblicalFoundation: s.biblicalFoundation,
-    preparation: s.preparation,
-    whatToExpect: s.whatToExpect,
-    commonQuestions: s.commonQuestions || [],
-    tags: s.tags || [],
+    biblicalFoundation: Array.isArray(s.biblicalFoundation)
+      ? s.biblicalFoundation
+      : [],
+    preparation: s.preparation || null,
+    whatToExpect: s.whatToExpect || null,
+    commonQuestions: Array.isArray(s.commonQuestions)
+      ? s.commonQuestions
+      : [],
+    tags: Array.isArray(s.tags) ? s.tags : [],
     source: s.source || null,
     sourceUrl: s.sourceUrl || null,
     sourceAttribution: s.sourceAttribution || null,
-    updatedAt: s.updatedAt
+    updatedAt: s.updatedAt || null
   };
 }
 
@@ -94,10 +95,9 @@ function sacramentOrderIndex(slug) {
   return idx === -1 ? 999 : idx;
 }
 
-// Built in English sacraments with meaning, history, and what we believe
+// Built in sacraments with meaning, history, and what we believe
+// Used as a safe fallback whenever the database does not yet have content.
 function builtInSacraments(language) {
-  if (language !== "en") return [];
-
   const now = new Date();
 
   const sacraments = [
@@ -431,7 +431,8 @@ function builtInSacraments(language) {
       },
       commonQuestions: [
         {
-          question: "Why can only men be ordained to the priesthood in the Catholic Church?",
+          question:
+            "Why can only men be ordained to the priesthood in the Catholic Church?",
           answer:
             "The Church understands that she is bound to the example of Christ, who chose men as His apostles. This is received not as a commentary on dignity or holiness, but as a sacramental sign entrusted to the Church."
         },
@@ -489,7 +490,8 @@ function builtInSacraments(language) {
       },
       commonQuestions: [
         {
-          question: "Why does the Church speak of marriage as a covenant and not only as a contract?",
+          question:
+            "Why does the Church speak of marriage as a covenant and not only as a contract?",
           answer:
             "A covenant is an exchange of persons, rooted in God’s faithful love. In Matrimony, the spouses give themselves to one another before God, forming a bond that reflects Christ’s irrevocable love for the Church."
         },
@@ -508,7 +510,6 @@ function builtInSacraments(language) {
     }
   ];
 
-  // Attach language and ids, keep canonical order
   return sacraments.map((s) => ({
     id: `builtin-sacrament-${language}-${s.slug}`,
     language,
@@ -516,84 +517,41 @@ function builtInSacraments(language) {
   }));
 }
 
-// Optional external sacraments JSON
-// Configure via SACRAMENTS_EXTERNAL_URL or SACRAMENTS_EXTERNAL_URL_EN etc
-async function fetchExternalSacraments(language) {
-  const cached = externalSacramentsCache.get(language);
-  if (cached) return cached;
-
-  const upper = language.toUpperCase();
-  const specific = process.env[`SACRAMENTS_EXTERNAL_URL_${upper}`];
-  const generic = process.env.SACRAMENTS_EXTERNAL_URL;
-  const url = specific || generic;
-
-  let external = [];
-
-  if (url && typeof fetch !== "undefined") {
-    try {
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data.items)
-          ? data.items
-          : [];
-
-        external = list
-          .map((raw, idx) => {
-            if (!raw || typeof raw !== "object") return null;
-
-            const name = String(raw.name || "").trim();
-            if (!name) return null;
-
-            const slugBase =
-              raw.slug ||
-              name
-                .toLowerCase()
-                .replace(/[^a-z0-9\s\-]/g, "")
-                .replace(/\s+/g, "-");
-
-            return {
-              id: String(raw.id || `external-sacrament-${language}-${idx}`),
-              language,
-              slug: String(slugBase).slice(0, 140),
-              name,
-              iconKey: raw.iconKey || null,
-              meaning: raw.meaning || "",
-              biblicalFoundation: raw.biblicalFoundation || [],
-              preparation: raw.preparation || null,
-              whatToExpect: raw.whatToExpect || null,
-              commonQuestions: Array.isArray(raw.commonQuestions)
-                ? raw.commonQuestions
-                : [],
-              tags: Array.isArray(raw.tags)
-                ? raw.tags.map((t) => String(t).toLowerCase())
-                : [],
-              source: raw.source || "external-json",
-              sourceUrl: raw.sourceUrl || null,
-              sourceAttribution:
-                raw.sourceAttribution || "External sacraments library",
-              updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date()
-            };
-          })
-          .filter(Boolean);
-      }
-    } catch (err) {
-      console.error(
-        "[Via Fidei] External sacraments fetch error",
-        language,
-        err
-      );
+// Load sacraments from PostgreSQL with built in fallback
+async function loadSacraments(prisma, language) {
+  let dbSacraments = [];
+  try {
+    if (prisma && prisma.sacrament) {
+      dbSacraments = await prisma.sacrament.findMany({
+        where: { language, isActive: true }
+      });
     }
+  } catch (err) {
+    console.error("[Via Fidei] Sacraments DB load error, using defaults", err);
   }
 
-  if (external.length === 0) {
-    external = builtInSacraments(language);
+  const builtIns = builtInSacraments(language);
+
+  // Database entries win on collisions
+  const allRaw =
+    Array.isArray(dbSacraments) && dbSacraments.length > 0
+      ? [...dbSacraments, ...builtIns]
+      : builtIns;
+
+  const seen = new Set();
+  const merged = [];
+
+  for (const s of allRaw) {
+    if (!s) continue;
+    const key = s.slug || s.id || (s.name || "").toLowerCase();
+    if (!key) continue;
+    const composite = `${language}:${key}`;
+    if (seen.has(composite)) continue;
+    seen.add(composite);
+    merged.push(s);
   }
 
-  // Enforce canonical order where possible
-  external.sort((a, b) => {
+  merged.sort((a, b) => {
     const ai = sacramentOrderIndex(a.slug);
     const bi = sacramentOrderIndex(b.slug);
     if (ai === bi) {
@@ -604,8 +562,7 @@ async function fetchExternalSacraments(language) {
     return ai - bi;
   });
 
-  externalSacramentsCache.set(language, external);
-  return external;
+  return merged;
 }
 
 // List all sacraments for the chosen language
@@ -614,43 +571,11 @@ router.get("/", async (req, res) => {
   const language = resolveLanguage(req);
 
   try {
-    const [dbSacraments, external] = await Promise.all([
-      prisma.sacrament.findMany({
-        where: { language, isActive: true }
-      }),
-      fetchExternalSacraments(language)
-    ]);
-
-    // Merge db with external or built in sacraments
-    // Database entries win on collisions and we display in canonical order
-    const allRaw = [...dbSacraments, ...external];
-    const seen = new Set();
-    const merged = [];
-
-    for (const s of allRaw) {
-      if (!s) continue;
-      const key = s.slug || s.id || (s.name || "").toLowerCase();
-      if (!key) continue;
-      const k = `${language}:${key}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      merged.push(s);
-    }
-
-    merged.sort((a, b) => {
-      const ai = sacramentOrderIndex(a.slug);
-      const bi = sacramentOrderIndex(b.slug);
-      if (ai === bi) {
-        const an = (a.name || "").toString();
-        const bn = (b.name || "").toString();
-        return an.localeCompare(bn);
-      }
-      return ai - bi;
-    });
+    const sacraments = await loadSacraments(prisma, language);
 
     return res.json({
       language,
-      items: merged.map(publicSacrament)
+      items: sacraments.map(publicSacrament)
     });
   } catch (error) {
     console.error("[Via Fidei] Sacraments list error", error);
@@ -665,30 +590,52 @@ router.get("/:idOrSlug", async (req, res) => {
   const { idOrSlug } = req.params;
 
   try {
-    let sacrament = await prisma.sacrament.findUnique({
-      where: { id: idOrSlug }
-    });
+    let sacrament = null;
 
-    if (!sacrament) {
-      sacrament = await prisma.sacrament.findUnique({
-        where: {
-          slug_language: {
-            slug: idOrSlug,
-            language
-          }
-        }
-      });
+    // Try database by id
+    try {
+      if (prisma && prisma.sacrament) {
+        sacrament = await prisma.sacrament.findUnique({
+          where: { id: idOrSlug }
+        });
+      }
+    } catch (err) {
+      console.error(
+        "[Via Fidei] Sacrament findUnique by id error, will try slug and defaults",
+        err
+      );
     }
 
-    if (sacrament && sacrament.isActive) {
+    // Try composite key slug + language
+    if (!sacrament) {
+      try {
+        if (prisma && prisma.sacrament) {
+          sacrament = await prisma.sacrament.findUnique({
+            where: {
+              slug_language: {
+                slug: idOrSlug,
+                language
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error(
+          "[Via Fidei] Sacrament findUnique by slug_language error, will fall back to defaults",
+          err
+        );
+      }
+    }
+
+    if (sacrament && (sacrament.isActive === undefined || sacrament.isActive)) {
       return res.json({ sacrament: publicSacrament(sacrament) });
     }
 
-    // Fallback to external or built in
-    const external = await fetchExternalSacraments(language);
+    // Fallback to merged set including built in sacraments
+    const merged = await loadSacraments(prisma, language);
     const match =
-      external.find((s) => s.id === idOrSlug) ||
-      external.find((s) => s.slug === idOrSlug);
+      merged.find((s) => s.id === idOrSlug) ||
+      merged.find((s) => s.slug === idOrSlug);
 
     if (!match) {
       return res.status(404).json({ error: "Sacrament not found" });
