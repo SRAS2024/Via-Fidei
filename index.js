@@ -100,6 +100,7 @@ try {
   app.use("/api/admin", require("./server/admin.routes"));
   app.use("/api/account", require("./server/account.routes"));
   app.use("/api/journal", require("./server/journal.routes"));
+  app.use("/api/goals", require("./server/goals.routes"));
 } catch (err) {
   // During early development some route files may not exist yet
   // The server can still boot so Railway builds are not blocked
