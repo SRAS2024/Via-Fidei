@@ -360,10 +360,11 @@ enum GoalType {
   CUSTOM
 }
 
-// Matches goals.routes.js which uses ACTIVE, COMPLETED, ARCHIVED
+// Matches goals.routes.js and keeps legacy OVERDUE values in the database valid
 enum GoalStatus {
   ACTIVE
   COMPLETED
+  OVERDUE
   ARCHIVED
 }
 
