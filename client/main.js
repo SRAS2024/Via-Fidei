@@ -1044,9 +1044,9 @@ function AppShell() {
           "div",
           {
             className:
-              "vf-header-banner vf-header-banner-" + currentSeason
+              "vf-header-banner vf-header-banner-" + currentSeason,
+            "aria-hidden": "true"
           },
-          { "aria-hidden": "true" },
           React.createElement("div", { className: "vf-banner-mark" })
         ),
         React.createElement(
@@ -2521,5 +2521,7 @@ function AppShell() {
 }
 
 const container = document.getElementById("root");
-const root = createRoot(container);
-root.render(React.createElement(AppShell));
+if (container) {
+  const root = createRoot(container);
+  root.render(React.createElement(AppShell));
+}
