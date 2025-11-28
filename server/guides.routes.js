@@ -1,6 +1,6 @@
 // server/guides.routes.js
 // Guides for Catholic life, practice, discernment, and vocation
-// Database first, then optional external JSON, then built in canonical guides.
+// Database first, then built in canonical guides as a safe fallback.
 
 const express = require("express");
 const { requireAuth } = require("./auth.routes");
@@ -8,9 +8,6 @@ const { requireAuth } = require("./auth.routes");
 const router = express.Router();
 
 const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
-
-// Simple cache for external guides
-const externalGuidesCache = new Map();
 
 function getPrisma(req) {
   if (!req.prisma) {
@@ -35,8 +32,8 @@ function resolveLanguage(req) {
     return SUPPORTED_LANGS.includes(lower) ? lower : null;
   };
 
-  const userPref = req.user && req.user.languageOverride;
-  const queryPref = req.query && (req.query.language || req.query.lang);
+  const userPref = req.user?.languageOverride;
+  const queryPref = req.query?.language || req.query?.lang;
   const envPref = process.env.DEFAULT_LANGUAGE;
 
   const fromUser = tryLang(userPref);
@@ -48,7 +45,7 @@ function resolveLanguage(req) {
   const fromEnv = tryLang(envPref);
   if (fromEnv) return fromEnv;
 
-  const header = req.headers && req.headers["accept-language"];
+  const header = req.headers?.["accept-language"];
   if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
@@ -65,22 +62,21 @@ function publicGuide(g) {
     language: g.language,
     slug: g.slug,
     title: g.title,
-    summary: g.summary,
-    body: g.body,
-    guideType: g.guideType,
-    checklistTemplate: g.checklistTemplate,
-    tags: g.tags || [],
+    summary: g.summary || "",
+    body: g.body || null,
+    guideType: g.guideType || "GENERAL",
+    checklistTemplate: g.checklistTemplate || null,
+    tags: Array.isArray(g.tags) ? g.tags : [],
     source: g.source || null,
     sourceUrl: g.sourceUrl || null,
     sourceAttribution: g.sourceAttribution || null,
-    updatedAt: g.updatedAt
+    updatedAt: g.updatedAt || null
   };
 }
 
-// Built in English guides for core areas
+// Built in guides for core areas
+// Used as a safe fallback whenever the database does not yet have content.
 function builtInGuides(language) {
-  if (language !== "en") return [];
-
   const now = new Date();
 
   // Rosary prayers
@@ -502,77 +498,59 @@ function builtInGuides(language) {
   }));
 }
 
-// Optional external guides JSON
-// Configure via GUIDES_EXTERNAL_URL or GUIDES_EXTERNAL_URL_EN etc
-async function fetchExternalGuides(language) {
-  const cached = externalGuidesCache.get(language);
-  if (cached) return cached;
-
-  const upper = language.toUpperCase();
-  const specific = process.env[`GUIDES_EXTERNAL_URL_${upper}`];
-  const generic = process.env.GUIDES_EXTERNAL_URL;
-  const url = specific || generic;
-
-  let external = [];
-
-  if (url && typeof fetch !== "undefined") {
-    try {
-      const res = await fetch(url, { headers: { Accept: "application/json" } });
-      if (res.ok) {
-        const data = await res.json();
-        const list = Array.isArray(data)
-          ? data
-          : Array.isArray(data.items)
-          ? data.items
-          : [];
-
-        external = list
-          .map((raw, idx) => {
-            if (!raw || typeof raw !== "object") return null;
-
-            const title = String(raw.title || "").trim();
-            const summary = String(raw.summary || "").trim();
-            if (!title) return null;
-
-            const slugBase =
-              raw.slug ||
-              title
-                .toLowerCase()
-                .replace(/[^a-z0-9\s\-]/g, "")
-                .replace(/\s+/g, "-");
-
-            return {
-              id: String(raw.id || `external-guide-${language}-${idx}`),
-              language,
-              slug: String(slugBase).slice(0, 140),
-              title,
-              summary,
-              body: raw.body || null,
-              guideType: raw.guideType || "GENERAL",
-              checklistTemplate: raw.checklistTemplate || null,
-              tags: Array.isArray(raw.tags)
-                ? raw.tags.map((t) => String(t).toLowerCase())
-                : [],
-              source: raw.source || "external-json",
-              sourceUrl: raw.sourceUrl || null,
-              sourceAttribution:
-                raw.sourceAttribution || "External guides library",
-              updatedAt: raw.updatedAt ? new Date(raw.updatedAt) : new Date()
-            };
-          })
-          .filter(Boolean);
-      }
-    } catch (err) {
-      console.error("[Via Fidei] External guides fetch error", language, err);
+// Load guides from PostgreSQL with built in fallback
+async function loadGuides(prisma, language, guideType) {
+  let dbGuides = [];
+  try {
+    if (prisma && prisma.guide) {
+      dbGuides = await prisma.guide.findMany({
+        where: {
+          language,
+          isActive: true,
+          ...(guideType ? { guideType } : {})
+        }
+      });
     }
+  } catch (err) {
+    console.error("[Via Fidei] Guides DB load error, using defaults", err);
   }
 
-  if (external.length === 0) {
-    external = builtInGuides(language);
+  const builtInsAll = builtInGuides(language);
+  const builtIns = guideType
+    ? builtInsAll.filter((g) => g.guideType === guideType)
+    : builtInsAll;
+
+  const allRaw =
+    Array.isArray(dbGuides) && dbGuides.length > 0
+      ? [...dbGuides, ...builtIns]
+      : builtIns;
+
+  const seen = new Set();
+  const merged = [];
+
+  for (const g of allRaw) {
+    if (!g) continue;
+    if (guideType && g.guideType !== guideType) continue;
+
+    const key = g.slug || g.id || (g.title || "").toLowerCase();
+    if (!key) continue;
+    const composite = `${language}:${key}`;
+    if (seen.has(composite)) continue;
+    seen.add(composite);
+    merged.push(g);
   }
 
-  externalGuidesCache.set(language, external);
-  return external;
+  merged.sort((a, b) => {
+    const at = (a.guideType || "").toString();
+    const bt = (b.guideType || "").toString();
+    if (at < bt) return -1;
+    if (at > bt) return 1;
+    const an = (a.title || "").toString();
+    const bn = (b.title || "").toString();
+    return an.localeCompare(bn);
+  });
+
+  return merged;
 }
 
 // List guides, optionally filtered by guideType
@@ -583,49 +561,11 @@ router.get("/", async (req, res) => {
   const guideType = req.query.guideType || null;
 
   try {
-    const [dbGuides, external] = await Promise.all([
-      prisma.guide.findMany({
-        where: {
-          language,
-          isActive: true,
-          ...(guideType ? { guideType } : {})
-        }
-      }),
-      fetchExternalGuides(language)
-    ]);
-
-    // Merge db and external or built in
-    // Prefer database entries when there is a slug or id collision
-    const allRaw = [...dbGuides, ...external];
-
-    const seen = new Set();
-    const merged = [];
-
-    for (const g of allRaw) {
-      if (!g) continue;
-      if (guideType && g.guideType !== guideType) continue;
-
-      const key = g.slug || g.id || (g.title || "").toLowerCase();
-      if (!key) continue;
-      const k = `${language}:${key}`;
-      if (seen.has(k)) continue;
-      seen.add(k);
-      merged.push(g);
-    }
-
-    merged.sort((a, b) => {
-      const at = (a.guideType || "").toString();
-      const bt = (b.guideType || "").toString();
-      if (at < bt) return -1;
-      if (at > bt) return 1;
-      const an = (a.title || "").toString();
-      const bn = (b.title || "").toString();
-      return an.localeCompare(bn);
-    });
+    const guides = await loadGuides(prisma, language, guideType);
 
     return res.json({
       language,
-      items: merged.map(publicGuide)
+      items: guides.map(publicGuide)
     });
   } catch (error) {
     console.error("[Via Fidei] Guides list error", error);
@@ -640,29 +580,49 @@ router.get("/:idOrSlug", async (req, res) => {
   const { idOrSlug } = req.params;
 
   try {
-    let guide = await prisma.guide.findUnique({
-      where: { id: idOrSlug }
-    });
+    let guide = null;
 
-    if (!guide) {
-      guide = await prisma.guide.findUnique({
-        where: {
-          slug_language: {
-            slug: idOrSlug,
-            language
-          }
-        }
-      });
+    try {
+      if (prisma && prisma.guide) {
+        guide = await prisma.guide.findUnique({
+          where: { id: idOrSlug }
+        });
+      }
+    } catch (err) {
+      console.error(
+        "[Via Fidei] Guide findUnique by id error, will try slug and defaults",
+        err
+      );
     }
 
-    if (guide && guide.isActive) {
+    if (!guide) {
+      try {
+        if (prisma && prisma.guide) {
+          guide = await prisma.guide.findUnique({
+            where: {
+              slug_language: {
+                slug: idOrSlug,
+                language
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error(
+          "[Via Fidei] Guide findUnique by slug_language error, will fall back to defaults",
+          err
+        );
+      }
+    }
+
+    if (guide && (guide.isActive === undefined || guide.isActive)) {
       return res.json({ guide: publicGuide(guide) });
     }
 
-    const external = await fetchExternalGuides(language);
+    const merged = await loadGuides(prisma, language, null);
     const match =
-      external.find((g) => g.id === idOrSlug) ||
-      external.find((g) => g.slug === idOrSlug);
+      merged.find((g) => g.id === idOrSlug) ||
+      merged.find((g) => g.slug === idOrSlug);
 
     if (!match) {
       return res.status(404).json({ error: "Guide not found" });
@@ -684,31 +644,51 @@ router.post("/:idOrSlug/add-goal", requireAuth, async (req, res) => {
   const { idOrSlug } = req.params;
 
   try {
-    let guide = await prisma.guide.findUnique({
-      where: { id: idOrSlug }
-    });
+    let guide = null;
 
-    if (!guide) {
-      guide = await prisma.guide.findUnique({
-        where: {
-          slug_language: {
-            slug: idOrSlug,
-            language
-          }
-        }
-      });
+    try {
+      if (prisma && prisma.guide) {
+        guide = await prisma.guide.findUnique({
+          where: { id: idOrSlug }
+        });
+      }
+    } catch (err) {
+      console.error(
+        "[Via Fidei] Guide findUnique by id in add-goal error",
+        err
+      );
     }
 
-    // If not in database, try external or built in guides
-    if (!guide || !guide.isActive) {
-      const external = await fetchExternalGuides(language);
+    if (!guide) {
+      try {
+        if (prisma && prisma.guide) {
+          guide = await prisma.guide.findUnique({
+            where: {
+              slug_language: {
+                slug: idOrSlug,
+                language
+              }
+            }
+          });
+        }
+      } catch (err) {
+        console.error(
+          "[Via Fidei] Guide findUnique by slug_language in add-goal error",
+          err
+        );
+      }
+    }
+
+    if (!guide || guide.isActive === false) {
+      const merged = await loadGuides(prisma, language, null);
       const match =
-        external.find((g) => g.id === idOrSlug) ||
-        external.find((g) => g.slug === idOrSlug);
+        merged.find((g) => g.id === idOrSlug) ||
+        merged.find((g) => g.slug === idOrSlug);
 
       if (!match) {
         return res.status(404).json({ error: "Guide not found" });
       }
+
       guide = match;
     }
 
