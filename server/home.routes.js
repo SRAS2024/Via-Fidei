@@ -73,33 +73,37 @@ function safeJsonParse(value) {
 
 // Default mission text used as a safe fallback when the database
 // does not yet have SiteContent for the requested language.
+// This mirrors the FALLBACK_MISSION used in the React client.
 function defaultMission(language) {
+  void language;
   return {
     heading: "Via Fidei",
-    subheading: "A calm path for growing in faith",
+    subheading: "A Catholic space for clarity, beauty, and depth",
     body: [
-      "Via Fidei exists to be a quiet and trustworthy space where the devout faithful can grow more deeply in their relationship with God.",
-      "It is also a place where those who are searching or returning to the Church can access clear and reliable teaching and resources.",
-      "In every supported language the mission of Via Fidei is the same: to help people encounter Christ and his Church with clarity, beauty, and depth."
+      "Via Fidei is a quiet and reverent space where the devout faithful can grow in their relationship with God and where those who are searching can encounter trusted Catholic teaching at a gentle pace.",
+      "The mission of Via Fidei is to be a place where both the non religious and the faithful alike can find the prayers, saints, sacraments, and guides they need to deepen in faith. It is a tool for spiritual growth, not noise.",
+      "All content is curated, catechism aligned, and presented in a way that is readable, calm, and ordered from top to bottom, left to right."
     ]
   };
 }
 
 // Default About text used as a safe fallback when the database
 // does not yet have SiteContent for the requested language.
+// This mirrors the FALLBACK_ABOUT used in the React client.
 function defaultAbout(language) {
+  void language;
   return {
     paragraphs: [
-      "Via Fidei is a multilingual Catholic website and app that gathers prayers, saints, sacraments, guides, and tools for personal spiritual growth into one quiet place.",
-      "Its design is intentionally simple and reverent so that each page can be read slowly. Typography, spacing, and color are chosen to support prayer rather than compete with it.",
-      "The experience is personal and private. There is no public feed and no comments. The focus is to help each person rest in the presence of God and to draw closer to him through the life of the Church."
+      "Via Fidei is designed to be simple, symmetrical, and approachable. The interface favors clarity over clutter so that you can focus on prayer, study, and discernment.",
+      "Every section is carefully localized and paired with visual elements like icons and artwork so that the whole experience feels rooted in the life of the Church.",
+      "All interactive features are personal and private. There is no social feed or messaging, only tools that support your sacramental life, your goals, and your spiritual journal."
     ],
     quickLinks: [
-      { target: "sacraments", label: "Sacraments" },
-      { target: "guides-ocia", label: "OCIA" },
-      { target: "guides-rosary", label: "Rosary" },
-      { target: "guides-confession", label: "Confession" },
-      { target: "guides", label: "Guides" }
+      { label: "Sacraments", target: "sacraments" },
+      { label: "OCIA", target: "guides-ocia" },
+      { label: "Rosary", target: "guides-rosary" },
+      { label: "Confession", target: "guides-confession" },
+      { label: "Guides", target: "guides-root" }
     ]
   };
 }
