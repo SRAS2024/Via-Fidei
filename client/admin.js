@@ -48,7 +48,9 @@ function applyTheme(theme) {
   const html = document.documentElement;
   if (!theme || theme === "system") {
     html.removeAttribute("data-theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const prefersDark = window.matchMedia(
+      "(prefers-color-scheme: dark)"
+    ).matches;
     html.setAttribute("data-theme", prefersDark ? "dark" : "light");
     return;
   }
@@ -280,9 +282,7 @@ function AdminShell() {
       <header className="vf-header">
         <div className="vf-header-inner">
           <div
-            className={
-              "vf-header-banner vf-header-banner-" + currentSeason
-            }
+            className={"vf-header-banner vf-header-banner-" + currentSeason}
             aria-hidden="true"
           >
             <div className="vf-banner-mark" />
