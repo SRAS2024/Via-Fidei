@@ -58,8 +58,8 @@ function safeJsonParse(value) {
 /**
  * Resolve the active language for the request.
  * Priority:
- *   1. Body language / lang
- *   2. Query language / lang
+ *   1. Body language or lang
+ *   2. Query language or lang
  *   3. Authenticated user preference
  *   4. DEFAULT_LANGUAGE env
  *   5. Accept Language header
@@ -72,11 +72,9 @@ function resolveLanguage(req) {
     return SUPPORTED_LANGS.includes(lower) ? lower : null;
   };
 
-  const bodyLang =
-    req.body && (req.body.language || req.body.lang);
-  const queryLang =
-    req.query && (req.query.language || req.query.lang);
-  const userPref = req.user && req.user.languageOverride;
+  const bodyLang = req.body?.language || req.body?.lang;
+  const queryLang = req.query?.language || req.query?.lang;
+  const userPref = req.user?.languageOverride;
   const envPref = process.env.DEFAULT_LANGUAGE;
 
   const candidates = [bodyLang, queryLang, userPref, envPref];
@@ -86,7 +84,7 @@ function resolveLanguage(req) {
     if (resolved) return resolved;
   }
 
-  const header = req.headers && req.headers["accept-language"];
+  const header = req.headers?.["accept-language"];
   if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
@@ -227,17 +225,15 @@ router.get("/home", requireAdmin, async (req, res) => {
           where: { language, key: "PHOTO_COLLAGE" }
         }),
         prisma.notice.findMany({
-          where: { language, isActive: true },
-          orderBy: { displayOrder: "asc" }
+          where: { language },
+          orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }]
         }),
-        // Global liturgical theme, shared across languages
         prisma.siteContent.findFirst({
           where: { language: "global", key: "LITURGICAL_THEME" }
         })
       ]);
 
-    const themeContent =
-      safeJsonParse(themeRow && themeRow.content) || {};
+    const themeContent = safeJsonParse(themeRow && themeRow.content) || {};
     const allowed = ["normal", "advent", "easter"];
     const liturgicalTheme = allowed.includes(themeContent.liturgicalTheme)
       ? themeContent.liturgicalTheme
@@ -265,11 +261,17 @@ router.put("/home", requireAdmin, async (req, res) => {
 
   try {
     const ops = [];
-    if (mission) {
+    if (mission != null) {
       ops.push(upsertSiteContent(prisma, language, "MISSION", mission));
     }
-    if (about) {
+    if (about != null) {
       ops.push(upsertSiteContent(prisma, language, "ABOUT", about));
+    }
+
+    if (ops.length === 0) {
+      return res.status(400).json({
+        error: "Nothing to update. Provide mission and or about in the request body"
+      });
     }
 
     const results = await Promise.all(ops);
@@ -278,8 +280,8 @@ router.put("/home", requireAdmin, async (req, res) => {
     const updatedAbout = results.find((row) => row.key === "ABOUT");
 
     res.json({
-      mission: updatedMission?.content || mission || null,
-      about: updatedAbout?.content || about || null
+      mission: updatedMission?.content ?? mission ?? null,
+      about: updatedAbout?.content ?? about ?? null
     });
   } catch (error) {
     console.error("[Via Fidei] Admin combined home update error", error);
@@ -290,8 +292,8 @@ router.put("/home", requireAdmin, async (req, res) => {
 // Update mission statement (kept for backwards compatibility)
 router.put("/mission", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.body.language || resolveLanguage(req);
-  const content = req.body.content || {};
+  const language = req.body?.language || resolveLanguage(req);
+  const content = req.body?.content || {};
 
   try {
     const mission = await upsertSiteContent(prisma, language, "MISSION", content);
@@ -305,8 +307,8 @@ router.put("/mission", requireAdmin, async (req, res) => {
 // Update About Via Fidei (kept for backwards compatibility)
 router.put("/about", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.body.language || resolveLanguage(req);
-  const content = req.body.content || {};
+  const language = req.body?.language || resolveLanguage(req);
+  const content = req.body?.content || {};
 
   try {
     const about = await upsertSiteContent(prisma, language, "ABOUT", content);
@@ -321,8 +323,8 @@ router.put("/about", requireAdmin, async (req, res) => {
 // Expecting content to be an object like { photos: [{ id, url, alt }, ...] }
 router.put("/photo-collage", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.body.language || resolveLanguage(req);
-  const content = req.body.content || {};
+  const language = req.body?.language || resolveLanguage(req);
+  const content = req.body?.content || {};
 
   try {
     const collage = await upsertSiteContent(
@@ -388,9 +390,7 @@ router.put("/theme", requireAdmin, async (req, res) => {
 
   const allowed = ["normal", "advent", "easter"];
   if (!allowed.includes(liturgicalTheme)) {
-    return res
-      .status(400)
-      .json({ error: "Invalid liturgical theme value" });
+    return res.status(400).json({ error: "Invalid liturgical theme value" });
   }
 
   try {
@@ -410,12 +410,12 @@ router.put("/theme", requireAdmin, async (req, res) => {
 // List notices for admin
 router.get("/notices", requireAdmin, async (req, res) => {
   const prisma = getPrisma(req);
-  const language = req.query.language || resolveLanguage(req);
+  const language = req.query?.language || resolveLanguage(req);
 
   try {
     const notices = await prisma.notice.findMany({
       where: { language },
-      orderBy: { displayOrder: "asc" }
+      orderBy: [{ displayOrder: "asc" }, { createdAt: "desc" }]
     });
 
     res.json({ notices });
@@ -492,3 +492,4 @@ router.delete("/notices/:id", requireAdmin, async (req, res) => {
 
 module.exports = router;
 module.exports.requireAdmin = requireAdmin;
+module.exports.ADMIN_COOKIE_NAME = ADMIN_COOKIE_NAME;
