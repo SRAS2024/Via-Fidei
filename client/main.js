@@ -79,34 +79,46 @@ function renderSacramentBiblicalFoundation(biblicalFoundation) {
   if (!biblicalFoundation) return null;
 
   if (Array.isArray(biblicalFoundation) && biblicalFoundation.length > 0) {
-    return (
-      <div className="vf-sacrament-field">
-        <strong>Scripture</strong>
-        <ul className="vf-sacrament-list">
-          {biblicalFoundation.map((item, idx) => {
-            if (!item) return null;
-            if (typeof item === "string") {
-              return <li key={idx}>{item}</li>;
-            }
-            return (
-              <li key={item.reference || idx}>
-                {item.reference && (
-                  <span className="vf-sacrament-ref">{item.reference}: </span>
-                )}
-                {item.text}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+    return React.createElement(
+      "div",
+      { className: "vf-sacrament-field" },
+      React.createElement("strong", null, "Scripture"),
+      React.createElement(
+        "ul",
+        { className: "vf-sacrament-list" },
+        biblicalFoundation.map((item, idx) => {
+          if (!item) return null;
+          if (typeof item === "string") {
+            return React.createElement("li", { key: idx }, item);
+          }
+          return React.createElement(
+            "li",
+            { key: item.reference || idx },
+            item.reference
+              ? React.createElement(
+                  React.Fragment,
+                  null,
+                  React.createElement(
+                    "span",
+                    { className: "vf-sacrament-ref" },
+                    item.reference + ": "
+                  ),
+                  item.text
+                )
+              : item.text
+          );
+        })
+      )
     );
   }
 
   if (typeof biblicalFoundation === "string" && biblicalFoundation.trim()) {
-    return (
-      <p className="vf-sacrament-field">
-        <strong>Biblical foundation:</strong> {biblicalFoundation}
-      </p>
+    return React.createElement(
+      "p",
+      { className: "vf-sacrament-field" },
+      React.createElement("strong", null, "Biblical foundation:"),
+      " ",
+      biblicalFoundation
     );
   }
 
@@ -117,28 +129,38 @@ function renderSacramentPreparation(preparation) {
   if (!preparation) return null;
 
   if (typeof preparation === "string") {
-    return (
-      <p className="vf-sacrament-field">
-        <strong>How to prepare:</strong> {preparation}
-      </p>
+    return React.createElement(
+      "p",
+      { className: "vf-sacrament-field" },
+      React.createElement("strong", null, "How to prepare:"),
+      " ",
+      preparation
     );
   }
 
   const overview = preparation.overview;
   const steps = Array.isArray(preparation.steps) ? preparation.steps : [];
 
-  return (
-    <div className="vf-sacrament-field">
-      <strong>How to prepare</strong>
-      {overview && <p className="vf-sacrament-text">{overview}</p>}
-      {steps.length > 0 && (
-        <ul className="vf-sacrament-list">
-          {steps.map((step, idx) => (
-            <li key={idx}>{step}</li>
-          ))}
-        </ul>
-      )}
-    </div>
+  return React.createElement(
+    "div",
+    { className: "vf-sacrament-field" },
+    React.createElement("strong", null, "How to prepare"),
+    overview
+      ? React.createElement(
+          "p",
+          { className: "vf-sacrament-text" },
+          overview
+        )
+      : null,
+    steps.length > 0
+      ? React.createElement(
+          "ul",
+          { className: "vf-sacrament-list" },
+          steps.map((step, idx) =>
+            React.createElement("li", { key: idx }, step)
+          )
+        )
+      : null
   );
 }
 
@@ -146,28 +168,38 @@ function renderSacramentWhatToExpect(whatToExpect) {
   if (!whatToExpect) return null;
 
   if (typeof whatToExpect === "string") {
-    return (
-      <p className="vf-sacrament-field">
-        <strong>What to expect:</strong> {whatToExpect}
-      </p>
+    return React.createElement(
+      "p",
+      { className: "vf-sacrament-field" },
+      React.createElement("strong", null, "What to expect:"),
+      " ",
+      whatToExpect
     );
   }
 
   const short = whatToExpect.short;
   const notes = Array.isArray(whatToExpect.notes) ? whatToExpect.notes : [];
 
-  return (
-    <div className="vf-sacrament-field">
-      <strong>What to expect</strong>
-      {short && <p className="vf-sacrament-text">{short}</p>}
-      {notes.length > 0 && (
-        <ul className="vf-sacrament-list">
-          {notes.map((note, idx) => (
-            <li key={idx}>{note}</li>
-          ))}
-        </ul>
-      )}
-    </div>
+  return React.createElement(
+    "div",
+    { className: "vf-sacrament-field" },
+    React.createElement("strong", null, "What to expect"),
+    short
+      ? React.createElement(
+          "p",
+          { className: "vf-sacrament-text" },
+          short
+        )
+      : null,
+    notes.length > 0
+      ? React.createElement(
+          "ul",
+          { className: "vf-sacrament-list" },
+          notes.map((note, idx) =>
+            React.createElement("li", { key: idx }, note)
+          )
+        )
+      : null
   );
 }
 
@@ -176,28 +208,38 @@ function renderSacramentQuestions(commonQuestions) {
     return null;
   }
 
-  return (
-    <div className="vf-sacrament-qa">
-      <h4 className="vf-sacrament-qa-title">Common questions</h4>
-      <dl className="vf-sacrament-qa-list">
-        {commonQuestions.map((qItem, idx) => {
-          if (!qItem) return null;
-          if (typeof qItem === "string") {
-            return (
-              <div key={idx} className="vf-sacrament-qa-item">
-                <dd>{qItem}</dd>
-              </div>
-            );
-          }
-          return (
-            <div key={idx} className="vf-sacrament-qa-item">
-              {qItem.question && <dt>{qItem.question}</dt>}
-              {qItem.answer && <dd>{qItem.answer}</dd>}
-            </div>
+  return React.createElement(
+    "div",
+    { className: "vf-sacrament-qa" },
+    React.createElement(
+      "h4",
+      { className: "vf-sacrament-qa-title" },
+      "Common questions"
+    ),
+    React.createElement(
+      "dl",
+      { className: "vf-sacrament-qa-list" },
+      commonQuestions.map((qItem, idx) => {
+        if (!qItem) return null;
+        if (typeof qItem === "string") {
+          return React.createElement(
+            "div",
+            { key: idx, className: "vf-sacrament-qa-item" },
+            React.createElement("dd", null, qItem)
           );
-        })}
-      </dl>
-    </div>
+        }
+        return React.createElement(
+          "div",
+          { key: idx, className: "vf-sacrament-qa-item" },
+          qItem.question
+            ? React.createElement("dt", null, qItem.question)
+            : null,
+          qItem.answer
+            ? React.createElement("dd", null, qItem.answer)
+            : null
+        );
+      })
+    )
   );
 }
 
@@ -207,59 +249,88 @@ function renderGuideBodyContent(body) {
   if (!body) return null;
 
   if (typeof body === "string") {
-    return <p className="vf-guide-body">{body}</p>;
+    return React.createElement(
+      "p",
+      { className: "vf-guide-body" },
+      body
+    );
   }
 
   const intro = body.intro;
   const sections = Array.isArray(body.sections) ? body.sections : [];
 
-  return (
-    <div className="vf-guide-body">
-      {intro && <p>{intro}</p>}
-      {sections.map((section, idx) => (
-        <section key={section.title || idx} className="vf-guide-section">
-          {section.title && (
-            <h4 className="vf-guide-section-title">{section.title}</h4>
-          )}
-          {Array.isArray(section.paragraphs) &&
-            section.paragraphs.map((p, i) => (
-              <p key={i} className="vf-guide-paragraph">
-                {p}
-              </p>
-            ))}
-          {Array.isArray(section.steps) && section.steps.length > 0 && (
-            <ol className="vf-guide-steps">
-              {section.steps.map((step, j) => (
-                <li key={step.label || j} className="vf-guide-step">
-                  <div className="vf-guide-step-main">
-                    {step.label && (
-                      <span className="vf-guide-step-label">
-                        {step.label}
-                      </span>
-                    )}
-                    {step.description && (
-                      <span className="vf-guide-step-description">
-                        {step.description}
-                      </span>
-                    )}
-                  </div>
-                  {step.prayerTitle && step.prayerText && (
-                    <div className="vf-guide-step-prayer">
-                      <div className="vf-guide-step-prayer-title">
-                        {step.prayerTitle}
-                      </div>
-                      <p className="vf-guide-step-prayer-text">
-                        {step.prayerText}
-                      </p>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ol>
-          )}
-        </section>
-      ))}
-    </div>
+  return React.createElement(
+    "div",
+    { className: "vf-guide-body" },
+    intro ? React.createElement("p", null, intro) : null,
+    sections.map((section, idx) =>
+      React.createElement(
+        "section",
+        { key: section.title || idx, className: "vf-guide-section" },
+        section.title
+          ? React.createElement(
+              "h4",
+              { className: "vf-guide-section-title" },
+              section.title
+            )
+          : null,
+        Array.isArray(section.paragraphs)
+          ? section.paragraphs.map((p, i) =>
+              React.createElement(
+                "p",
+                { key: i, className: "vf-guide-paragraph" },
+                p
+              )
+            )
+          : null,
+        Array.isArray(section.steps) && section.steps.length > 0
+          ? React.createElement(
+              "ol",
+              { className: "vf-guide-steps" },
+              section.steps.map((step, j) =>
+                React.createElement(
+                  "li",
+                  { key: step.label || j, className: "vf-guide-step" },
+                  React.createElement(
+                    "div",
+                    { className: "vf-guide-step-main" },
+                    step.label
+                      ? React.createElement(
+                          "span",
+                          { className: "vf-guide-step-label" },
+                          step.label
+                        )
+                      : null,
+                    step.description
+                      ? React.createElement(
+                          "span",
+                          { className: "vf-guide-step-description" },
+                          step.description
+                        )
+                      : null
+                  ),
+                  step.prayerTitle && step.prayerText
+                    ? React.createElement(
+                        "div",
+                        { className: "vf-guide-step-prayer" },
+                        React.createElement(
+                          "div",
+                          { className: "vf-guide-step-prayer-title" },
+                          step.prayerTitle
+                        ),
+                        React.createElement(
+                          "p",
+                          { className: "vf-guide-step-prayer-text" },
+                          step.prayerText
+                        )
+                      )
+                    : null
+                )
+              )
+            )
+          : null
+      )
+    )
   );
 }
 
@@ -270,17 +341,25 @@ function renderGuideChecklist(checklistTemplate) {
     : [];
   if (items.length === 0) return null;
 
-  return (
-    <div className="vf-guide-checklist">
-      <h4 className="vf-guide-checklist-title">
-        {checklistTemplate.title || "Checklist"}
-      </h4>
-      <ul>
-        {items.map((item, idx) => (
-          <li key={idx}>{item.label || String(item)}</li>
-        ))}
-      </ul>
-    </div>
+  return React.createElement(
+    "div",
+    { className: "vf-guide-checklist" },
+    React.createElement(
+      "h4",
+      { className: "vf-guide-checklist-title" },
+      checklistTemplate.title || "Checklist"
+    ),
+    React.createElement(
+      "ul",
+      null,
+      items.map((item, idx) =>
+        React.createElement(
+          "li",
+          { key: idx },
+          item.label || String(item)
+        )
+      )
+    )
   );
 }
 
@@ -291,25 +370,29 @@ function renderPagination(currentPage, totalPages, onPageChange, idPrefix) {
   for (let page = 1; page <= totalPages; page += 1) {
     const isActive = page === currentPage;
     pages.push(
-      <li key={`${idPrefix}-${page}`} className="vf-page-item">
-        <button
-          type="button"
-          className={
-            "vf-page-button" + (isActive ? " vf-page-button-active" : "")
-          }
-          onClick={() => onPageChange(page)}
-          aria-current={isActive ? "page" : undefined}
-        >
-          {page}
-        </button>
-      </li>
+      React.createElement(
+        "li",
+        { key: `${idPrefix}-${page}`, className: "vf-page-item" },
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            className:
+              "vf-page-button" +
+              (isActive ? " vf-page-button-active" : ""),
+            onClick: () => onPageChange(page),
+            "aria-current": isActive ? "page" : undefined
+          },
+          page
+        )
+      )
     );
   }
 
-  return (
-    <nav className="vf-pagination" aria-label="Pagination">
-      <ul className="vf-pagination-list">{pages}</ul>
-    </nav>
+  return React.createElement(
+    "nav",
+    { className: "vf-pagination", "aria-label": "Pagination" },
+    React.createElement("ul", { className: "vf-pagination-list" }, pages)
   );
 }
 
@@ -461,26 +544,29 @@ function AppShell() {
   }, [language]);
 
   // Fetch home content
-  const loadHome = useCallback(async (lang) => {
-    try {
-      setLoadingHome(true);
-      const params = new URLSearchParams();
-      if (lang) {
-        params.set("language", lang);
-      }
-      const res = await fetch(`/api/home?${params.toString()}`);
-      const data = await res.json();
-      setHomeData(data);
+  const loadHome = useCallback(
+    async (lang) => {
+      try {
+        setLoadingHome(true);
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        const res = await fetch(`/api/home?${params.toString()}`);
+        const data = await res.json();
+        setHomeData(data);
 
-      if (data && data.liturgicalTheme) {
-        setSeasonTheme(data.liturgicalTheme);
+        if (data && data.liturgicalTheme) {
+          setSeasonTheme(data.liturgicalTheme);
+        }
+      } catch (err) {
+        console.error("Failed to load home content", err);
+      } finally {
+        setLoadingHome(false);
       }
-    } catch (err) {
-      console.error("Failed to load home content", err);
-    } finally {
-      setLoadingHome(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   useEffect(() => {
     loadHome(language);
@@ -767,9 +853,7 @@ function AppShell() {
         `/api/prayers/search/local?${params.toString()}`
       );
       const data = await res.json();
-      setPrayersResults(
-        Array.isArray(data.results) ? data.results : []
-      );
+      setPrayersResults(Array.isArray(data.results) ? data.results : []);
       setPrayersPage(1);
     } catch (err) {
       console.error("Prayers full search failed", err);
@@ -950,212 +1034,297 @@ function AppShell() {
         ? "vf-logo-crucifix"
         : "vf-logo-cross";
 
-    return (
-      <header className="vf-header">
-        <div className="vf-header-inner">
-          <div
-            className={
+    return React.createElement(
+      "header",
+      { className: "vf-header" },
+      React.createElement(
+        "div",
+        { className: "vf-header-inner" },
+        React.createElement(
+          "div",
+          {
+            className:
               "vf-header-banner vf-header-banner-" + currentSeason
-            }
-            aria-hidden="true"
-          >
-            <div className="vf-banner-mark" />
-          </div>
-
-          <div className="vf-header-title-block">
-            <div className="vf-title-row">
-              <span className={logoClass} aria-hidden="true" />
-              <h1 className="vf-site-title">Via Fidei</h1>
-            </div>
-            <p className="vf-site-subtitle">
-              Catholic prayers, saints, sacraments, and guides for spiritual
-              growth
-            </p>
-          </div>
-
-          <nav className="vf-nav" aria-label="Primary">
-            <ul className="vf-nav-list">
-              {TABS.map((tab) => (
-                <li key={tab.id} className="vf-nav-item">
-                  <button
-                    type="button"
-                    className={
+          },
+          { "aria-hidden": "true" },
+          React.createElement("div", { className: "vf-banner-mark" })
+        ),
+        React.createElement(
+          "div",
+          { className: "vf-header-title-block" },
+          React.createElement(
+            "div",
+            { className: "vf-title-row" },
+            React.createElement("span", {
+              className: logoClass,
+              "aria-hidden": "true"
+            }),
+            React.createElement(
+              "h1",
+              { className: "vf-site-title" },
+              "Via Fidei"
+            )
+          ),
+          React.createElement(
+            "p",
+            { className: "vf-site-subtitle" },
+            "Catholic prayers, saints, sacraments, and guides for spiritual growth"
+          )
+        ),
+        React.createElement(
+          "nav",
+          { className: "vf-nav", "aria-label": "Primary" },
+          React.createElement(
+            "ul",
+            { className: "vf-nav-list" },
+            TABS.map((tab) =>
+              React.createElement(
+                "li",
+                { key: tab.id, className: "vf-nav-item" },
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    className:
                       "vf-nav-tab" +
-                      (currentTab === tab.id ? " vf-nav-tab-active" : "")
-                    }
-                    onClick={() => setCurrentTab(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            <div className="vf-nav-right">
-              <div className="vf-icon-group">
-                <div className="vf-icon-wrapper">
-                  <button
-                    type="button"
-                    className="vf-account-button"
-                    aria-haspopup="menu"
-                    aria-expanded={accountMenu === ACCOUNT_STATES.OPEN}
-                    onClick={() =>
+                      (currentTab === tab.id
+                        ? " vf-nav-tab-active"
+                        : ""),
+                    onClick: () => setCurrentTab(tab.id)
+                  },
+                  tab.label
+                )
+              )
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-nav-right" },
+            React.createElement(
+              "div",
+              { className: "vf-icon-group" },
+              // Account
+              React.createElement(
+                "div",
+                { className: "vf-icon-wrapper" },
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    className: "vf-account-button",
+                    "aria-haspopup": "menu",
+                    "aria-expanded":
+                      accountMenu === ACCOUNT_STATES.OPEN,
+                    onClick: () =>
                       setAccountMenu(
                         accountMenu === ACCOUNT_STATES.OPEN
                           ? ACCOUNT_STATES.CLOSED
                           : ACCOUNT_STATES.OPEN
                       )
-                    }
-                  >
-                    <span className="vf-account-label">Account</span>
-                  </button>
-                  {accountMenu === ACCOUNT_STATES.OPEN && (
-                    <div className="vf-menu" role="menu">
-                      {user ? (
-                        <>
-                          <button
-                            type="button"
-                            className="vf-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              setCurrentTab("profile");
-                              setAccountMenu(ACCOUNT_STATES.CLOSED);
-                            }}
-                          >
-                            Profile
-                          </button>
-                          <button
-                            type="button"
-                            className="vf-menu-item"
-                            role="menuitem"
-                            onClick={() => {
-                              setSettingsMenu(SETTINGS_STATES.OPEN);
-                              setAccountMenu(ACCOUNT_STATES.CLOSED);
-                            }}
-                          >
-                            Settings
-                          </button>
-                          <button
-                            type="button"
-                            className="vf-menu-item vf-menu-item-danger"
-                            role="menuitem"
-                            onClick={handleLogout}
-                          >
-                            Logout
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          className="vf-menu-item"
-                          role="menuitem"
-                          onClick={() => {
-                            setCurrentTab("auth");
-                            setAccountMenu(ACCOUNT_STATES.CLOSED);
-                          }}
-                        >
-                          Login
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <div className="vf-icon-wrapper">
-                  <button
-                    type="button"
-                    className="vf-icon-button"
-                    aria-haspopup="menu"
-                    aria-expanded={settingsMenu === SETTINGS_STATES.OPEN}
-                    aria-label="Settings"
-                    onClick={() =>
+                  },
+                  React.createElement(
+                    "span",
+                    { className: "vf-account-label" },
+                    "Account"
+                  )
+                ),
+                accountMenu === ACCOUNT_STATES.OPEN
+                  ? React.createElement(
+                      "div",
+                      { className: "vf-menu", role: "menu" },
+                      user
+                        ? React.createElement(
+                            React.Fragment,
+                            null,
+                            React.createElement(
+                              "button",
+                              {
+                                type: "button",
+                                className: "vf-menu-item",
+                                role: "menuitem",
+                                onClick: () => {
+                                  setCurrentTab("profile");
+                                  setAccountMenu(ACCOUNT_STATES.CLOSED);
+                                }
+                              },
+                              "Profile"
+                            ),
+                            React.createElement(
+                              "button",
+                              {
+                                type: "button",
+                                className: "vf-menu-item",
+                                role: "menuitem",
+                                onClick: () => {
+                                  setSettingsMenu(SETTINGS_STATES.OPEN);
+                                  setAccountMenu(ACCOUNT_STATES.CLOSED);
+                                }
+                              },
+                              "Settings"
+                            ),
+                            React.createElement(
+                              "button",
+                              {
+                                type: "button",
+                                className:
+                                  "vf-menu-item vf-menu-item-danger",
+                                role: "menuitem",
+                                onClick: handleLogout
+                              },
+                              "Logout"
+                            )
+                          )
+                        : React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-menu-item",
+                              role: "menuitem",
+                              onClick: () => {
+                                setCurrentTab("auth");
+                                setAccountMenu(ACCOUNT_STATES.CLOSED);
+                              }
+                            },
+                            "Login"
+                          )
+                    )
+                  : null
+              ),
+              // Settings
+              React.createElement(
+                "div",
+                { className: "vf-icon-wrapper" },
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    className: "vf-icon-button",
+                    "aria-haspopup": "menu",
+                    "aria-expanded":
+                      settingsMenu === SETTINGS_STATES.OPEN,
+                    "aria-label": "Settings",
+                    onClick: () =>
                       setSettingsMenu(
                         settingsMenu === SETTINGS_STATES.OPEN
                           ? SETTINGS_STATES.CLOSED
                           : SETTINGS_STATES.OPEN
                       )
-                    }
-                  >
-                    <span className="vf-icon-gear" aria-hidden="true" />
-                  </button>
-                  {settingsMenu === SETTINGS_STATES.OPEN && (
-                    <div className="vf-menu" role="menu">
-                      <div className="vf-menu-group-label">Theme</div>
-                      <button
-                        type="button"
-                        className={
-                          "vf-menu-item" +
-                          (theme === "light" ? " vf-menu-item-active" : "")
-                        }
-                        role="menuitem"
-                        onClick={() => handleThemeChange("light")}
-                      >
-                        Light
-                      </button>
-                      <button
-                        type="button"
-                        className={
-                          "vf-menu-item" +
-                          (theme === "dark" ? " vf-menu-item-active" : "")
-                        }
-                        role="menuitem"
-                        onClick={() => handleThemeChange("dark")}
-                      >
-                        Dark
-                      </button>
-                      <button
-                        type="button"
-                        className={
-                          "vf-menu-item" +
-                          (theme === "system" ? " vf-menu-item-active" : "")
-                        }
-                        role="menuitem"
-                        onClick={() => handleThemeChange("system")}
-                      >
-                        System
-                      </button>
-
-                      <div className="vf-menu-divider" />
-
-                      <div className="vf-menu-group-label">Language</div>
-                      <div className="vf-menu-inline-field">
-                        <select
-                          value={language}
-                          onChange={(e) =>
-                            handleLanguageChange(e.target.value)
-                          }
-                          className="vf-lang-select"
-                        >
-                          {SUPPORTED_LANGS.map((lang) => (
-                            <option key={lang.code} value={lang.code}>
-                              {lang.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </nav>
-        </div>
-      </header>
+                  },
+                  React.createElement("span", {
+                    className: "vf-icon-gear",
+                    "aria-hidden": "true"
+                  })
+                ),
+                settingsMenu === SETTINGS_STATES.OPEN
+                  ? React.createElement(
+                      "div",
+                      { className: "vf-menu", role: "menu" },
+                      React.createElement(
+                        "div",
+                        { className: "vf-menu-group-label" },
+                        "Theme"
+                      ),
+                      React.createElement(
+                        "button",
+                        {
+                          type: "button",
+                          className:
+                            "vf-menu-item" +
+                            (theme === "light"
+                              ? " vf-menu-item-active"
+                              : ""),
+                          role: "menuitem",
+                          onClick: () => handleThemeChange("light")
+                        },
+                        "Light"
+                      ),
+                      React.createElement(
+                        "button",
+                        {
+                          type: "button",
+                          className:
+                            "vf-menu-item" +
+                            (theme === "dark"
+                              ? " vf-menu-item-active"
+                              : ""),
+                          role: "menuitem",
+                          onClick: () => handleThemeChange("dark")
+                        },
+                        "Dark"
+                      ),
+                      React.createElement(
+                        "button",
+                        {
+                          type: "button",
+                          className:
+                            "vf-menu-item" +
+                            (theme === "system"
+                              ? " vf-menu-item-active"
+                              : ""),
+                          role: "menuitem",
+                          onClick: () => handleThemeChange("system")
+                        },
+                        "System"
+                      ),
+                      React.createElement("div", {
+                        className: "vf-menu-divider"
+                      }),
+                      React.createElement(
+                        "div",
+                        { className: "vf-menu-group-label" },
+                        "Language"
+                      ),
+                      React.createElement(
+                        "div",
+                        { className: "vf-menu-inline-field" },
+                        React.createElement(
+                          "select",
+                          {
+                            value: language,
+                            onChange: (e) =>
+                              handleLanguageChange(e.target.value),
+                            className: "vf-lang-select"
+                          },
+                          SUPPORTED_LANGS.map((lang) =>
+                            React.createElement(
+                              "option",
+                              {
+                                key: lang.code,
+                                value: lang.code
+                              },
+                              lang.label
+                            )
+                          )
+                        )
+                      )
+                    )
+                  : null
+              )
+            )
+          )
+        )
+      )
     );
   }
 
   function renderHome() {
     if (loadingHome) {
-      return (
-        <main className="vf-main">
-          <section className="vf-section">
-            <article className="vf-card">
-              <div className="vf-card-body">
-                <p>Loading home content…</p>
-              </div>
-            </article>
-          </section>
-        </main>
+      return React.createElement(
+        "main",
+        { className: "vf-main" },
+        React.createElement(
+          "section",
+          { className: "vf-section" },
+          React.createElement(
+            "article",
+            { className: "vf-card" },
+            React.createElement(
+              "div",
+              { className: "vf-card-body" },
+              React.createElement("p", null, "Loading home content…")
+            )
+          )
+        )
       );
     }
 
@@ -1167,85 +1336,136 @@ function AppShell() {
     const mission = missionFromApi || FALLBACK_MISSION;
     const about = aboutFromApi || FALLBACK_ABOUT;
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          {notices.length > 0 && (
-            <div className="vf-notices">
-              {notices.map((n) => (
-                <article key={n.id} className="vf-notice-card">
-                  <h2 className="vf-notice-title">{n.title}</h2>
-                  <p className="vf-notice-body">{n.body}</p>
-                </article>
-              ))}
-            </div>
-          )}
-
-          <article className="vf-card vf-card-hero">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">{mission.heading}</h2>
-              {mission.subheading && (
-                <p className="vf-card-subtitle">{mission.subheading}</p>
-              )}
-            </header>
-            {Array.isArray(mission.body) && (
-              <div className="vf-card-body">
-                {mission.body.map((p, idx) => (
-                  <p key={idx}>{p}</p>
-                ))}
-              </div>
-            )}
-          </article>
-
-          <article className="vf-card">
-            <header className="vf-card-header">
-              <h3 className="vf-card-title">About Via Fidei</h3>
-            </header>
-            <div className="vf-card-body">
-              {Array.isArray(about.paragraphs) &&
-                about.paragraphs.map((p, idx) => <p key={idx}>{p}</p>)}
-              {Array.isArray(about.quickLinks) && (
-                <div className="vf-quick-links">
-                  {about.quickLinks.map((link) => (
-                    <button
-                      key={link.target}
-                      type="button"
-                      className="vf-chip-link"
-                      onClick={() => {
-                        if (link.target === "sacraments") {
-                          setCurrentTab("sacraments");
-                        } else if (link.target.startsWith("guides")) {
-                          setCurrentTab("guides");
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        notices.length > 0
+          ? React.createElement(
+              "div",
+              { className: "vf-notices" },
+              notices.map((n) =>
+                React.createElement(
+                  "article",
+                  { key: n.id, className: "vf-notice-card" },
+                  React.createElement(
+                    "h2",
+                    { className: "vf-notice-title" },
+                    n.title
+                  ),
+                  React.createElement(
+                    "p",
+                    { className: "vf-notice-body" },
+                    n.body
+                  )
+                )
+              )
+            )
+          : null,
+        React.createElement(
+          "article",
+          { className: "vf-card vf-card-hero" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              mission.heading
+            ),
+            mission.subheading
+              ? React.createElement(
+                  "p",
+                  { className: "vf-card-subtitle" },
+                  mission.subheading
+                )
+              : null
+          ),
+          Array.isArray(mission.body)
+            ? React.createElement(
+                "div",
+                { className: "vf-card-body" },
+                mission.body.map((p, idx) =>
+                  React.createElement("p", { key: idx }, p)
+                )
+              )
+            : null
+        ),
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h3",
+              { className: "vf-card-title" },
+              "About Via Fidei"
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            Array.isArray(about.paragraphs)
+              ? about.paragraphs.map((p, idx) =>
+                  React.createElement("p", { key: idx }, p)
+                )
+              : null,
+            Array.isArray(about.quickLinks)
+              ? React.createElement(
+                  "div",
+                  { className: "vf-quick-links" },
+                  about.quickLinks.map((link) =>
+                    React.createElement(
+                      "button",
+                      {
+                        key: link.target,
+                        type: "button",
+                        className: "vf-chip-link",
+                        onClick: () => {
+                          if (link.target === "sacraments") {
+                            setCurrentTab("sacraments");
+                          } else if (
+                            link.target &&
+                            link.target.indexOf("guides") === 0
+                          ) {
+                            setCurrentTab("guides");
+                          }
                         }
-                      }}
-                    >
-                      {link.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </article>
-
-          {collagePhotos.length > 0 && (
-            <section className="vf-collage-section">
-              <div className="vf-collage-grid">
-                {collagePhotos.slice(0, 6).map((photo) => (
-                  <figure
-                    key={photo.id || photo.url}
-                    className="vf-collage-item"
-                  >
-                    <img
-                      src={photo.url}
-                      alt={photo.alt || "Via Fidei photo"}
-                    />
-                  </figure>
-                ))}
-              </div>
-            </section>
-          )}
-        </section>
-      </main>
+                      },
+                      link.label
+                    )
+                  )
+                )
+              : null
+          )
+        ),
+        collagePhotos.length > 0
+          ? React.createElement(
+              "section",
+              { className: "vf-collage-section" },
+              React.createElement(
+                "div",
+                { className: "vf-collage-grid" },
+                collagePhotos.slice(0, 6).map((photo) =>
+                  React.createElement(
+                    "figure",
+                    {
+                      key: photo.id || photo.url,
+                      className: "vf-collage-item"
+                    },
+                    React.createElement("img", {
+                      src: photo.url,
+                      alt: photo.alt || "Via Fidei photo"
+                    })
+                  )
+                )
+              )
+            )
+          : null
+      )
     );
   }
 
@@ -1261,61 +1481,89 @@ function AppShell() {
       startIndex + PAGE_SIZE
     );
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          <article className="vf-card">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">Liturgy and History</h2>
-              <p className="vf-card-subtitle">
-                Apostolic Age, Early Church, Councils, Middle Ages,
-                Reformation, modern era, the councils of the last century,
-                and the contemporary life of the Church.
-              </p>
-            </header>
-
-            <div className="vf-card-body">
-              {loadingHistory && historyItems.length === 0 && (
-                <p>Loading history overview…</p>
-              )}
-
-              {!loadingHistory && historyItems.length === 0 && (
-                <p>No history sections are available yet in this language.</p>
-              )}
-
-              {pagedItems.length > 0 && (
-                <div className="vf-stack">
-                  {pagedItems.map((section) => (
-                    <section
-                      key={section.id}
-                      className="vf-history-section"
-                    >
-                      <h3 className="vf-section-subtitle">
-                        {section.title}
-                      </h3>
-                      {section.summary && (
-                        <p className="vf-history-summary">
-                          {section.summary}
-                        </p>
-                      )}
-                      {section.body && (
-                        <p className="vf-history-body">{section.body}</p>
-                      )}
-                    </section>
-                  ))}
-                </div>
-              )}
-
-              {renderPagination(
-                safePage,
-                totalPages,
-                setHistoryPage,
-                "history"
-              )}
-            </div>
-          </article>
-        </section>
-      </main>
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              "Liturgy and History"
+            ),
+            React.createElement(
+              "p",
+              { className: "vf-card-subtitle" },
+              "Apostolic Age, Early Church, Councils, Middle Ages, Reformation, modern era, the councils of the last century, and the contemporary life of the Church."
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            loadingHistory && historyItems.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "Loading history overview…"
+                )
+              : null,
+            !loadingHistory && historyItems.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "No history sections are available yet in this language."
+                )
+              : null,
+            pagedItems.length > 0
+              ? React.createElement(
+                  "div",
+                  { className: "vf-stack" },
+                  pagedItems.map((section) =>
+                    React.createElement(
+                      "section",
+                      {
+                        key: section.id,
+                        className: "vf-history-section"
+                      },
+                      React.createElement(
+                        "h3",
+                        { className: "vf-section-subtitle" },
+                        section.title
+                      ),
+                      section.summary
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-history-summary" },
+                            section.summary
+                          )
+                        : null,
+                      section.body
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-history-body" },
+                            section.body
+                          )
+                        : null
+                    )
+                  )
+                )
+              : null,
+            renderPagination(
+              safePage,
+              totalPages,
+              setHistoryPage,
+              "history"
+            )
+          )
+        )
+      )
     );
   }
 
@@ -1335,102 +1583,159 @@ function AppShell() {
     );
     const showingSearchResults = prayersResults.length > 0;
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          <article className="vf-card">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">Prayers</h2>
-              <p className="vf-card-subtitle">
-                A curated library of approved Catholic prayers in many
-                languages.
-              </p>
-            </header>
-
-            <form className="vf-search-bar" onSubmit={submitPrayersSearch}>
-              <label className="vf-field-label" htmlFor="prayers-search">
-                Search prayers
-              </label>
-              <div className="vf-search-input-wrap">
-                <input
-                  id="prayers-search"
-                  type="search"
-                  placeholder="Search prayers by title or text"
-                  value={prayersSearch}
-                  onChange={(e) => setPrayersSearch(e.target.value)}
-                />
-                <button type="submit" className="vf-btn vf-btn-blue">
-                  Search
-                </button>
-              </div>
-              {prayersSuggestions.length > 0 && (
-                <ul className="vf-search-suggestions">
-                  {prayersSuggestions.slice(0, 3).map((p) => (
-                    <li
-                      key={p.id}
-                      className="vf-search-suggestion"
-                      onClick={() => handlePrayersSuggestionClick(p)}
-                    >
-                      <span className="vf-search-suggestion-title">
-                        {p.title}
-                      </span>
-                      {p.category && (
-                        <span className="vf-search-suggestion-meta">
-                          {p.category}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </form>
-
-            <div className="vf-card-body">
-              {loadingPrayers && activePrayers.length === 0 && (
-                <p>Loading prayers…</p>
-              )}
-
-              {!loadingPrayers && activePrayers.length === 0 && (
-                <p>No prayers are available yet in this language.</p>
-              )}
-
-              {pagedPrayers.length > 0 && (
-                <>
-                  {showingSearchResults && (
-                    <p className="vf-search-results-label">
-                      Showing {pagedPrayers.length} of{" "}
-                      {activePrayers.length} matching prayers
-                    </p>
-                  )}
-                  <div className="vf-stack">
-                    {pagedPrayers.map((p) => (
-                      <article
-                        key={p.id}
-                        className="vf-prayer-item"
-                      >
-                        <h3 className="vf-prayer-title">{p.title}</h3>
-                        {p.category && (
-                          <p className="vf-prayer-category">
-                            {p.category}
-                          </p>
-                        )}
-                        <p className="vf-prayer-body">{p.content}</p>
-                      </article>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {renderPagination(
-                safePage,
-                totalPages,
-                setPrayersPage,
-                "prayers"
-              )}
-            </div>
-          </article>
-        </section>
-      </main>
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              "Prayers"
+            ),
+            React.createElement(
+              "p",
+              { className: "vf-card-subtitle" },
+              "A curated library of approved Catholic prayers in many languages."
+            )
+          ),
+          React.createElement(
+            "form",
+            {
+              className: "vf-search-bar",
+              onSubmit: submitPrayersSearch
+            },
+            React.createElement(
+              "label",
+              { className: "vf-field-label", htmlFor: "prayers-search" },
+              "Search prayers"
+            ),
+            React.createElement(
+              "div",
+              { className: "vf-search-input-wrap" },
+              React.createElement("input", {
+                id: "prayers-search",
+                type: "search",
+                placeholder: "Search prayers by title or text",
+                value: prayersSearch,
+                onChange: (e) => setPrayersSearch(e.target.value)
+              }),
+              React.createElement(
+                "button",
+                { type: "submit", className: "vf-btn vf-btn-blue" },
+                "Search"
+              )
+            ),
+            prayersSuggestions.length > 0
+              ? React.createElement(
+                  "ul",
+                  { className: "vf-search-suggestions" },
+                  prayersSuggestions.slice(0, 3).map((p) =>
+                    React.createElement(
+                      "li",
+                      {
+                        key: p.id,
+                        className: "vf-search-suggestion",
+                        onClick: () =>
+                          handlePrayersSuggestionClick(p)
+                      },
+                      React.createElement(
+                        "span",
+                        { className: "vf-search-suggestion-title" },
+                        p.title
+                      ),
+                      p.category
+                        ? React.createElement(
+                            "span",
+                            { className: "vf-search-suggestion-meta" },
+                            p.category
+                          )
+                        : null
+                    )
+                  )
+                )
+              : null
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            loadingPrayers && activePrayers.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "Loading prayers…"
+                )
+              : null,
+            !loadingPrayers && activePrayers.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "No prayers are available yet in this language."
+                )
+              : null,
+            pagedPrayers.length > 0
+              ? React.createElement(
+                  React.Fragment,
+                  null,
+                  showingSearchResults
+                    ? React.createElement(
+                        "p",
+                        { className: "vf-search-results-label" },
+                        "Showing ",
+                        pagedPrayers.length,
+                        " of ",
+                        activePrayers.length,
+                        " matching prayers"
+                      )
+                    : null,
+                  React.createElement(
+                    "div",
+                    { className: "vf-stack" },
+                    pagedPrayers.map((p) =>
+                      React.createElement(
+                        "article",
+                        {
+                          key: p.id,
+                          className: "vf-prayer-item"
+                        },
+                        React.createElement(
+                          "h3",
+                          { className: "vf-prayer-title" },
+                          p.title
+                        ),
+                        p.category
+                          ? React.createElement(
+                              "p",
+                              { className: "vf-prayer-category" },
+                              p.category
+                            )
+                          : null,
+                        React.createElement(
+                          "p",
+                          { className: "vf-prayer-body" },
+                          p.content
+                        )
+                      )
+                    )
+                  )
+                )
+              : null,
+            renderPagination(
+              safePage,
+              totalPages,
+              setPrayersPage,
+              "prayers"
+            )
+          )
+        )
+      )
     );
   }
 
@@ -1450,126 +1755,181 @@ function AppShell() {
     );
     const showingSearchResults = saintsResults.length > 0;
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          <article className="vf-card">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">Saints</h2>
-              <p className="vf-card-subtitle">
-                Lives of the saints with print friendly About pages,
-                patronages, and prayers.
-              </p>
-            </header>
-
-            <form className="vf-search-bar" onSubmit={submitSaintsSearch}>
-              <label className="vf-field-label" htmlFor="saints-search">
-                Search saints
-              </label>
-              <div className="vf-search-input-wrap">
-                <input
-                  id="saints-search"
-                  type="search"
-                  placeholder="Search by name or patronage"
-                  value={saintsSearch}
-                  onChange={(e) => setSaintsSearch(e.target.value)}
-                />
-                <button type="submit" className="vf-btn vf-btn-blue">
-                  Search
-                </button>
-              </div>
-              {saintsSuggestions.length > 0 && (
-                <ul className="vf-search-suggestions">
-                  {saintsSuggestions.slice(0, 3).map((s) => (
-                    <li
-                      key={s.id || s.slug || s.title}
-                      className="vf-search-suggestion"
-                      onClick={() => handleSaintsSuggestionClick(s)}
-                    >
-                      <span className="vf-search-suggestion-title">
-                        {s.title || s.name}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </form>
-
-            <div className="vf-card-body">
-              {loadingSaints && activeSaints.length === 0 && (
-                <p>Loading saints…</p>
-              )}
-
-              {!loadingSaints && activeSaints.length === 0 && (
-                <p>No saints are available yet in this language.</p>
-              )}
-
-              {pagedSaints.length > 0 && (
-                <>
-                  {showingSearchResults && (
-                    <p className="vf-search-results-label">
-                      Showing {pagedSaints.length} of{" "}
-                      {activeSaints.length} matching saints
-                    </p>
-                  )}
-                  <section className="vf-stack">
-                    {pagedSaints.map((s) => (
-                      <article
-                        key={s.id}
-                        className="vf-saint-item vf-saint-detail"
-                      >
-                        <div className="vf-saint-header">
-                          {s.imageUrl && (
-                            <div className="vf-saint-avatar-wrap">
-                              <img
-                                src={s.imageUrl}
-                                alt={s.name}
-                                className="vf-saint-avatar"
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <h4 className="vf-saint-name">
-                              {s.name}
-                            </h4>
-                            {s.feastDay && (
-                              <p className="vf-saint-meta">
-                                Feast day:{" "}
-                                {new Date(
-                                  s.feastDay
-                                ).toLocaleDateString()}
-                              </p>
-                            )}
-                            {Array.isArray(s.patronages) &&
-                              s.patronages.length > 0 && (
-                                <p className="vf-saint-meta">
-                                  Patronage:{" "}
-                                  {s.patronages.join(", ")}
-                                </p>
-                              )}
-                          </div>
-                        </div>
-                        {s.biography && (
-                          <p className="vf-saint-bio">
-                            {s.biography}
-                          </p>
-                        )}
-                      </article>
-                    ))}
-                  </section>
-                </>
-              )}
-
-              {renderPagination(
-                safePage,
-                totalPages,
-                setSaintsPage,
-                "saints"
-              )}
-            </div>
-          </article>
-        </section>
-      </main>
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              "Saints"
+            ),
+            React.createElement(
+              "p",
+              { className: "vf-card-subtitle" },
+              "Lives of the saints with print friendly About pages, patronages, and prayers."
+            )
+          ),
+          React.createElement(
+            "form",
+            {
+              className: "vf-search-bar",
+              onSubmit: submitSaintsSearch
+            },
+            React.createElement(
+              "label",
+              { className: "vf-field-label", htmlFor: "saints-search" },
+              "Search saints"
+            ),
+            React.createElement(
+              "div",
+              { className: "vf-search-input-wrap" },
+              React.createElement("input", {
+                id: "saints-search",
+                type: "search",
+                placeholder: "Search by name or patronage",
+                value: saintsSearch,
+                onChange: (e) => setSaintsSearch(e.target.value)
+              }),
+              React.createElement(
+                "button",
+                { type: "submit", className: "vf-btn vf-btn-blue" },
+                "Search"
+              )
+            ),
+            saintsSuggestions.length > 0
+              ? React.createElement(
+                  "ul",
+                  { className: "vf-search-suggestions" },
+                  saintsSuggestions.slice(0, 3).map((s) =>
+                    React.createElement(
+                      "li",
+                      {
+                        key: s.id || s.slug || s.title,
+                        className: "vf-search-suggestion",
+                        onClick: () =>
+                          handleSaintsSuggestionClick(s)
+                      },
+                      React.createElement(
+                        "span",
+                        { className: "vf-search-suggestion-title" },
+                        s.title || s.name
+                      )
+                    )
+                  )
+                )
+              : null
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            loadingSaints && activeSaints.length === 0
+              ? React.createElement("p", null, "Loading saints…")
+              : null,
+            !loadingSaints && activeSaints.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "No saints are available yet in this language."
+                )
+              : null,
+            pagedSaints.length > 0
+              ? React.createElement(
+                  React.Fragment,
+                  null,
+                  showingSearchResults
+                    ? React.createElement(
+                        "p",
+                        { className: "vf-search-results-label" },
+                        "Showing ",
+                        pagedSaints.length,
+                        " of ",
+                        activeSaints.length,
+                        " matching saints"
+                      )
+                    : null,
+                  React.createElement(
+                    "section",
+                    { className: "vf-stack" },
+                    pagedSaints.map((s) =>
+                      React.createElement(
+                        "article",
+                        {
+                          key: s.id,
+                          className: "vf-saint-item vf-saint-detail"
+                        },
+                        React.createElement(
+                          "div",
+                          { className: "vf-saint-header" },
+                          s.imageUrl
+                            ? React.createElement(
+                                "div",
+                                { className: "vf-saint-avatar-wrap" },
+                                React.createElement("img", {
+                                  src: s.imageUrl,
+                                  alt: s.name,
+                                  className: "vf-saint-avatar"
+                                })
+                              )
+                            : null,
+                          React.createElement(
+                            "div",
+                            null,
+                            React.createElement(
+                              "h4",
+                              { className: "vf-saint-name" },
+                              s.name
+                            ),
+                            s.feastDay
+                              ? React.createElement(
+                                  "p",
+                                  { className: "vf-saint-meta" },
+                                  "Feast day: ",
+                                  new Date(
+                                    s.feastDay
+                                  ).toLocaleDateString()
+                                )
+                              : null,
+                            Array.isArray(s.patronages) &&
+                            s.patronages.length > 0
+                              ? React.createElement(
+                                  "p",
+                                  { className: "vf-saint-meta" },
+                                  "Patronage: ",
+                                  s.patronages.join(", ")
+                                )
+                              : null
+                          )
+                        ),
+                        s.biography
+                          ? React.createElement(
+                              "p",
+                              { className: "vf-saint-bio" },
+                              s.biography
+                            )
+                          : null
+                      )
+                    )
+                  )
+                )
+              : null,
+            renderPagination(
+              safePage,
+              totalPages,
+              setSaintsPage,
+              "saints"
+            )
+          )
+        )
+      )
     );
   }
 
@@ -1589,150 +1949,208 @@ function AppShell() {
     );
     const showingSearchResults = ourLadyResults.length > 0;
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          <article className="vf-card">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">Our Lady</h2>
-              <p className="vf-card-subtitle">
-                Approved Marian apparitions and titles of Mary, Mother of
-                the Church.
-              </p>
-            </header>
-
-            <section className="vf-card-body vf-mary-about">
-              <h3 className="vf-section-subtitle">
-                Mary, Mother of God and Mother of the Church
-              </h3>
-              <p>
-                Mary is the Mother of God, the Mother of the Church, and
-                the perfect model of discipleship. She leads the faithful
-                to her Son with a heart that is humble, obedient, and
-                filled with faith.
-              </p>
-              <p>
-                In the mystery of the Holy Family, Mary and Saint Joseph
-                cared for Jesus with reverence and trust in the will of
-                God. Joseph, her chaste spouse, guarded and protected the
-                child Jesus and serves as a quiet example of fidelity and
-                hidden holiness.
-              </p>
-              <p>
-                Through approved apparitions, Our Lady continues to call
-                the faithful to conversion, prayer, and deeper love for
-                Christ and his Church.
-              </p>
-            </section>
-
-            <form className="vf-search-bar" onSubmit={submitOurLadySearch}>
-              <label className="vf-field-label" htmlFor="ourlady-search">
-                Search Marian apparitions and titles
-              </label>
-              <div className="vf-search-input-wrap">
-                <input
-                  id="ourlady-search"
-                  type="search"
-                  placeholder="Search by title or location"
-                  value={ourLadySearch}
-                  onChange={(e) => setOurLadySearch(e.target.value)}
-                />
-                <button type="submit" className="vf-btn vf-btn-blue">
-                  Search
-                </button>
-              </div>
-              {ourLadySuggestions.length > 0 && (
-                <ul className="vf-search-suggestions">
-                  {ourLadySuggestions.slice(0, 3).map((a) => (
-                    <li
-                      key={a.id || a.slug || a.title}
-                      className="vf-search-suggestion"
-                      onClick={() => handleOurLadySuggestionClick(a)}
-                    >
-                      <span className="vf-search-suggestion-title">
-                        {a.title || a.name}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </form>
-
-            <div className="vf-card-body">
-              {loadingApparitions && activeApparitions.length === 0 && (
-                <p>Loading Marian titles and apparitions…</p>
-              )}
-
-              {!loadingApparitions &&
-                activeApparitions.length === 0 && (
-                  <p>
-                    No Marian titles or apparitions are available yet in
-                    this language.
-                  </p>
-                )}
-
-              {pagedApparitions.length > 0 && (
-                <>
-                  {showingSearchResults && (
-                    <p className="vf-search-results-label">
-                      Showing {pagedApparitions.length} of{" "}
-                      {activeApparitions.length} matching entries
-                    </p>
-                  )}
-                  <section className="vf-stack vf-stack-apparitions">
-                    {pagedApparitions.map((a) => (
-                      <article
-                        key={a.id}
-                        className="vf-saint-item vf-saint-detail"
-                      >
-                        <div className="vf-saint-header">
-                          {a.imageUrl && (
-                            <div className="vf-saint-avatar-wrap">
-                              <img
-                                src={a.imageUrl}
-                                alt={a.title}
-                                className="vf-saint-avatar"
-                              />
-                            </div>
-                          )}
-                          <div>
-                            <h4 className="vf-saint-name">
-                              {a.title}
-                            </h4>
-                            {a.location && (
-                              <p className="vf-saint-meta">
-                                Location: {a.location}
-                              </p>
-                            )}
-                            {a.feastDay && (
-                              <p className="vf-saint-meta">
-                                Feast:{" "}
-                                {new Date(
-                                  a.feastDay
-                                ).toLocaleDateString()}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        {a.story && (
-                          <p className="vf-saint-bio">{a.story}</p>
-                        )}
-                      </article>
-                    ))}
-                  </section>
-                </>
-              )}
-
-              {renderPagination(
-                safePage,
-                totalPages,
-                setOurLadyPage,
-                "ourlady"
-              )}
-            </div>
-          </article>
-        </section>
-      </main>
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              "Our Lady"
+            ),
+            React.createElement(
+              "p",
+              { className: "vf-card-subtitle" },
+              "Approved Marian apparitions and titles of Mary, Mother of the Church."
+            )
+          ),
+          React.createElement(
+            "section",
+            { className: "vf-card-body vf-mary-about" },
+            React.createElement(
+              "h3",
+              { className: "vf-section-subtitle" },
+              "Mary, Mother of God and Mother of the Church"
+            ),
+            React.createElement(
+              "p",
+              null,
+              "Mary is the Mother of God, the Mother of the Church, and the perfect model of discipleship. She leads the faithful to her Son with a heart that is humble, obedient, and filled with faith."
+            ),
+            React.createElement(
+              "p",
+              null,
+              "In the mystery of the Holy Family, Mary and Saint Joseph cared for Jesus with reverence and trust in the will of God. Joseph, her chaste spouse, guarded and protected the child Jesus and serves as a quiet example of fidelity and hidden holiness."
+            ),
+            React.createElement(
+              "p",
+              null,
+              "Through approved apparitions, Our Lady continues to call the faithful to conversion, prayer, and deeper love for Christ and his Church."
+            )
+          ),
+          React.createElement(
+            "form",
+            {
+              className: "vf-search-bar",
+              onSubmit: submitOurLadySearch
+            },
+            React.createElement(
+              "label",
+              { className: "vf-field-label", htmlFor: "ourlady-search" },
+              "Search Marian apparitions and titles"
+            ),
+            React.createElement(
+              "div",
+              { className: "vf-search-input-wrap" },
+              React.createElement("input", {
+                id: "ourlady-search",
+                type: "search",
+                placeholder: "Search by title or location",
+                value: ourLadySearch,
+                onChange: (e) => setOurLadySearch(e.target.value)
+              }),
+              React.createElement(
+                "button",
+                { type: "submit", className: "vf-btn vf-btn-blue" },
+                "Search"
+              )
+            ),
+            ourLadySuggestions.length > 0
+              ? React.createElement(
+                  "ul",
+                  { className: "vf-search-suggestions" },
+                  ourLadySuggestions.slice(0, 3).map((a) =>
+                    React.createElement(
+                      "li",
+                      {
+                        key: a.id || a.slug || a.title,
+                        className: "vf-search-suggestion",
+                        onClick: () =>
+                          handleOurLadySuggestionClick(a)
+                      },
+                      React.createElement(
+                        "span",
+                        { className: "vf-search-suggestion-title" },
+                        a.title || a.name
+                      )
+                    )
+                  )
+                )
+              : null
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            loadingApparitions && activeApparitions.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "Loading Marian titles and apparitions…"
+                )
+              : null,
+            !loadingApparitions && activeApparitions.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "No Marian titles or apparitions are available yet in this language."
+                )
+              : null,
+            pagedApparitions.length > 0
+              ? React.createElement(
+                  React.Fragment,
+                  null,
+                  showingSearchResults
+                    ? React.createElement(
+                        "p",
+                        { className: "vf-search-results-label" },
+                        "Showing ",
+                        pagedApparitions.length,
+                        " of ",
+                        activeApparitions.length,
+                        " matching entries"
+                      )
+                    : null,
+                  React.createElement(
+                    "section",
+                    { className: "vf-stack vf-stack-apparitions" },
+                    pagedApparitions.map((a) =>
+                      React.createElement(
+                        "article",
+                        {
+                          key: a.id,
+                          className: "vf-saint-item vf-saint-detail"
+                        },
+                        React.createElement(
+                          "div",
+                          { className: "vf-saint-header" },
+                          a.imageUrl
+                            ? React.createElement(
+                                "div",
+                                { className: "vf-saint-avatar-wrap" },
+                                React.createElement("img", {
+                                  src: a.imageUrl,
+                                  alt: a.title,
+                                  className: "vf-saint-avatar"
+                                })
+                              )
+                            : null,
+                          React.createElement(
+                            "div",
+                            null,
+                            React.createElement(
+                              "h4",
+                              { className: "vf-saint-name" },
+                              a.title
+                            ),
+                            a.location
+                              ? React.createElement(
+                                  "p",
+                                  { className: "vf-saint-meta" },
+                                  "Location: ",
+                                  a.location
+                                )
+                              : null,
+                            a.feastDay
+                              ? React.createElement(
+                                  "p",
+                                  { className: "vf-saint-meta" },
+                                  "Feast: ",
+                                  new Date(
+                                    a.feastDay
+                                  ).toLocaleDateString()
+                                )
+                              : null
+                          )
+                        ),
+                        a.story
+                          ? React.createElement(
+                              "p",
+                              { className: "vf-saint-bio" },
+                              a.story
+                            )
+                          : null
+                      )
+                    )
+                  )
+                )
+              : null,
+            renderPagination(
+              safePage,
+              totalPages,
+              setOurLadyPage,
+              "ourlady"
+            )
+          )
+        )
+      )
     );
   }
 
@@ -1748,64 +2166,88 @@ function AppShell() {
       startIndex + PAGE_SIZE
     );
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          <article className="vf-card">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">Sacraments</h2>
-              <p className="vf-card-subtitle">
-                Meaning, biblical foundation, preparation, what to expect,
-                and common questions for each of the seven sacraments.
-              </p>
-            </header>
-
-            <div className="vf-card-body">
-              {loadingSacraments && sacramentItems.length === 0 && (
-                <p>Loading sacraments…</p>
-              )}
-
-              {!loadingSacraments && sacramentItems.length === 0 && (
-                <p>
-                  No sacrament details are available yet in this language.
-                </p>
-              )}
-
-              {pagedSacraments.length > 0 && (
-                <div className="vf-stack">
-                  {pagedSacraments.map((s) => (
-                    <section
-                      key={s.id}
-                      className="vf-sacrament-item"
-                    >
-                      <h3 className="vf-section-subtitle">{s.name}</h3>
-                      {s.meaning && (
-                        <p className="vf-sacrament-meaning">
-                          {s.meaning}
-                        </p>
-                      )}
-
-                      {renderSacramentBiblicalFoundation(
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              "Sacraments"
+            ),
+            React.createElement(
+              "p",
+              { className: "vf-card-subtitle" },
+              "Meaning, biblical foundation, preparation, what to expect, and common questions for each of the seven sacraments."
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            loadingSacraments && sacramentItems.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "Loading sacraments…"
+                )
+              : null,
+            !loadingSacraments && sacramentItems.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "No sacrament details are available yet in this language."
+                )
+              : null,
+            pagedSacraments.length > 0
+              ? React.createElement(
+                  "div",
+                  { className: "vf-stack" },
+                  pagedSacraments.map((s) =>
+                    React.createElement(
+                      "section",
+                      {
+                        key: s.id,
+                        className: "vf-sacrament-item"
+                      },
+                      React.createElement(
+                        "h3",
+                        { className: "vf-section-subtitle" },
+                        s.name
+                      ),
+                      s.meaning
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-sacrament-meaning" },
+                            s.meaning
+                          )
+                        : null,
+                      renderSacramentBiblicalFoundation(
                         s.biblicalFoundation
-                      )}
-                      {renderSacramentPreparation(s.preparation)}
-                      {renderSacramentWhatToExpect(s.whatToExpect)}
-                      {renderSacramentQuestions(s.commonQuestions)}
-                    </section>
-                  ))}
-                </div>
-              )}
-
-              {renderPagination(
-                safePage,
-                totalPages,
-                setSacramentsPage,
-                "sacraments"
-              )}
-            </div>
-          </article>
-        </section>
-      </main>
+                      ),
+                      renderSacramentPreparation(s.preparation),
+                      renderSacramentWhatToExpect(s.whatToExpect),
+                      renderSacramentQuestions(s.commonQuestions)
+                    )
+                  )
+                )
+              : null,
+            renderPagination(
+              safePage,
+              totalPages,
+              setSacramentsPage,
+              "sacraments"
+            )
+          )
+        )
+      )
     );
   }
 
@@ -1821,147 +2263,224 @@ function AppShell() {
       startIndex + PAGE_SIZE
     );
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          <article className="vf-card">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">Guides</h2>
-              <p className="vf-card-subtitle">
-                Step by step guides for OCIA, Confession, Rosary,
-                Adoration, consecrations, and vocations.
-              </p>
-            </header>
-
-            <div className="vf-card-body">
-              {loadingGuides && guideItems.length === 0 && (
-                <p>Loading guides…</p>
-              )}
-
-              {!loadingGuides && guideItems.length === 0 && (
-                <p>No guides are available yet in this language.</p>
-              )}
-
-              {pagedGuides.length > 0 && (
-                <div className="vf-stack">
-                  {pagedGuides.map((g) => (
-                    <section
-                      key={g.id}
-                      className="vf-guide-item"
-                    >
-                      <h3 className="vf-section-subtitle">
-                        {g.title}
-                      </h3>
-                      {g.summary && (
-                        <p className="vf-guide-summary">
-                          {g.summary}
-                        </p>
-                      )}
-                      {renderGuideBodyContent(g.body)}
-                      {renderGuideChecklist(g.checklistTemplate)}
-                    </section>
-                  ))}
-                </div>
-              )}
-
-              {renderPagination(
-                safePage,
-                totalPages,
-                setGuidesPage,
-                "guides"
-              )}
-            </div>
-          </article>
-        </section>
-      </main>
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              "Guides"
+            ),
+            React.createElement(
+              "p",
+              { className: "vf-card-subtitle" },
+              "Step by step guides for OCIA, Confession, Rosary, Adoration, consecrations, and vocations."
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            loadingGuides && guideItems.length === 0
+              ? React.createElement("p", null, "Loading guides…")
+              : null,
+            !loadingGuides && guideItems.length === 0
+              ? React.createElement(
+                  "p",
+                  null,
+                  "No guides are available yet in this language."
+                )
+              : null,
+            pagedGuides.length > 0
+              ? React.createElement(
+                  "div",
+                  { className: "vf-stack" },
+                  pagedGuides.map((g) =>
+                    React.createElement(
+                      "section",
+                      {
+                        key: g.id,
+                        className: "vf-guide-item"
+                      },
+                      React.createElement(
+                        "h3",
+                        { className: "vf-section-subtitle" },
+                        g.title
+                      ),
+                      g.summary
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-guide-summary" },
+                            g.summary
+                          )
+                        : null,
+                      renderGuideBodyContent(g.body),
+                      renderGuideChecklist(g.checklistTemplate)
+                    )
+                  )
+                )
+              : null,
+            renderPagination(
+              safePage,
+              totalPages,
+              setGuidesPage,
+              "guides"
+            )
+          )
+        )
+      )
     );
   }
 
   function renderProfile() {
     if (!user) {
-      return (
-        <main className="vf-main">
-          <section className="vf-section">
-            <article className="vf-card">
-              <header className="vf-card-header">
-                <h2 className="vf-card-title">Profile</h2>
-              </header>
-              <div className="vf-card-body">
-                <p>You need to be logged in to view your profile.</p>
-              </div>
-            </article>
-          </section>
-        </main>
+      return React.createElement(
+        "main",
+        { className: "vf-main" },
+        React.createElement(
+          "section",
+          { className: "vf-section" },
+          React.createElement(
+            "article",
+            { className: "vf-card" },
+            React.createElement(
+              "header",
+              { className: "vf-card-header" },
+              React.createElement(
+                "h2",
+                { className: "vf-card-title" },
+                "Profile"
+              )
+            ),
+            React.createElement(
+              "div",
+              { className: "vf-card-body" },
+              React.createElement(
+                "p",
+                null,
+                "You need to be logged in to view your profile."
+              )
+            )
+          )
+        )
       );
     }
 
-    return (
-      <main className="vf-main">
-        <section className="vf-section">
-          <article className="vf-card">
-            <header className="vf-card-header vf-profile-header">
-              <div className="vf-profile-avatar-wrap">
-                <div className="vf-profile-avatar">
-                  {user.profilePictureUrl ? (
-                    <img
-                      src={user.profilePictureUrl}
-                      alt={`${user.firstName} {user.lastName}`}
-                    />
-                  ) : (
-                    <span className="vf-profile-initials">
-                      {user.firstName?.[0]}
-                      {user.lastName?.[0]}
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="vf-profile-avatar-edit"
-                    title="Edit Profile Picture"
-                    aria-label="Edit Profile Picture"
-                  >
-                    <span className="vf-icon-pencil" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-              <div>
-                <h2 className="vf-card-title">
-                  {user.firstName} {user.lastName}
-                </h2>
-                <p className="vf-card-subtitle">{user.email}</p>
-              </div>
-            </header>
-            <div className="vf-card-body">
-              <p>
-                Your profile gathers My Prayers, Journal, Goals, and
-                Milestones, along with settings for theme, language, and
-                privacy, so that everything supporting your spiritual life
-                stays in one place.
-              </p>
-            </div>
-          </article>
-        </section>
-      </main>
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section" },
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            {
+              className: "vf-card-header vf-profile-header"
+            },
+            React.createElement(
+              "div",
+              { className: "vf-profile-avatar-wrap" },
+              React.createElement(
+                "div",
+                { className: "vf-profile-avatar" },
+                user.profilePictureUrl
+                  ? React.createElement("img", {
+                      src: user.profilePictureUrl,
+                      alt: `${user.firstName} ${user.lastName}`
+                    })
+                  : React.createElement(
+                      "span",
+                      { className: "vf-profile-initials" },
+                      user.firstName?.[0],
+                      user.lastName?.[0]
+                    ),
+                React.createElement(
+                  "button",
+                  {
+                    type: "button",
+                    className: "vf-profile-avatar-edit",
+                    title: "Edit Profile Picture",
+                    "aria-label": "Edit Profile Picture"
+                  },
+                  React.createElement("span", {
+                    className: "vf-icon-pencil",
+                    "aria-hidden": "true"
+                  })
+                )
+              )
+            ),
+            React.createElement(
+              "div",
+              null,
+              React.createElement(
+                "h2",
+                { className: "vf-card-title" },
+                user.firstName,
+                " ",
+                user.lastName
+              ),
+              React.createElement(
+                "p",
+                { className: "vf-card-subtitle" },
+                user.email
+              )
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            React.createElement(
+              "p",
+              null,
+              "Your profile gathers My Prayers, Journal, Goals, and Milestones, along with settings for theme, language, and privacy, so that everything supporting your spiritual life stays in one place."
+            )
+          )
+        )
+      )
     );
   }
 
   function renderAuth() {
-    return (
-      <main className="vf-main">
-        <section className="vf-section vf-auth-layout">
-          <article className="vf-card vf-auth-card">
-            <header className="vf-card-header">
-              <h2 className="vf-card-title">Login</h2>
-            </header>
-            <div className="vf-card-body">
-              <p>
-                The authentication forms for Create Account, Login, and
-                Reset Password integrate with the Via Fidei account system
-                so that interactive features remain personal and private.
-              </p>
-            </div>
-          </article>
-        </section>
-      </main>
+    return React.createElement(
+      "main",
+      { className: "vf-main" },
+      React.createElement(
+        "section",
+        { className: "vf-section vf-auth-layout" },
+        React.createElement(
+          "article",
+          { className: "vf-card vf-auth-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h2",
+              { className: "vf-card-title" },
+              "Login"
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            React.createElement(
+              "p",
+              null,
+              "The authentication forms for Create Account, Login, and Reset Password integrate with the Via Fidei account system so that interactive features remain personal and private."
+            )
+          )
+        )
+      )
     );
   }
 
@@ -1978,21 +2497,29 @@ function AppShell() {
     return renderHome();
   }
 
-  return (
-    <div className="vf-shell">
-      {renderHeader()}
-      {renderCurrentTab()}
-      <footer className="vf-footer">
-        <div className="vf-footer-inner">
-          <span>
-            © {new Date().getFullYear()} Via Fidei. All rights reserved.
-          </span>
-        </div>
-      </footer>
-    </div>
+  return React.createElement(
+    "div",
+    { className: "vf-shell" },
+    renderHeader(),
+    renderCurrentTab(),
+    React.createElement(
+      "footer",
+      { className: "vf-footer" },
+      React.createElement(
+        "div",
+        { className: "vf-footer-inner" },
+        React.createElement(
+          "span",
+          null,
+          "© ",
+          new Date().getFullYear(),
+          " Via Fidei. All rights reserved."
+        )
+      )
+    )
   );
 }
 
 const container = document.getElementById("root");
 const root = createRoot(container);
-root.render(<AppShell />);
+root.render(React.createElement(AppShell));
