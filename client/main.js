@@ -1,6 +1,7 @@
 // client/main.js
 import React, { useEffect, useState, useCallback } from "react";
 import { createRoot } from "react-dom/client";
+import "./styles.css";
 
 const PAGE_SIZE = 10;
 
