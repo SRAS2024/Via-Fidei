@@ -1,6 +1,6 @@
 // server/saints.routes.js
 // Saints and Our Lady (Marian apparitions) library and local search
-// Database first, then external JSON, then built in canonical entries.
+// Database first, then optional external JSON, then built in canonical entries.
 
 const express = require("express");
 const { requireAuth } = require("./auth.routes");
@@ -20,19 +20,37 @@ function getPrisma(req) {
   return req.prisma;
 }
 
+/**
+ * Resolve the active language for the request.
+ * Priority:
+ *   1. Authenticated user preference
+ *   2. Explicit query param ?language= or ?lang=
+ *   3. DEFAULT_LANGUAGE env
+ *   4. Accept Language header
+ *   5. English
+ */
 function resolveLanguage(req) {
-  const override =
-    req.user?.languageOverride ||
-    req.query.language ||
-    process.env.DEFAULT_LANGUAGE ||
-    "en";
+  const tryLang = (value) => {
+    if (!value) return null;
+    const lower = String(value).toLowerCase();
+    return SUPPORTED_LANGS.includes(lower) ? lower : null;
+  };
 
-  const lower = String(override).toLowerCase();
+  const userPref = req.user?.languageOverride;
+  const queryPref = req.query?.language || req.query?.lang;
+  const envPref = process.env.DEFAULT_LANGUAGE;
 
-  if (SUPPORTED_LANGS.includes(lower)) return lower;
+  const fromUser = tryLang(userPref);
+  if (fromUser) return fromUser;
 
-  const header = req.headers["accept-language"];
-  if (typeof header === "string") {
+  const fromQuery = tryLang(queryPref);
+  if (fromQuery) return fromQuery;
+
+  const fromEnv = tryLang(envPref);
+  if (fromEnv) return fromEnv;
+
+  const header = req.headers?.["accept-language"];
+  if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
     const base = first.split("-")[0];
@@ -49,16 +67,16 @@ function publicSaint(s) {
     slug: s.slug,
     name: s.name,
     feastDay: s.feastDay,
-    patronages: s.patronages || [],
+    patronages: Array.isArray(s.patronages) ? s.patronages : [],
     biography: s.biography,
     canonizationStatus: s.canonizationStatus,
     officialPrayer: s.officialPrayer,
     imageUrl: s.imageUrl,
-    tags: s.tags || [],
+    tags: Array.isArray(s.tags) ? s.tags : [],
     source: s.source || null,
     sourceUrl: s.sourceUrl || null,
     sourceAttribution: s.sourceAttribution || null,
-    updatedAt: s.updatedAt
+    updatedAt: s.updatedAt || null
   };
 }
 
@@ -75,19 +93,20 @@ function publicApparition(a) {
     story: a.story,
     officialPrayer: a.officialPrayer,
     imageUrl: a.imageUrl,
-    tags: a.tags || [],
+    tags: Array.isArray(a.tags) ? a.tags : [],
     source: a.source || null,
     sourceUrl: a.sourceUrl || null,
     sourceAttribution: a.sourceAttribution || null,
-    updatedAt: a.updatedAt
+    updatedAt: a.updatedAt || null
   };
 }
 
-// Built in canonical saints library for English
+// Built in canonical saints library
+// Used as a fallback for any supported language when database and external are empty
 function builtInSaints(language) {
-  if (language !== "en") return [];
-
   const now = new Date();
+  // Use the requested language code for filtering, even though the text is in English
+  const lang = SUPPORTED_LANGS.includes(language) ? language : "en";
 
   const entries = [
     {
@@ -97,9 +116,17 @@ function builtInSaints(language) {
       patronages: ["families", "workers", "universal church", "fathers"],
       canonizationStatus: "Canonized",
       biography:
-        "Saint Joseph, the just and silent guardian of the Holy Family, was chosen by God to be the foster father of Jesus and the chaste spouse of the Blessed Virgin Mary. Though the Gospels record no words of Joseph, they show him as a man of deep faith, prompt obedience, and courageous protection. He welcomed the mystery of the Incarnation into his home and labored humbly as a carpenter, supporting Mary and the Child with the work of his hands.\n\nIn every scene where he appears, Joseph listens for the voice of God and responds without hesitation. He takes Mary into his home, protects the Child from Herod by fleeing into Egypt, and returns only when the Lord commands. His hidden life in Nazareth reveals the dignity of ordinary work offered to God and the sanctity of family life lived in quiet fidelity.\n\nThe Church venerates Saint Joseph as Patron of the Universal Church, protector of families, workers, and the dying. His example invites the faithful to a life of humble strength, purity of heart, and total trust in Divine Providence.",
+        "Saint Joseph, the just and silent guardian of the Holy Family, was chosen by God to be the foster father of Jesus and the chaste spouse of the Blessed Virgin Mary. " +
+        "Though the Gospels record no words of Joseph, they show him as a man of deep faith, prompt obedience, and courageous protection. " +
+        "He welcomed the mystery of the Incarnation into his home and labored humbly as a carpenter, supporting Mary and the Child with the work of his hands.\n\n" +
+        "In every scene where he appears, Joseph listens for the voice of God and responds without hesitation. " +
+        "He takes Mary into his home, protects the Child from Herod by fleeing into Egypt, and returns only when the Lord commands. " +
+        "His hidden life in Nazareth reveals the dignity of ordinary work offered to God and the sanctity of family life lived in quiet fidelity.\n\n" +
+        "The Church venerates Saint Joseph as Patron of the Universal Church, protector of families, workers, and the dying. " +
+        "His example invites the faithful to a life of humble strength, purity of heart, and total trust in Divine Providence.",
       officialPrayer:
-        "O Saint Joseph, spouse of the Blessed Virgin Mary and foster father of our Lord Jesus Christ, guardian of the Holy Family, protect our homes and families. Obtain for us a spirit of humble obedience, purity of heart, and generous fidelity to God’s will. Pray for us, that we may live and die in the friendship of your Son and enter the joy of heaven. Amen.",
+        "O Saint Joseph, spouse of the Blessed Virgin Mary and foster father of our Lord Jesus Christ, guardian of the Holy Family, protect our homes and families. " +
+        "Obtain for us a spirit of humble obedience, purity of heart, and generous fidelity to God’s will. Pray for us, that we may live and die in the friendship of your Son and enter the joy of heaven. Amen.",
       imageUrl: null,
       tags: ["saint joseph", "holy family", "workers", "fathers"],
       source: "built-in",
@@ -112,7 +139,13 @@ function builtInSaints(language) {
       patronages: ["animals", "creation", "italy", "peace"],
       canonizationStatus: "Canonized",
       biography:
-        "Saint Francis of Assisi, born into a wealthy merchant family, encountered Christ and chose a life of radical poverty, simplicity, and joy. He became a living image of the Gospel, embracing lepers, begging for the poor, repairing churches, and proclaiming peace. His love for Christ crucified led him to embrace suffering and to see all creation as a reflection of God’s goodness.\n\nFrancis founded the Order of Friars Minor, inspiring men and women to live the Gospel without compromise, relying entirely on God’s providence. His joyful humility drew countless people back to the sacraments, rekindling love for the Church and her Lord. His Canticle of the Creatures reveals a heart that saw brotherhood and sisterhood in all that God made.\n\nThe Church honors Saint Francis as patron of ecology and peace. His life calls the faithful to conversion, mercy, reverence for creation, and a trust in God that frees the soul from attachment to earthly wealth.",
+        "Saint Francis of Assisi, born into a wealthy merchant family, encountered Christ and chose a life of radical poverty, simplicity, and joy. " +
+        "He became a living image of the Gospel, embracing lepers, begging for the poor, repairing churches, and proclaiming peace. " +
+        "His love for Christ crucified led him to embrace suffering and to see all creation as a reflection of God’s goodness.\n\n" +
+        "Francis founded the Order of Friars Minor, inspiring men and women to live the Gospel without compromise, relying entirely on God’s providence. " +
+        "His joyful humility drew countless people back to the sacraments, rekindling love for the Church and her Lord. " +
+        "His Canticle of the Creatures reveals a heart that saw brotherhood and sisterhood in all that God made.\n\n" +
+        "The Church honors Saint Francis as patron of ecology and peace. His life calls the faithful to conversion, mercy, reverence for creation, and a trust in God that frees the soul from attachment to earthly wealth.",
       officialPrayer:
         "Most High, glorious God, enlighten the darkness of my heart and give me true faith, certain hope, and perfect charity, sense and knowledge, Lord, that I may carry out Your holy and true command. Saint Francis of Assisi, pray for us. Amen.",
       imageUrl: null,
@@ -127,9 +160,18 @@ function builtInSaints(language) {
       patronages: ["missions", "france", "trust", "childlike faith"],
       canonizationStatus: "Doctor of the Church",
       biography:
-        "Saint Thérèse of the Child Jesus and the Holy Face, known as the Little Flower, entered the Carmelite monastery of Lisieux at a young age and lived a hidden life of prayer, sacrifice, and love. Without great external works, she discovered a Little Way of spiritual childhood, trusting entirely in God’s mercy and offering every small act with great love.\n\nHer autobiography, Story of a Soul, reveals a soul marked by deep humility, ardent charity, and unwavering confidence in the Father’s tenderness. Through daily fidelity in ordinary duties, she reached the heights of sanctity and offered herself as a victim of merciful love for the salvation of souls.\n\nProclaimed a Doctor of the Church, Saint Thérèse is patroness of the missions and a guide for all who feel small or hidden. Her Little Way invites believers to trust that holiness is possible in the ordinary tasks of daily life when done with love for Jesus.",
+        "Saint Thérèse of the Child Jesus and the Holy Face, known as the Little Flower, entered the Carmelite monastery of Lisieux at a young age " +
+        "and lived a hidden life of prayer, sacrifice, and love. Without great external works, she discovered a Little Way of spiritual childhood, " +
+        "trusting entirely in God’s mercy and offering every small act with great love.\n\n" +
+        "Her autobiography, Story of a Soul, reveals a soul marked by deep humility, ardent charity, " +
+        "and unwavering confidence in the Father’s tenderness. Through daily fidelity in ordinary duties, she reached the heights of sanctity " +
+        "and offered herself as a victim of merciful love for the salvation of souls.\n\n" +
+        "Proclaimed a Doctor of the Church, Saint Thérèse is patroness of the missions and a guide for all who feel small or hidden. " +
+        "Her Little Way invites believers to trust that holiness is possible in the ordinary tasks of daily life when done with love for Jesus.",
       officialPrayer:
-        "Saint Thérèse of the Child Jesus and the Holy Face, Little Flower of Jesus, teach us your Little Way of trust and love. Help us to offer every moment, every sacrifice, and every joy for love of God and the salvation of souls. Intercede for us, that we may love Jesus with your childlike confidence and rejoice forever in His mercy. Amen.",
+        "Saint Thérèse of the Child Jesus and the Holy Face, Little Flower of Jesus, teach us your Little Way of trust and love. " +
+        "Help us to offer every moment, every sacrifice, and every joy for love of God and the salvation of souls. " +
+        "Intercede for us, that we may love Jesus with your childlike confidence and rejoice forever in His mercy. Amen.",
       imageUrl: null,
       tags: ["therese", "little way", "trust", "mercy"],
       source: "built-in",
@@ -142,9 +184,17 @@ function builtInSaints(language) {
       patronages: ["youth", "families", "world youth day"],
       canonizationStatus: "Canonized",
       biography:
-        "Saint John Paul II, born Karol Wojtyła in Poland, lived through war, totalitarian regimes, and persecution, yet emerged as a tireless witness to the dignity of the human person. As priest, bishop, and pope, he proclaimed Christ as the Redeemer of man, calling the Church and the world to be not afraid and to open wide the doors to Christ.\n\nHis pontificate was marked by deep Marian devotion, a robust defense of life and family, and a passionate engagement with culture, philosophy, and youth. He traveled across the globe, celebrated World Youth Day, and authored encyclicals that explored faith, reason, morality, and the mystery of God’s mercy.\n\nThe Church venerates Saint John Paul II as a pastor who united fidelity to tradition with courageous engagement with the modern world. His life teaches believers to trust in Divine Mercy, to defend the vulnerable, and to offer one’s gifts generously in service of the Gospel.",
+        "Saint John Paul II, born Karol Wojtyła in Poland, lived through war, totalitarian regimes, and persecution, " +
+        "yet emerged as a tireless witness to the dignity of the human person. As priest, bishop, and pope, he proclaimed Christ as the Redeemer of man, " +
+        "calling the Church and the world to be not afraid and to open wide the doors to Christ.\n\n" +
+        "His pontificate was marked by deep Marian devotion, a robust defense of life and family, and a passionate engagement with culture, philosophy, and youth. " +
+        "He traveled across the globe, celebrated World Youth Day, and authored encyclicals that explored faith, reason, morality, and the mystery of God’s mercy.\n\n" +
+        "The Church venerates Saint John Paul II as a pastor who united fidelity to tradition with courageous engagement with the modern world. " +
+        "His life teaches believers to trust in Divine Mercy, to defend the vulnerable, and to offer one’s gifts generously in service of the Gospel.",
       officialPrayer:
-        "Saint John Paul II, faithful shepherd of the Church, intercede for us, that we may open wide the doors to Christ. Obtain for us a living faith, a courageous hope, and a love that is ready to sacrifice for the dignity of every human person. Pray that we may proclaim the Gospel with joy and stand firm in truth and charity. Amen.",
+        "Saint John Paul II, faithful shepherd of the Church, intercede for us, that we may open wide the doors to Christ. " +
+        "Obtain for us a living faith, a courageous hope, and a love that is ready to sacrifice for the dignity of every human person. " +
+        "Pray that we may proclaim the Gospel with joy and stand firm in truth and charity. Amen.",
       imageUrl: null,
       tags: ["john paul ii", "mercy", "youth", "family"],
       source: "built-in",
@@ -153,8 +203,8 @@ function builtInSaints(language) {
   ];
 
   return entries.map((s, idx) => ({
-    id: `builtin-saint-en-${idx}`,
-    language: "en",
+    id: `builtin-saint-${lang}-${idx}`,
+    language: lang,
     slug: s.slug,
     name: s.name,
     feastDay: s.feastDay,
@@ -171,11 +221,11 @@ function builtInSaints(language) {
   }));
 }
 
-// Built in Marian apparitions library for English
+// Built in Marian apparitions library
+// Used as a fallback for any supported language when database and external are empty
 function builtInApparitions(language) {
-  if (language !== "en") return [];
-
   const now = new Date();
+  const lang = SUPPORTED_LANGS.includes(language) ? language : "en";
 
   const entries = [
     {
@@ -187,9 +237,17 @@ function builtInApparitions(language) {
       approvalNote:
         "Apparitions to three shepherd children in 1917, approved by the Church and widely venerated.",
       story:
-        "In 1917, in the small village of Fátima in Portugal, the Blessed Virgin Mary appeared to three shepherd children, Lucia, Francisco, and Jacinta. She called the world to prayer, penance, and conversion, urging devotion to her Immaculate Heart and the daily recitation of the Rosary for peace and the salvation of souls.\n\nOver several months, Our Lady entrusted messages concerning the need for repentance, the suffering of the Church, and the mercy of God. The apparitions culminated in the Miracle of the Sun, witnessed by thousands, which confirmed Heaven’s intervention in a dramatic and public way.\n\nOur Lady of Fátima continues to inspire the faithful to pray the Rosary, offer sacrifices for sinners, and entrust themselves to her maternal care. Her message is a call to hope, confident trust, and a deeper love for Christ present in the Church.",
+        "In 1917, in the small village of Fátima in Portugal, the Blessed Virgin Mary appeared to three shepherd children, Lucia, Francisco, and Jacinta. " +
+        "She called the world to prayer, penance, and conversion, urging devotion to her Immaculate Heart and the daily recitation of the Rosary " +
+        "for peace and the salvation of souls.\n\n" +
+        "Over several months, Our Lady entrusted messages concerning the need for repentance, the suffering of the Church, and the mercy of God. " +
+        "The apparitions culminated in the Miracle of the Sun, witnessed by thousands, which confirmed Heaven’s intervention in a dramatic and public way.\n\n" +
+        "Our Lady of Fátima continues to inspire the faithful to pray the Rosary, offer sacrifices for sinners, and entrust themselves to her maternal care. " +
+        "Her message is a call to hope, confident trust, and a deeper love for Christ present in the Church.",
       officialPrayer:
-        "O Most Holy Virgin Mary, Queen of the Rosary of Fátima, you were pleased to appear to the children of Fátima and reveal the treasures of grace hidden in the Rosary. Inspire our hearts with a sincere love for this devotion, that by meditating on the mysteries of our redemption we may obtain the graces we ask for. Our Lady of Fátima, pray for us. Amen.",
+        "O Most Holy Virgin Mary, Queen of the Rosary of Fátima, you were pleased to appear to the children of Fátima and reveal the treasures of grace hidden in the Rosary. " +
+        "Inspire our hearts with a sincere love for this devotion, that by meditating on the mysteries of our redemption we may obtain the graces we ask for. " +
+        "Our Lady of Fátima, pray for us. Amen.",
       imageUrl: null,
       tags: ["fatima", "our lady", "rosary", "conversion"],
       source: "built-in",
@@ -204,9 +262,16 @@ function builtInApparitions(language) {
       approvalNote:
         "Apparitions to Saint Bernadette Soubirous in 1858, approved by the Church and associated with many healings.",
       story:
-        "In 1858, the Blessed Virgin Mary appeared to a poor young girl, Bernadette Soubirous, in the grotto of Massabielle near Lourdes in France. Mary identified herself as the Immaculate Conception and invited Bernadette to prayer, penance, and the discovery of a spring of water that would become a source of physical and spiritual healing.\n\nThroughout the apparitions, Our Lady spoke with gentleness and maternal concern, calling sinners to conversion and the Church to renewed trust in God’s mercy. The waters of Lourdes have since been associated with countless healings, many of which have been thoroughly investigated and recognized.\n\nOur Lady of Lourdes is venerated as a mother who draws the sick, the suffering, and the poor to the heart of Christ. Her sanctuary remains a place of pilgrimage, confession, Eucharistic adoration, and compassionate care for the most vulnerable.",
+        "In 1858, the Blessed Virgin Mary appeared to a poor young girl, Bernadette Soubirous, in the grotto of Massabielle near Lourdes in France. " +
+        "Mary identified herself as the Immaculate Conception and invited Bernadette to prayer, penance, and the discovery of a spring of water " +
+        "that would become a source of physical and spiritual healing.\n\n" +
+        "Throughout the apparitions, Our Lady spoke with gentleness and maternal concern, calling sinners to conversion and the Church to renewed trust in God’s mercy. " +
+        "The waters of Lourdes have since been associated with countless healings, many of which have been thoroughly investigated and recognized.\n\n" +
+        "Our Lady of Lourdes is venerated as a mother who draws the sick, the suffering, and the poor to the heart of Christ. " +
+        "Her sanctuary remains a place of pilgrimage, confession, Eucharistic adoration, and compassionate care for the most vulnerable.",
       officialPrayer:
-        "O ever Immaculate Virgin, Mother of mercy, Our Lady of Lourdes, you who appeared to Bernadette in the grotto of Massabielle, we ask your intercession. Obtain for us the grace of conversion, healing of soul and body, and a deeper trust in your Son Jesus. Our Lady of Lourdes, health of the sick, pray for us. Amen.",
+        "O ever Immaculate Virgin, Mother of mercy, Our Lady of Lourdes, you who appeared to Bernadette in the grotto of Massabielle, we ask your intercession. " +
+        "Obtain for us the grace of conversion, healing of soul and body, and a deeper trust in your Son Jesus. Our Lady of Lourdes, health of the sick, pray for us. Amen.",
       imageUrl: null,
       tags: ["lourdes", "healing", "our lady", "immaculate conception"],
       source: "built-in",
@@ -221,9 +286,17 @@ function builtInApparitions(language) {
       approvalNote:
         "Apparitions to Saint Juan Diego in 1531, honored as Patroness of the Americas and the unborn.",
       story:
-        "In 1531, the Blessed Virgin Mary appeared to Saint Juan Diego on the hill of Tepeyac near present day Mexico City. She came as a gentle mother, clothed in native symbols, and spoke in Juan Diego’s own language, asking that a church be built where she might show her love and compassion to all who seek her Son.\n\nAs a sign for the bishop, Mary caused roses to bloom in winter and imprinted her image miraculously on Juan Diego’s tilma. This image, rich in symbolic meaning, led to the conversion of countless indigenous peoples and remains a powerful witness to the dignity of every human life.\n\nOur Lady of Guadalupe is venerated as Patroness of the Americas and the unborn. Her message is one of tenderness, protection, and evangelization, inviting all people to trust that they are seen, known, and loved by God.",
+        "In 1531, the Blessed Virgin Mary appeared to Saint Juan Diego on the hill of Tepeyac near present day Mexico City. " +
+        "She came as a gentle mother, clothed in native symbols, and spoke in Juan Diego’s own language, asking that a church be built " +
+        "where she might show her love and compassion to all who seek her Son.\n\n" +
+        "As a sign for the bishop, Mary caused roses to bloom in winter and imprinted her image miraculously on Juan Diego’s tilma. " +
+        "This image, rich in symbolic meaning, led to the conversion of countless indigenous peoples and remains a powerful witness to the dignity of every human life.\n\n" +
+        "Our Lady of Guadalupe is venerated as Patroness of the Americas and the unborn. Her message is one of tenderness, protection, and evangelization, " +
+        "inviting all people to trust that they are seen, known, and loved by God.",
       officialPrayer:
-        "Our Lady of Guadalupe, Mother of the true God and Mother of the Church, look with mercy upon us and upon all who seek your help. Gather us under your mantle of protection, guide us to your Son Jesus, and obtain for us the grace to defend the dignity of every human person. Our Lady of Guadalupe, pray for us. Amen.",
+        "Our Lady of Guadalupe, Mother of the true God and Mother of the Church, look with mercy upon us and upon all who seek your help. " +
+        "Gather us under your mantle of protection, guide us to your Son Jesus, and obtain for us the grace to defend the dignity of every human person. " +
+        "Our Lady of Guadalupe, pray for us. Amen.",
       imageUrl: null,
       tags: ["guadalupe", "americas", "our lady", "life"],
       source: "built-in",
@@ -232,8 +305,8 @@ function builtInApparitions(language) {
   ];
 
   return entries.map((a, idx) => ({
-    id: `builtin-apparition-en-${idx}`,
-    language: "en",
+    id: `builtin-apparition-${lang}-${idx}`,
+    language: lang,
     slug: a.slug,
     title: a.title,
     location: a.location,
