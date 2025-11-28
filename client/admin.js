@@ -130,9 +130,10 @@ function AdminShell() {
     loadHome(language);
   }, [language, loadHome]);
 
-  // Keep admin drafts in sync with home data
+  // Keep admin drafts in sync with home data once authenticated
   useEffect(() => {
     if (!adminAuthenticated) return;
+
     const mission = homeData?.mission || FALLBACK_MISSION;
     const about = homeData?.about || FALLBACK_ABOUT;
     const notices = homeData?.notices || [];
@@ -449,6 +450,23 @@ function AdminShell() {
   }
 
   function renderAdminContent() {
+    if (loadingHome && !homeData) {
+      return (
+        <main className="vf-main">
+          <section className="vf-section vf-admin-section">
+            <article className="vf-card vf-admin-card">
+              <header className="vf-card-header">
+                <h2 className="vf-card-title">Admin Home</h2>
+              </header>
+              <div className="vf-card-body">
+                <p>Loading home content…</p>
+              </div>
+            </article>
+          </section>
+        </main>
+      );
+    }
+
     const mission = adminMissionDraft || homeData?.mission || FALLBACK_MISSION;
     const about = adminAboutDraft || homeData?.about || FALLBACK_ABOUT;
     const notices = adminNoticesDraft || homeData?.notices || [];
@@ -777,5 +795,7 @@ function AdminShell() {
 }
 
 const container = document.getElementById("root");
-const root = createRoot(container);
-root.render(<AdminShell />);
+if (container) {
+  const root = createRoot(container);
+  root.render(<AdminShell />);
+}
