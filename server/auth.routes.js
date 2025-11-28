@@ -108,8 +108,8 @@ function toPublicUser(user) {
   if (!user) return null;
   return {
     id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
+    firstName: user.firstName || null,
+    lastName: user.lastName || null,
     email: user.email,
     themePreference: user.themePreference,
     languageOverride: user.languageOverride,
@@ -130,6 +130,20 @@ function validateNewPassword(password) {
   return null;
 }
 
+function sanitizeName(value, maxLen) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return trimmed.slice(0, maxLen);
+}
+
+function sanitizeEmail(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  if (!trimmed) return null;
+  return trimmed.slice(0, 190);
+}
+
 // Routes
 
 // POST /api/auth/register
@@ -138,7 +152,11 @@ router.post("/register", async (req, res) => {
   const { firstName, lastName, email, password, passwordConfirm } =
     req.body || {};
 
-  if (!firstName || !lastName || !email || !password || !passwordConfirm) {
+  const safeFirst = sanitizeName(firstName, 80);
+  const safeLast = sanitizeName(lastName, 80);
+  const normalizedEmail = sanitizeEmail(email);
+
+  if (!safeFirst || !safeLast || !normalizedEmail || !password || !passwordConfirm) {
     return res.status(400).json({ error: "All fields are required" });
   }
 
@@ -150,8 +168,6 @@ router.post("/register", async (req, res) => {
   if (passwordError) {
     return res.status(400).json({ error: passwordError });
   }
-
-  const normalizedEmail = String(email).trim().toLowerCase();
 
   try {
     const existing = await prisma.user.findUnique({
@@ -166,8 +182,8 @@ router.post("/register", async (req, res) => {
 
     const user = await prisma.user.create({
       data: {
-        firstName: String(firstName).trim(),
-        lastName: String(lastName).trim(),
+        firstName: safeFirst,
+        lastName: safeLast,
         email: normalizedEmail,
         passwordHash,
         themePreference: null,
@@ -196,14 +212,18 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ error: "Email and password are required" });
   }
 
-  const normalizedEmail = String(email).trim().toLowerCase();
+  const normalizedEmail = sanitizeEmail(email);
+
+  if (!normalizedEmail) {
+    return res.status(400).json({ error: "Email and password are required" });
+  }
 
   try {
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail }
     });
 
-    if (!user) {
+    if (!user || !user.passwordHash) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
 
@@ -295,20 +315,23 @@ router.post("/reset-password", async (req, res) => {
     return res.status(400).json({ error: passwordError });
   }
 
-  const normalizedEmail = String(email).trim().toLowerCase();
-  const normalizedFirst = String(firstName).trim();
-  const normalizedLast = String(lastName).trim();
+  const normalizedEmail = sanitizeEmail(email);
+  const normalizedFirst = sanitizeName(firstName, 80);
+  const normalizedLast = sanitizeName(lastName, 80);
+
+  if (!normalizedEmail || !normalizedFirst || !normalizedLast) {
+    return res.status(400).json({ error: "All fields are required" });
+  }
 
   try {
     const user = await prisma.user.findUnique({
       where: { email: normalizedEmail }
     });
 
-    if (
-      !user ||
-      user.firstName.trim() !== normalizedFirst ||
-      user.lastName.trim() !== normalizedLast
-    ) {
+    const storedFirst = sanitizeName(user?.firstName || "", 80);
+    const storedLast = sanitizeName(user?.lastName || "", 80);
+
+    if (!user || storedFirst !== normalizedFirst || storedLast !== normalizedLast) {
       return res.status(404).json({
         error:
           "No user found with the provided email, first name, and last name"
