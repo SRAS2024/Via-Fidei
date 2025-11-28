@@ -38,8 +38,7 @@ async function seedSiteContent() {
   };
 
   const collageContent = {
-    layout: "masonry",
-    images: []
+    photos: []
   };
 
   await prisma.siteContent.upsert({
@@ -480,7 +479,7 @@ async function seedSacraments() {
         name: "Anointing of the Sick",
         iconKey: "anointing-oil",
         meaning:
-          "Anointing of the Sick strengthens, peace, and courage to those who are seriously ill or in danger due to old age, uniting them to the suffering of Christ.",
+          "Anointing of the Sick gives strength, peace, and courage to those who are seriously ill or in danger due to old age, uniting them to the suffering of Christ.",
         biblicalFoundation:
           "See James 5 where the elders of the Church pray over the sick and anoint them with oil in the name of the Lord.",
         preparation:
@@ -497,7 +496,7 @@ async function seedSacraments() {
         meaning:
           "Matrimony is the sacrament by which a baptized man and woman are joined in a lifelong covenant of faithful love and are given grace to live as a sign of Christ and the Church.",
         biblicalFoundation:
-          "See Genesis 2, Matthew 19, and Ephesians 5 where marriage is revealed as a covenant and a sign of Christ love for the Church.",
+          "See Genesis 2, Matthew 19, and Ephesians 5 where marriage is revealed as a covenant and a sign of Christ's love for the Church.",
         preparation:
           "Meet with your parish priest, participate in marriage preparation, pray together, and reflect seriously on the promises you will make.",
         whatToExpect:
@@ -561,8 +560,16 @@ async function seedHistory() {
           "After the apostolic era, the Church grows amid persecution, clarifies her faith in Christ, and is nourished by the Fathers who preach, write, and defend the Gospel. The canon of Scripture is received and local liturgical traditions develop.",
         timeline: {
           entries: [
-            { year: 313, title: "Edict of Milan", note: "Religious tolerance for Christians" },
-            { year: 325, title: "Council of Nicaea", note: "Affirms Christ true divinity" }
+            {
+              year: 313,
+              title: "Edict of Milan",
+              note: "Religious tolerance for Christians"
+            },
+            {
+              year: 325,
+              title: "Council of Nicaea",
+              note: "Affirms Christ's true divinity"
+            }
           ]
         },
         eraOrder: 2,
@@ -582,8 +589,16 @@ async function seedHistory() {
           "Across the first millennium and beyond, the Church meets in ecumenical councils to respond to doctrinal crises and to profess the faith with precision. Nicaea, Constantinople, Ephesus, Chalcedon, and later councils deepen the Church understanding of the Trinity and the mystery of Christ.",
         timeline: {
           entries: [
-            { year: 381, title: "Council of Constantinople", note: "Completes Nicene Creed" },
-            { year: 451, title: "Council of Chalcedon", note: "Defines Christ two natures" }
+            {
+              year: 381,
+              title: "Council of Constantinople",
+              note: "Completes Nicene Creed"
+            },
+            {
+              year: 451,
+              title: "Council of Chalcedon",
+              note: "Defines Christ's two natures"
+            }
           ]
         },
         eraOrder: 3,
@@ -603,8 +618,16 @@ async function seedHistory() {
           "The medieval period sees the rise of monastic orders, the birth of universities, and the building of great cathedrals. Thinkers such as Saint Thomas Aquinas integrate faith and reason while popular devotion deepens through the liturgy, the Rosary, and local pilgrimages.",
         timeline: {
           entries: [
-            { year: 1095, title: "First Crusade preached", note: "Pilgrimage and conflict" },
-            { year: 1215, title: "Fourth Lateran Council", note: "Clarifies Eucharistic doctrine" }
+            {
+              year: 1095,
+              title: "First Crusade preached",
+              note: "Pilgrimage and conflict"
+            },
+            {
+              year: 1215,
+              title: "Fourth Lateran Council",
+              note: "Clarifies Eucharistic doctrine"
+            }
           ]
         },
         eraOrder: 4,
@@ -624,8 +647,16 @@ async function seedHistory() {
           "In the sixteenth century, serious abuses and doctrinal disputes contribute to the Protestant Reformation. The Council of Trent responds with clear teaching on Scripture, tradition, the sacraments, and justification, and inspires a strong renewal of priestly formation, religious life, and catechesis.",
         timeline: {
           entries: [
-            { year: 1517, title: "Reformation begins", note: "Debates on doctrine and practice" },
-            { year: 1545, title: "Council of Trent opens", note: "Catholic reform and clarity" }
+            {
+              year: 1517,
+              title: "Reformation begins",
+              note: "Debates on doctrine and practice"
+            },
+            {
+              year: 1545,
+              title: "Council of Trent opens",
+              note: "Catholic reform and clarity"
+            }
           ]
         },
         eraOrder: 5,
@@ -645,8 +676,16 @@ async function seedHistory() {
           "The modern period brings revolutions, new philosophies, and global mission. Catholic social teaching emerges, new religious congregations serve the poor, and the Church proclaims the dignity of every human person in the face of war and totalitarian ideologies.",
         timeline: {
           entries: [
-            { year: 1891, title: "Rerum Novarum", note: "Foundational social encyclical" },
-            { year: 1917, title: "Fátima apparitions", note: "Call to conversion and prayer" }
+            {
+              year: 1891,
+              title: "Rerum Novarum",
+              note: "Foundational social encyclical"
+            },
+            {
+              year: 1917,
+              title: "Fátima apparitions",
+              note: "Call to conversion and prayer"
+            }
           ]
         },
         eraOrder: 6,
@@ -666,8 +705,16 @@ async function seedHistory() {
           "Vatican I defined papal primacy and infallibility in a context of modern challenges to faith. Vatican II renewed the Church with a focus on the People of God, the liturgy, Scripture, religious freedom, and dialogue with the world, calling all the faithful to holiness and mission.",
         timeline: {
           entries: [
-            { year: 1869, title: "First Vatican Council opens", note: "Papal primacy and faith" },
-            { year: 1962, title: "Second Vatican Council opens", note: "Pastoral renewal and mission" }
+            {
+              year: 1869,
+              title: "First Vatican Council opens",
+              note: "Papal primacy and faith"
+            },
+            {
+              year: 1962,
+              title: "Second Vatican Council opens",
+              note: "Pastoral renewal and mission"
+            }
           ]
         },
         eraOrder: 7,
@@ -687,8 +734,16 @@ async function seedHistory() {
           "In the contemporary period the Church continues to form missionary disciples, defend human dignity from conception to natural death, accompany families and the poor, and proclaim the mercy of God. New ecclesial movements, lay initiatives, and digital evangelization all serve the same ancient mission.",
         timeline: {
           entries: [
-            { year: 1978, title: "Election of John Paul II", note: "Be not afraid" },
-            { year: 2013, title: "Election of Francis", note: "A Church that goes forth" }
+            {
+              year: 1978,
+              title: "Election of John Paul II",
+              note: "Be not afraid"
+            },
+            {
+              year: 2013,
+              title: "Election of Francis",
+              note: "A Church that goes forth"
+            }
           ]
         },
         eraOrder: 8,
@@ -754,8 +809,14 @@ async function seedGuides() {
           items: [
             { label: "Pray for the light of the Holy Spirit", required: true },
             { label: "Make an honest examination of conscience", required: true },
-            { label: "Recall how long it has been since your last confession", required: true },
-            { label: "Write down anything you are afraid of forgetting", required: false },
+            {
+              label: "Recall how long it has been since your last confession",
+              required: true
+            },
+            {
+              label: "Write down anything you are afraid of forgetting",
+              required: false
+            },
             { label: "Learn or review an act of contrition", required: true }
           ]
         },
@@ -781,10 +842,24 @@ async function seedGuides() {
             { label: "Pray one Our Father on the first large bead", required: true },
             { label: "Pray three Hail Marys on the next three beads", required: true },
             { label: "Pray one Glory Be", required: true },
-            { label: "Announce the first mystery and pause in silence", required: true },
-            { label: "For each decade, pray one Our Father, ten Hail Marys, and one Glory Be", required: true },
-            { label: "Optionally add the Fátima Prayer after each decade", required: false },
-            { label: "After five decades, pray the Hail Holy Queen and concluding prayer", required: true },
+            {
+              label: "Announce the first mystery and pause in silence",
+              required: true
+            },
+            {
+              label:
+                "For each decade, pray one Our Father, ten Hail Marys, and one Glory Be",
+              required: true
+            },
+            {
+              label: "Optionally add the Fátima Prayer after each decade",
+              required: false
+            },
+            {
+              label:
+                "After five decades, pray the Hail Holy Queen and concluding prayer",
+              required: true
+            },
             { label: "Finish with the Sign of the Cross", required: true }
           ]
         },
@@ -806,11 +881,26 @@ async function seedGuides() {
         guideOrder: 4,
         checklistTemplate: {
           items: [
-            { label: "Enter reverently and make a genuflection or deep bow", required: true },
-            { label: "Begin with a simple prayer of faith and love", required: true },
-            { label: "Read a short passage of Scripture slowly", required: false },
-            { label: "Spend time in silence before the Lord", required: true },
-            { label: "End with a prayer of thanksgiving and intercession", required: true }
+            {
+              label: "Enter reverently and make a genuflection or deep bow",
+              required: true
+            },
+            {
+              label: "Begin with a simple prayer of faith and love",
+              required: true
+            },
+            {
+              label: "Read a short passage of Scripture slowly",
+              required: false
+            },
+            {
+              label: "Spend time in silence before the Lord",
+              required: true
+            },
+            {
+              label: "End with a prayer of thanksgiving and intercession",
+              required: true
+            }
           ]
         },
         tags: ["adoration", "eucharist", "silence"],
@@ -832,10 +922,23 @@ async function seedGuides() {
         checklistTemplate: {
           items: [
             { label: "Commit to daily personal prayer", required: true },
-            { label: "Seek regular spiritual direction if possible", required: true },
-            { label: "Become involved in the life and service of your parish", required: true },
-            { label: "Learn about the different vocations in the Church", required: true },
-            { label: "Pay attention to the desires and gifts God has placed in your heart", required: true }
+            {
+              label: "Seek regular spiritual direction if possible",
+              required: true
+            },
+            {
+              label: "Become involved in the life and service of your parish",
+              required: true
+            },
+            {
+              label: "Learn about the different vocations in the Church",
+              required: true
+            },
+            {
+              label:
+                "Pay attention to the desires and gifts God has placed in your heart",
+              required: true
+            }
           ]
         },
         tags: ["vocation", "discernment", "calling"],
