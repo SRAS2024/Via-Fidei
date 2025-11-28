@@ -116,10 +116,10 @@ model Saint {
   language String
   slug     String
 
-  name              String
-  feastDay          DateTime?
-  patronages        String[]
-  biography         String
+  name               String
+  feastDay           DateTime?
+  patronages         String[]
+  biography          String
   canonizationStatus String?
   officialPrayer     String?
   imageUrl           String?
@@ -162,12 +162,12 @@ model Apparition {
   language String
   slug     String
 
-  title        String
-  location     String?
-  firstYear    Int?
-  feastDay     DateTime?
-  approvalNote String?  // short Church approval context
-  story        String
+  title         String
+  location      String?
+  firstYear     Int?
+  feastDay      DateTime?
+  approvalNote  String?  // short Church approval context
+  story         String
   officialPrayer String?
   imageUrl       String?
 
