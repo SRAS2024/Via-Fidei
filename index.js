@@ -129,7 +129,12 @@ if (NODE_ENV === "production") {
 
   app.use(express.static(clientDist));
 
-  // All non API routes serve the React app
+  // Serve admin shell for /admin and any nested admin routes
+  app.get("/admin*", (req, res) => {
+    res.sendFile(path.join(clientDist, "admin.html"));
+  });
+
+  // All other non API routes serve the main React app
   app.get("*", (req, res) => {
     res.sendFile(path.join(clientDist, "index.html"));
   });
