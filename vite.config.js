@@ -18,31 +18,38 @@ export default defineConfig({
   plugins: [
     react({
       jsxRuntime: "automatic",
-      include: [
-        "**/*.js",
-        "**/*.jsx",
-        "**/*.ts",
-        "**/*.tsx"
-      ]
+      include: ["**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"]
     })
   ],
 
   resolve: {
     alias: {
-      // You can use "@/..." to refer to files inside client/src
-      "@": path.resolve(__dirname, "client", "src")
+      // You can use "@/..." to refer to files inside client
+      "@": path.resolve(__dirname, "client")
     }
   },
 
   server: {
     port: 5173,
-    strictPort: true
+    strictPort: true,
+    proxy: {
+      "/api": {
+        target: "http://localhost:5000",
+        changeOrigin: true
+      }
+    }
   },
 
   build: {
     // Output folder relative to the Vite root (client/)
     // So final path on disk is /client/dist
     outDir: "dist",
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "client", "index.html"),
+        admin: path.resolve(__dirname, "client", "admin.html")
+      }
+    }
   }
 });
