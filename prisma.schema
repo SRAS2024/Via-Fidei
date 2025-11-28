@@ -116,10 +116,10 @@ model Saint {
   language String
   slug     String
 
-  name       String
-  feastDay   DateTime?
-  patronages String[]
-  biography  String
+  name              String
+  feastDay          DateTime?
+  patronages        String[]
+  biography         String
   canonizationStatus String?
   officialPrayer     String?
   imageUrl           String?
@@ -431,4 +431,3 @@ enum SiteContentKey {
   PHOTO_COLLAGE
   LITURGICAL_THEME
 }
-]
