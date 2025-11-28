@@ -168,15 +168,19 @@ router.put("/:id", requireAuth, async (req, res) => {
 
     if (typeof req.body.title === "string") {
       const t = req.body.title.trim();
-      if (t) data.title = t;
+      if (t) {
+        data.title = t;
+      }
     }
 
     if (Object.prototype.hasOwnProperty.call(req.body, "body")) {
-      data.body = req.body.body;
-    } else if (
-      Object.prototype.hasOwnProperty.call(req.body, "content")
-    ) {
-      data.body = req.body.content;
+      if (typeof req.body.body === "string") {
+        data.body = req.body.body;
+      }
+    } else if (Object.prototype.hasOwnProperty.call(req.body, "content")) {
+      if (typeof req.body.content === "string") {
+        data.body = req.body.content;
+      }
     }
 
     if (Object.prototype.hasOwnProperty.call(req.body, "isFavorite")) {
@@ -185,6 +189,10 @@ router.put("/:id", requireAuth, async (req, res) => {
 
     if (Object.prototype.hasOwnProperty.call(req.body, "isArchived")) {
       data.isArchived = Boolean(req.body.isArchived);
+    }
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
     }
 
     const updated = await prisma.journalEntry.update({
