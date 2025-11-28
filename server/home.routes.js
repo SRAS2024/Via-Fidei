@@ -31,8 +31,9 @@ function resolveLanguage(req) {
     return SUPPORTED_LANGS.includes(lower) ? lower : null;
   };
 
-  const userPref = req.user?.languageOverride;
-  const queryPref = req.query?.language || req.query?.lang;
+  const userPref = req.user && req.user.languageOverride;
+  const queryPref =
+    (req.query && (req.query.language || req.query.lang)) || null;
   const envPref = process.env.DEFAULT_LANGUAGE;
 
   const fromUser = tryLang(userPref);
@@ -44,7 +45,8 @@ function resolveLanguage(req) {
   const fromEnv = tryLang(envPref);
   if (fromEnv) return fromEnv;
 
-  const header = req.headers?.["accept-language"];
+  const header =
+    (req.headers && req.headers["accept-language"]) || null;
   if (typeof header === "string" && header.length > 0) {
     const first = header.split(",")[0].trim().toLowerCase();
     if (SUPPORTED_LANGS.includes(first)) return first;
@@ -261,6 +263,7 @@ router.get("/", async (req, res) => {
 
     const mission = normalizeMission(missionRow, language);
     const about = normalizeAbout(aboutRow, language);
+
     const collage = collageRow ? collageRow.content : null;
     const collagePhotos = normalizeCollage(collageRow);
 
