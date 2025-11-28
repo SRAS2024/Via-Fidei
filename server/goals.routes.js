@@ -96,6 +96,7 @@ router.post("/", requireAuth, async (req, res) => {
 
   let normalizedChecklist = null;
   if (checklist && typeof checklist === "object") {
+    // Accept either { items: [...] } or any object payload
     normalizedChecklist = checklist;
   }
 
@@ -194,7 +195,9 @@ router.patch("/:id", requireAuth, async (req, res) => {
     } else if (checklist === null) {
       data.checklist = null;
     } else {
-      return res.status(400).json({ error: "Checklist must be an object or null" });
+      return res
+        .status(400)
+        .json({ error: "Checklist must be an object or null" });
     }
   }
 
@@ -246,9 +249,10 @@ router.post("/:id/checklist/toggle", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "Goal not found" });
     }
 
-    const checklist = goal.checklist && typeof goal.checklist === "object"
-      ? { ...goal.checklist }
-      : null;
+    const checklist =
+      goal.checklist && typeof goal.checklist === "object"
+        ? { ...goal.checklist }
+        : null;
 
     if (!checklist || !Array.isArray(checklist.items)) {
       return res.status(400).json({ error: "Goal has no checklist items" });
@@ -310,4 +314,4 @@ router.delete("/:id", requireAuth, async (req, res) => {
   }
 });
 
-module.exports = router;s
+module.exports = router;
