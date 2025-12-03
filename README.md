@@ -36,9 +36,19 @@ All content is easy to read, organized top to bottom and left to right, carefull
 
 **Deployment**
 
-- Railway web service  
-- Railway PostgreSQL plugin  
-- Environment variables for secrets, admin access, database URL, language behavior, theme persistence  
+- Railway web service
+- Railway PostgreSQL plugin
+- Environment variables for secrets, admin access, database URL, language behavior, theme persistence
+
+### Railway deployment checklist
+
+1. Provision a Railway PostgreSQL database and copy its `DATABASE_URL` into the service variables.
+2. Set `JWT_SECRET`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD` as Railway variables (never check these into git).
+3. Ensure `CLIENT_ORIGIN` matches the public URL Railway gives you (for example `https://your-app.up.railway.app`).
+4. Deploy with the default Node service configuration; Railway will run `npm run build` followed by `npm start`.
+   - The `prestart` hook runs `prisma migrate deploy` through `database/prestart.js`, so the schema applies automatically when the database is reachable.
+5. Railway health checks hit `/api/health` as defined in `railway.json`; waits are extended for initial cold starts.
+6. If a deploy fails, inspect the Railway logs for the clear Prisma or environment message emitted by `database/prestart.js`.
 
 ---
 

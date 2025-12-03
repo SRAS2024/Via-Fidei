@@ -87,28 +87,33 @@ app.get("/api/health", async (req, res) => {
 
 // API routers
 // These live in /server and keep the file tree small and clear
-try {
-  app.use("/api/home", require("./server/home.routes"));
-  app.use("/api/layout", require("./server/layout.routes"));
-  app.use("/api/auth", require("./server/auth.routes"));
-  app.use("/api/prayers", require("./server/prayers.routes"));
-  app.use("/api/saints", require("./server/saints.routes"));
-  app.use("/api/guides", require("./server/guides.routes"));
-  app.use("/api/sacraments", require("./server/sacraments.routes"));
-  app.use("/api/history", require("./server/history.routes"));
-  app.use("/api/profile", require("./server/profile.routes"));
-  app.use("/api/admin", require("./server/admin.routes"));
-  app.use("/api/account", require("./server/account.routes"));
-  app.use("/api/journal", require("./server/journal.routes"));
-  app.use("/api/goals", require("./server/goals.routes"));
-} catch (err) {
-  // During early development some route files may not exist yet
-  // The server can still boot so Railway builds are not blocked
-  console.warn(
-    "[Via Fidei] API routes not fully loaded yet. This is expected until all server/*.routes.js files exist.",
-    err && err.message ? `Reason: ${err.message}` : ""
-  );
-}
+const routes = [
+  ["/api/home", "./server/home.routes"],
+  ["/api/layout", "./server/layouts.routes"],
+  ["/api/auth", "./server/auth.routes"],
+  ["/api/prayers", "./server/prayers.routes"],
+  ["/api/saints", "./server/saints.routes"],
+  ["/api/guides", "./server/guides.routes"],
+  ["/api/sacraments", "./server/sacraments.routes"],
+  ["/api/history", "./server/history.routes"],
+  ["/api/profile", "./server/profile.routes"],
+  ["/api/admin", "./server/admin.routes"],
+  ["/api/account", "./server/account.routes"],
+  ["/api/journal", "./server/journal.routes"],
+  ["/api/goals", "./server/goals.routes"]
+];
+
+routes.forEach(([path, modulePath]) => {
+  try {
+    app.use(path, require(modulePath));
+  } catch (err) {
+    console.error(
+      `[Via Fidei] Failed to load router for ${path} from ${modulePath}. The server cannot start without all routes.`,
+      err
+    );
+    process.exit(1);
+  }
+});
 
 // Simple 404 JSON for unknown API paths
 app.use("/api", (req, res) => {
