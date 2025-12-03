@@ -28,6 +28,14 @@ const SUPPORTED_LANGS = [
   { code: "uk", label: "Українська" }
 ];
 
+const GOAL_TYPES = [
+  { value: "CUSTOM", label: "Custom" },
+  { value: "TEMPLATE_NOVENA", label: "Novena" },
+  { value: "TEMPLATE_OCIA", label: "OCIA" },
+  { value: "TEMPLATE_CONSECRATION", label: "Consecration" },
+  { value: "TEMPLATE_VOCATION", label: "Vocation" }
+];
+
 const ACCOUNT_STATES = {
   CLOSED: "closed",
   OPEN: "open"
@@ -638,6 +646,64 @@ function AppShell() {
   const [guidesPage, setGuidesPage] = useState(1);
   const [guidesError, setGuidesError] = useState("");
 
+  // Profile data
+  const [profileOverview, setProfileOverview] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState("");
+
+  const [savedPrayers, setSavedPrayers] = useState([]);
+  const [loadingSavedPrayers, setLoadingSavedPrayers] = useState(false);
+  const [savedPrayersError, setSavedPrayersError] = useState("");
+
+  const [journalEntries, setJournalEntries] = useState([]);
+  const [journalView, setJournalView] = useState("active");
+  const [journalForm, setJournalForm] = useState({
+    title: "",
+    body: "",
+    isFavorite: false
+  });
+  const [journalSubmitting, setJournalSubmitting] = useState(false);
+  const [journalError, setJournalError] = useState("");
+
+  const [goalForm, setGoalForm] = useState({
+    title: "",
+    description: "",
+    goalType: "CUSTOM",
+    dueDate: "",
+    checklist: null
+  });
+  const [goals, setGoals] = useState([]);
+  const [goalsError, setGoalsError] = useState("");
+  const [goalsLoading, setGoalsLoading] = useState(false);
+
+  const [milestones, setMilestones] = useState([]);
+  const [milestonesError, setMilestonesError] = useState("");
+  const [milestonesLoading, setMilestonesLoading] = useState(false);
+
+  const [profileNotice, setProfileNotice] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  // Auth forms
+  const [authMode, setAuthMode] = useState("login");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [registerForm, setRegisterForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    passwordConfirm: ""
+  });
+  const [resetForm, setResetForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    newPassword: ""
+  });
+  const [authError, setAuthError] = useState("");
+  const [authSuccess, setAuthSuccess] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
   // Prayers search and library
   const [prayersSearch, setPrayersSearch] = useState("");
   const [prayersSuggestions, setPrayersSuggestions] = useState([]);
@@ -726,6 +792,19 @@ function AppShell() {
     const season = seasonTheme || "normal";
     document.documentElement.setAttribute("data-season", season);
   }, [seasonTheme]);
+
+  useEffect(() => {
+    setAvatarUrl(user?.profilePictureUrl || "");
+    if (!user) {
+      setProfileOverview(null);
+      setSavedPrayers([]);
+      setJournalEntries([]);
+      setGoals([]);
+      setMilestones([]);
+      setProfileNotice("");
+      setProfileError("");
+    }
+  }, [user]);
 
   // When language changes, mark language dependent sections as needing reload
   useEffect(() => {
@@ -1104,6 +1183,16 @@ function AppShell() {
     loadApparitions
   ]);
 
+  useEffect(() => {
+    if (currentTab === "profile" && user) {
+      loadProfileOverview();
+      loadSavedPrayers();
+      loadJournalEntries(journalView);
+      loadGoals();
+      loadMilestones();
+    }
+  }, [currentTab, user, journalView]);
+
   // Account actions
   async function handleLogout() {
     try {
@@ -1113,6 +1202,32 @@ function AppShell() {
       });
       setUser(null);
       setAccountMenu(ACCOUNT_STATES.CLOSED);
+      setProfileOverview(null);
+      setProfileLoading(false);
+      setProfileError("");
+      setProfileNotice("");
+      setAvatarUrl("");
+      setSavedPrayers([]);
+      setLoadingSavedPrayers(false);
+      setSavedPrayersError("");
+      setJournalEntries([]);
+      setJournalView("active");
+      setJournalForm({ title: "", body: "", isFavorite: false });
+      setJournalSubmitting(false);
+      setJournalError("");
+      setGoalForm({
+        title: "",
+        description: "",
+        goalType: "CUSTOM",
+        dueDate: "",
+        checklist: null
+      });
+      setGoals([]);
+      setGoalsError("");
+      setGoalsLoading(false);
+      setMilestones([]);
+      setMilestonesError("");
+      setMilestonesLoading(false);
       setCurrentTab("home");
     } catch (err) {
       console.error("Logout failed", err);
@@ -1147,6 +1262,431 @@ function AppShell() {
       });
     }
   }
+
+  // Auth actions
+  function resetAuthState() {
+    setAuthError("");
+    setAuthSuccess("");
+    setAuthSubmitting(false);
+  }
+
+  async function handleLoginSubmit(event) {
+    event.preventDefault();
+    resetAuthState();
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Login failed");
+      }
+      setUser(data.user || null);
+      setCurrentTab("profile");
+      setAccountMenu(ACCOUNT_STATES.CLOSED);
+      setAuthSuccess("Welcome back. You are now signed in.");
+    } catch (err) {
+      setAuthError(err.message || "Login failed");
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  async function handleRegisterSubmit(event) {
+    event.preventDefault();
+    resetAuthState();
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(registerForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Registration failed");
+      }
+      setUser(data.user || null);
+      setCurrentTab("profile");
+      setAuthSuccess("Account created. You are now signed in.");
+    } catch (err) {
+      setAuthError(err.message || "Registration failed");
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  async function handleResetSubmit(event) {
+    event.preventDefault();
+    resetAuthState();
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...resetForm,
+          newPassword: resetForm.newPassword
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Password reset failed");
+      }
+      setAuthSuccess("Password reset. You can log in with the new password.");
+      setAuthMode("login");
+    } catch (err) {
+      setAuthError(err.message || "Password reset failed");
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  // Logged-in features
+  function requireAuth() {
+    if (!user) {
+      setCurrentTab("auth");
+      setAuthMode("login");
+      setAuthError("Please log in to use this feature.");
+      return false;
+    }
+    return true;
+  }
+
+  async function loadProfileOverview() {
+    if (!user) return;
+    try {
+      setProfileLoading(true);
+      setProfileError("");
+      const res = await fetch("/api/profile", { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load profile");
+      }
+      setProfileOverview(data.overview || null);
+    } catch (err) {
+      setProfileError(err.message || "Profile load failed");
+    } finally {
+      setProfileLoading(false);
+    }
+  }
+
+  async function loadSavedPrayers() {
+    if (!user) return;
+    try {
+      setLoadingSavedPrayers(true);
+      setSavedPrayersError("");
+      const res = await fetch("/api/profile/my-prayers", {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load saved prayers");
+      }
+      setSavedPrayers(data.items || []);
+    } catch (err) {
+      setSavedPrayersError(err.message || "Unable to load saved prayers");
+    } finally {
+      setLoadingSavedPrayers(false);
+    }
+  }
+
+  async function removeSavedPrayer(prayerId) {
+    if (!requireAuth()) return;
+    try {
+      const res = await fetch(`/api/profile/my-prayers/${prayerId}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error || "Failed to remove saved prayer");
+      }
+      setSavedPrayers((prev) => prev.filter((p) => p.prayerId !== prayerId));
+      setProfileNotice("Removed from My Prayers.");
+      loadProfileOverview();
+    } catch (err) {
+      setSavedPrayersError(err.message || "Unable to remove saved prayer");
+    }
+  }
+
+  async function loadJournalEntries(view = journalView) {
+    if (!user) return;
+    try {
+      setJournalError("");
+      const res = await fetch(`/api/profile/journal?view=${view}`, {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load journal entries");
+      }
+      setJournalEntries(data.items || []);
+    } catch (err) {
+      setJournalError(err.message || "Unable to load journal");
+    }
+  }
+
+  async function submitJournal(event) {
+    event.preventDefault();
+    if (!requireAuth()) return;
+    setJournalSubmitting(true);
+    setJournalError("");
+    try {
+      const res = await fetch("/api/profile/journal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(journalForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to save journal entry");
+      }
+      setJournalForm({ title: "", body: "", isFavorite: false });
+      setProfileNotice("Journal entry added.");
+      loadJournalEntries(journalView);
+      loadProfileOverview();
+    } catch (err) {
+      setJournalError(err.message || "Unable to save journal entry");
+    } finally {
+      setJournalSubmitting(false);
+    }
+  }
+
+  async function updateJournalEntry(id, payload) {
+    if (!requireAuth()) return;
+    try {
+      const res = await fetch(`/api/profile/journal/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update journal entry");
+      }
+      setJournalEntries((prev) =>
+        prev.map((entry) => (entry.id === id ? data.entry : entry))
+      );
+      setProfileNotice("Journal updated.");
+      loadProfileOverview();
+    } catch (err) {
+      setJournalError(err.message || "Unable to update journal entry");
+    }
+  }
+
+  async function deleteJournalEntry(id) {
+    if (!requireAuth()) return;
+    try {
+      const res = await fetch(`/api/profile/journal/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error || "Failed to delete journal entry");
+      }
+      setJournalEntries((prev) => prev.filter((entry) => entry.id !== id));
+      setProfileNotice("Journal entry deleted.");
+      loadProfileOverview();
+    } catch (err) {
+      setJournalError(err.message || "Unable to delete journal entry");
+    }
+  }
+
+  async function loadGoals() {
+    if (!user) return;
+    try {
+      setGoalsLoading(true);
+      setGoalsError("");
+      const res = await fetch("/api/profile/goals", {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load goals");
+      }
+      setGoals(data.items || []);
+    } catch (err) {
+      setGoalsError(err.message || "Unable to load goals");
+    } finally {
+      setGoalsLoading(false);
+    }
+  }
+
+  async function submitGoal(event) {
+    event.preventDefault();
+    if (!requireAuth()) return;
+    setGoalsError("");
+    try {
+      const res = await fetch("/api/profile/goals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(goalForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to create goal");
+      }
+      setGoalForm({ title: "", description: "", goalType: "CUSTOM", dueDate: "", checklist: null });
+      setProfileNotice("Goal added.");
+      loadGoals();
+      loadMilestones();
+      loadProfileOverview();
+    } catch (err) {
+      setGoalsError(err.message || "Unable to create goal");
+    }
+  }
+
+  async function updateGoal(id, payload) {
+    if (!requireAuth()) return;
+    try {
+      const res = await fetch(`/api/profile/goals/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update goal");
+      }
+      setGoals((prev) => prev.map((g) => (g.id === id ? data.goal : g)));
+      setProfileNotice("Goal updated.");
+      loadMilestones();
+      loadProfileOverview();
+    } catch (err) {
+      setGoalsError(err.message || "Unable to update goal");
+    }
+  }
+
+  async function deleteGoal(id) {
+    if (!requireAuth()) return;
+    try {
+      const res = await fetch(`/api/profile/goals/${id}`, {
+        method: "DELETE",
+        credentials: "include"
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data?.error || "Failed to delete goal");
+      }
+      setGoals((prev) => prev.filter((g) => g.id !== id));
+      setProfileNotice("Goal removed.");
+      loadMilestones();
+      loadProfileOverview();
+    } catch (err) {
+      setGoalsError(err.message || "Unable to delete goal");
+    }
+  }
+
+  async function loadMilestones() {
+    if (!user) return;
+    try {
+      setMilestonesLoading(true);
+      setMilestonesError("");
+      const res = await fetch("/api/profile/milestones", {
+        credentials: "include"
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to load milestones");
+      }
+      setMilestones(data.items || []);
+    } catch (err) {
+      setMilestonesError(err.message || "Unable to load milestones");
+    } finally {
+      setMilestonesLoading(false);
+    }
+  }
+
+  async function saveAvatar(event) {
+    event.preventDefault();
+    if (!requireAuth()) return;
+    try {
+      const res = await fetch("/api/profile/avatar", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ profilePictureUrl: avatarUrl })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to update profile picture");
+      }
+      if (data.user) {
+        setUser(data.user);
+      }
+      setProfileNotice("Profile picture updated.");
+    } catch (err) {
+      setProfileError(err.message || "Unable to update profile picture");
+    }
+  }
+
+    async function savePrayer(prayerId) {
+      if (!requireAuth()) return;
+      try {
+        const res = await fetch(`/api/prayers/${prayerId}/save`, {
+          method: "POST",
+          credentials: "include"
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to save prayer");
+        }
+        setProfileNotice("Prayer added to your library.");
+        loadSavedPrayers();
+        loadProfileOverview();
+      } catch (err) {
+        setPrayersError(err.message || "Unable to save prayer");
+      }
+    }
+
+    async function saveSaint(saintId) {
+      if (!requireAuth()) return;
+      try {
+        const res = await fetch(`/api/saints/${saintId}/save`, {
+          method: "POST",
+          credentials: "include"
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to save saint");
+        }
+        setSaintsError(null);
+        setProfileNotice("Saint saved to your account.");
+        loadProfileOverview();
+      } catch (err) {
+        setSaintsError(err.message || "Unable to save saint");
+      }
+    }
+
+    async function saveApparition(apparitionId) {
+      if (!requireAuth()) return;
+      try {
+        const res = await fetch(`/api/saints/apparitions/${apparitionId}/save`, {
+          method: "POST",
+          credentials: "include"
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || "Failed to save apparition");
+        }
+        setApparitionsError(null);
+        setProfileNotice("Apparition saved to your account.");
+        loadProfileOverview();
+      } catch (err) {
+        setApparitionsError(err.message || "Unable to save apparition");
+      }
+    }
 
   // Local search in Prayers
   useEffect(() => {
@@ -2093,7 +2633,22 @@ function AppShell() {
                           "p",
                           { className: "vf-prayer-body" },
                           p.content
-                        )
+                        ),
+                        user
+                          ? React.createElement(
+                              "div",
+                              { className: "vf-item-actions" },
+                              React.createElement(
+                                "button",
+                                {
+                                  type: "button",
+                                  className: "vf-btn vf-btn-ghost",
+                                  onClick: () => savePrayer(p.id)
+                                },
+                                "Save to profile"
+                              )
+                            )
+                          : null
                       )
                     )
                   )
@@ -2293,6 +2848,21 @@ function AppShell() {
                               "p",
                               { className: "vf-saint-bio" },
                               s.biography
+                            )
+                          : null,
+                        user
+                          ? React.createElement(
+                              "div",
+                              { className: "vf-item-actions" },
+                              React.createElement(
+                                "button",
+                                {
+                                  type: "button",
+                                  className: "vf-btn vf-btn-ghost",
+                                  onClick: () => saveSaint(s.id)
+                                },
+                                "Save this saint"
+                              )
                             )
                           : null
                       )
@@ -2521,6 +3091,21 @@ function AppShell() {
                               "p",
                               { className: "vf-saint-bio" },
                               a.story
+                            )
+                          : null,
+                        user
+                          ? React.createElement(
+                              "div",
+                              { className: "vf-item-actions" },
+                              React.createElement(
+                                "button",
+                                {
+                                  type: "button",
+                                  className: "vf-btn vf-btn-ghost",
+                                  onClick: () => saveApparition(a.id)
+                                },
+                                "Save this apparition"
+                              )
                             )
                           : null
                       )
@@ -2779,15 +3364,13 @@ function AppShell() {
       { className: "vf-main" },
       React.createElement(
         "section",
-        { className: "vf-section" },
+        { className: "vf-section vf-profile-grid" },
         React.createElement(
           "article",
-          { className: "vf-card" },
+          { className: "vf-card vf-profile-card" },
           React.createElement(
             "header",
-            {
-              className: "vf-card-header vf-profile-header"
-            },
+            { className: "vf-card-header vf-profile-header" },
             React.createElement(
               "div",
               { className: "vf-profile-avatar-wrap" },
@@ -2804,19 +3387,21 @@ function AppShell() {
                       { className: "vf-profile-initials" },
                       user.firstName?.[0],
                       user.lastName?.[0]
-                    ),
+                    )
+              ),
+              React.createElement(
+                "form",
+                { className: "vf-inline-form", onSubmit: saveAvatar },
+                React.createElement("input", {
+                  type: "url",
+                  placeholder: "Avatar image URL",
+                  value: avatarUrl,
+                  onChange: (e) => setAvatarUrl(e.target.value)
+                }),
                 React.createElement(
                   "button",
-                  {
-                    type: "button",
-                    className: "vf-profile-avatar-edit",
-                    title: "Edit Profile Picture",
-                    "aria-label": "Edit Profile Picture"
-                  },
-                  React.createElement("span", {
-                    className: "vf-icon-pencil",
-                    "aria-hidden": "true"
-                  })
+                  { type: "submit", className: "vf-btn vf-btn-blue" },
+                  "Save"
                 )
               )
             ),
@@ -2834,7 +3419,21 @@ function AppShell() {
                 "p",
                 { className: "vf-card-subtitle" },
                 user.email
-              )
+              ),
+              profileError
+                ? React.createElement(
+                    "p",
+                    { className: "vf-inline-alert" },
+                    profileError
+                  )
+                : null,
+              profileNotice
+                ? React.createElement(
+                    "p",
+                    { className: "vf-inline-success" },
+                    profileNotice
+                  )
+                : null
             )
           ),
           React.createElement(
@@ -2842,9 +3441,552 @@ function AppShell() {
             { className: "vf-card-body" },
             React.createElement(
               "p",
-              null,
-              "Your profile gathers My Prayers, Journal, Goals, and Milestones, along with settings for theme, language, and privacy, so that everything supporting your spiritual life stays in one place."
+              { className: "vf-lede" },
+              "Your account keeps prayers, saints, apparitions, journal notes, goals, and milestones together so that your devotion stays organized."
+            ),
+            profileLoading
+              ? React.createElement("p", null, "Loading profile…")
+              : null,
+            profileOverview
+              ? React.createElement(
+                  "div",
+                  { className: "vf-metrics" },
+                  [
+                    {
+                      label: "Saved Prayers",
+                      value: profileOverview.savedPrayersCount
+                    },
+                    { label: "Saved Saints", value: profileOverview.savedSaintsCount },
+                    {
+                      label: "Saved Apparitions",
+                      value: profileOverview.savedApparitionsCount
+                    },
+                    { label: "Journal Entries", value: profileOverview.journalCount },
+                    {
+                      label: "Archived Journal",
+                      value: profileOverview.journalArchivedCount
+                    },
+                    { label: "Goals", value: profileOverview.goalsCount },
+                    { label: "Active Goals", value: profileOverview.goalsActiveCount },
+                    { label: "Overdue Goals", value: profileOverview.goalsOverdueCount },
+                    { label: "Milestones", value: profileOverview.milestonesCount }
+                  ].map((metric) =>
+                    React.createElement(
+                      "div",
+                      { key: metric.label, className: "vf-metric" },
+                      React.createElement(
+                        "p",
+                        { className: "vf-metric-label" },
+                        metric.label
+                      ),
+                      React.createElement(
+                        "p",
+                        { className: "vf-metric-value" },
+                        metric.value ?? 0
+                      )
+                    )
+                  )
+                )
+              : null
+          )
+        ),
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "div",
+              { className: "vf-card-title-row" },
+              React.createElement("h3", { className: "vf-card-title" }, "My Prayers"),
+              React.createElement(
+                "span",
+                { className: "vf-chip" },
+                savedPrayers.length,
+                " saved"
+              )
             )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            savedPrayersError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  savedPrayersError
+                )
+              : null,
+            loadingSavedPrayers
+              ? React.createElement("p", null, "Loading saved prayers…")
+              : null,
+            savedPrayers.length === 0 && !loadingSavedPrayers
+              ? React.createElement(
+                  "p",
+                  null,
+                  "Save any prayer from the library to keep it close."
+                )
+              : null,
+            savedPrayers.length > 0
+              ? React.createElement(
+                  "ul",
+                  { className: "vf-list" },
+                  savedPrayers.map((item) =>
+                    React.createElement(
+                      "li",
+                      { key: item.id, className: "vf-list-row" },
+                      React.createElement(
+                        "div",
+                        null,
+                        React.createElement(
+                          "p",
+                          { className: "vf-list-title" },
+                          item.prayer.title
+                        ),
+                        React.createElement(
+                          "p",
+                          { className: "vf-list-subtitle" },
+                          new Date(item.savedAt).toLocaleDateString(),
+                          " · ",
+                          item.prayer.category || "Prayer"
+                        )
+                      ),
+                      React.createElement(
+                        "button",
+                        {
+                          type: "button",
+                          className: "vf-btn vf-btn-ghost",
+                          onClick: () => removeSavedPrayer(item.prayerId)
+                        },
+                        "Remove"
+                      )
+                    )
+                  )
+                )
+              : null
+          )
+        ),
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement("h3", { className: "vf-card-title" }, "Journal"),
+            React.createElement(
+              "div",
+              { className: "vf-pill-group" },
+              [
+                { id: "active", label: "Active" },
+                { id: "archived", label: "Archived" },
+                { id: "all", label: "All" }
+              ].map((view) =>
+                React.createElement(
+                  "button",
+                  {
+                    key: view.id,
+                    type: "button",
+                    className:
+                      "vf-pill" + (journalView === view.id ? " vf-pill-active" : ""),
+                    onClick: () => {
+                      setJournalView(view.id);
+                      loadJournalEntries(view.id);
+                    }
+                  },
+                  view.label
+                )
+              )
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            journalError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  journalError
+                )
+              : null,
+            React.createElement(
+              "form",
+              { className: "vf-form vf-stacked-form", onSubmit: submitJournal },
+              React.createElement(
+                "label",
+                { className: "vf-field" },
+                React.createElement("span", null, "Title"),
+                React.createElement("input", {
+                  type: "text",
+                  value: journalForm.title,
+                  onChange: (e) =>
+                    setJournalForm((prev) => ({ ...prev, title: e.target.value }))
+                })
+              ),
+              React.createElement(
+                "label",
+                { className: "vf-field" },
+                React.createElement("span", null, "Entry"),
+                React.createElement("textarea", {
+                  required: true,
+                  value: journalForm.body,
+                  rows: 3,
+                  onChange: (e) =>
+                    setJournalForm((prev) => ({ ...prev, body: e.target.value }))
+                })
+              ),
+              React.createElement(
+                "label",
+                { className: "vf-checkbox" },
+                React.createElement("input", {
+                  type: "checkbox",
+                  checked: journalForm.isFavorite,
+                  onChange: (e) =>
+                    setJournalForm((prev) => ({
+                      ...prev,
+                      isFavorite: e.target.checked
+                    }))
+                }),
+                React.createElement("span", null, "Mark as favorite")
+              ),
+              React.createElement(
+                "button",
+                { type: "submit", className: "vf-btn vf-btn-blue", disabled: journalSubmitting },
+                journalSubmitting ? "Saving…" : "Add entry"
+              )
+            ),
+            journalEntries.length > 0
+              ? React.createElement(
+                  "div",
+                  { className: "vf-stack" },
+                  journalEntries.map((entry) =>
+                    React.createElement(
+                      "article",
+                      { key: entry.id, className: "vf-note" },
+                      React.createElement(
+                        "div",
+                        { className: "vf-note-head" },
+                        React.createElement(
+                          "h4",
+                          { className: "vf-note-title" },
+                          entry.title || "Untitled"
+                        ),
+                        React.createElement(
+                          "div",
+                          { className: "vf-note-actions" },
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className:
+                                "vf-chip" + (entry.isFavorite ? " vf-chip-green" : ""),
+                              onClick: () =>
+                                updateJournalEntry(entry.id, {
+                                  isFavorite: !entry.isFavorite
+                                })
+                            },
+                            entry.isFavorite ? "Favorite" : "Mark favorite"
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-btn vf-btn-ghost",
+                              onClick: () =>
+                                updateJournalEntry(entry.id, {
+                                  isArchived: !entry.isArchived
+                                })
+                            },
+                            entry.isArchived ? "Unarchive" : "Archive"
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-btn vf-btn-ghost",
+                              onClick: () => deleteJournalEntry(entry.id)
+                            },
+                            "Delete"
+                          )
+                        )
+                      ),
+                      React.createElement(
+                        "p",
+                        { className: "vf-note-date" },
+                        new Date(entry.createdAt).toLocaleString()
+                      ),
+                      React.createElement("p", null, entry.body)
+                    )
+                  )
+                )
+              : React.createElement(
+                  "p",
+                  { className: "vf-empty" },
+                  "No journal entries yet."
+                )
+          )
+        ),
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement("h3", { className: "vf-card-title" }, "Goals"),
+            goalsError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  goalsError
+                )
+              : null
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            React.createElement(
+              "form",
+              { className: "vf-form vf-goal-form", onSubmit: submitGoal },
+              React.createElement(
+                "label",
+                { className: "vf-field" },
+                React.createElement("span", null, "Title"),
+                React.createElement("input", {
+                  required: true,
+                  value: goalForm.title,
+                  onChange: (e) =>
+                    setGoalForm((prev) => ({ ...prev, title: e.target.value }))
+                })
+              ),
+              React.createElement(
+                "label",
+                { className: "vf-field" },
+                React.createElement("span", null, "Description"),
+                React.createElement("textarea", {
+                  value: goalForm.description,
+                  rows: 2,
+                  onChange: (e) =>
+                    setGoalForm((prev) => ({
+                      ...prev,
+                      description: e.target.value
+                    }))
+                })
+              ),
+              React.createElement(
+                "label",
+                { className: "vf-field" },
+                React.createElement("span", null, "Goal type"),
+                React.createElement(
+                  "select",
+                  {
+                    value: goalForm.goalType,
+                    onChange: (e) =>
+                      setGoalForm((prev) => ({
+                        ...prev,
+                        goalType: e.target.value
+                      }))
+                  },
+                  GOAL_TYPES.map((type) =>
+                    React.createElement(
+                      "option",
+                      { key: type.value, value: type.value },
+                      type.label
+                    )
+                  )
+                )
+              ),
+              React.createElement(
+                "label",
+                { className: "vf-field" },
+                React.createElement("span", null, "Due date"),
+                React.createElement("input", {
+                  type: "date",
+                  value: goalForm.dueDate,
+                  onChange: (e) =>
+                    setGoalForm((prev) => ({ ...prev, dueDate: e.target.value }))
+                })
+              ),
+              React.createElement(
+                "button",
+                { type: "submit", className: "vf-btn vf-btn-blue" },
+                "Create goal"
+              )
+            ),
+            goalsLoading
+              ? React.createElement("p", null, "Loading goals…")
+              : null,
+            goals.length > 0
+              ? React.createElement(
+                  "div",
+                  { className: "vf-stack" },
+                  goals.map((goal) =>
+                    React.createElement(
+                      "article",
+                      { key: goal.id, className: "vf-goal" },
+                      React.createElement(
+                        "div",
+                        { className: "vf-goal-head" },
+                        React.createElement(
+                          "div",
+                          null,
+                          React.createElement(
+                            "p",
+                            { className: "vf-goal-title" },
+                            goal.title
+                          ),
+                          React.createElement(
+                            "p",
+                            { className: "vf-goal-meta" },
+                            goal.goalType,
+                            goal.dueDate
+                              ? ` · Due ${new Date(goal.dueDate).toLocaleDateString()}`
+                              : ""
+                          )
+                        ),
+                        React.createElement(
+                          "div",
+                          { className: "vf-goal-actions" },
+                          React.createElement(
+                            "span",
+                            {
+                              className:
+                                "vf-pill vf-status-pill" +
+                                (goal.status === "COMPLETED"
+                                  ? " vf-pill-green"
+                                  : goal.status === "OVERDUE"
+                                  ? " vf-pill-red"
+                                  : "")
+                            },
+                            goal.status
+                          ),
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-btn vf-btn-ghost",
+                              onClick: () =>
+                                updateGoal(goal.id, { status: "COMPLETED" })
+                            },
+                            "Mark complete"
+                          ),
+                          goal.status !== "ACTIVE"
+                            ? React.createElement(
+                                "button",
+                                {
+                                  type: "button",
+                                  className: "vf-btn vf-btn-ghost",
+                                  onClick: () =>
+                                    updateGoal(goal.id, { status: "ACTIVE" })
+                                },
+                                "Move to active"
+                              )
+                            : null,
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-btn vf-btn-ghost",
+                              onClick: () => deleteGoal(goal.id)
+                            },
+                            "Delete"
+                          )
+                        )
+                      ),
+                      goal.description
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-goal-desc" },
+                            goal.description
+                          )
+                        : null
+                    )
+                  )
+                )
+              : React.createElement(
+                  "p",
+                  { className: "vf-empty" },
+                  "Add a goal to begin tracking your next spiritual milestone."
+                )
+          )
+        ),
+        React.createElement(
+          "article",
+          { className: "vf-card" },
+          React.createElement(
+            "header",
+            { className: "vf-card-header" },
+            React.createElement(
+              "h3",
+              { className: "vf-card-title" },
+              "Milestones"
+            )
+          ),
+          React.createElement(
+            "div",
+            { className: "vf-card-body" },
+            milestonesError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  milestonesError
+                )
+              : null,
+            milestonesLoading
+              ? React.createElement("p", null, "Loading milestones…")
+              : null,
+            milestones.length > 0
+              ? React.createElement(
+                  "div",
+                  { className: "vf-stack" },
+                  milestones.map((m) =>
+                    React.createElement(
+                      "div",
+                      { key: m.id, className: "vf-milestone" },
+                      React.createElement(
+                        "div",
+                        { className: "vf-milestone-head" },
+                        React.createElement(
+                          "p",
+                          { className: "vf-milestone-title" },
+                          m.title
+                        ),
+                        React.createElement(
+                          "span",
+                          { className: "vf-chip" },
+                          m.milestoneType
+                        )
+                      ),
+                      m.sacrament
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-milestone-meta" },
+                            "Sacrament: ",
+                            m.sacrament.name
+                          )
+                        : null,
+                      m.goal
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-milestone-meta" },
+                            "Goal: ",
+                            m.goal.title
+                          )
+                        : null,
+                      m.description
+                        ? React.createElement(
+                            "p",
+                            { className: "vf-milestone-desc" },
+                            m.description
+                          )
+                        : null
+                    )
+                  )
+                )
+              : React.createElement(
+                  "p",
+                  { className: "vf-empty" },
+                  "Complete a goal or sacrament to see milestones here."
+                )
           )
         )
       )
@@ -2867,17 +4009,261 @@ function AppShell() {
             React.createElement(
               "h2",
               { className: "vf-card-title" },
-              "Login"
+              authMode === "login"
+                ? "Login"
+                : authMode === "register"
+                ? "Create Account"
+                : "Reset Password"
             )
           ),
           React.createElement(
             "div",
             { className: "vf-card-body" },
             React.createElement(
-              "p",
-              null,
-              "The authentication forms for Create Account, Login, and Reset Password integrate with the Via Fidei account system so that interactive features remain personal and private."
-            )
+              "div",
+              { className: "vf-auth-tabs" },
+              [
+                { id: "login", label: "Login" },
+                { id: "register", label: "Register" },
+                { id: "reset", label: "Reset" }
+              ].map((mode) =>
+                React.createElement(
+                  "button",
+                  {
+                    key: mode.id,
+                    type: "button",
+                    className:
+                      "vf-pill" +
+                      (authMode === mode.id ? " vf-pill-active" : ""),
+                    onClick: () => {
+                      setAuthMode(mode.id);
+                      resetAuthState();
+                    }
+                  },
+                  mode.label
+                )
+              )
+            ),
+            authError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  authError
+                )
+              : null,
+            authSuccess
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-success" },
+                  authSuccess
+                )
+              : null,
+            authMode === "login"
+              ? React.createElement(
+                  "form",
+                  { className: "vf-form", onSubmit: handleLoginSubmit },
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Email"),
+                    React.createElement("input", {
+                      type: "email",
+                      required: true,
+                      value: loginEmail,
+                      onChange: (e) => setLoginEmail(e.target.value)
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: loginPassword,
+                      onChange: (e) => setLoginPassword(e.target.value)
+                    })
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "vf-button",
+                      disabled: authSubmitting
+                    },
+                    authSubmitting ? "Signing in…" : "Login"
+                  )
+                )
+              : null,
+            authMode === "register"
+              ? React.createElement(
+                  "form",
+                  { className: "vf-form", onSubmit: handleRegisterSubmit },
+                  React.createElement(
+                    "div",
+                    { className: "vf-field-grid" },
+                    React.createElement(
+                      "label",
+                      { className: "vf-field" },
+                      React.createElement("span", null, "First name"),
+                      React.createElement("input", {
+                        type: "text",
+                        required: true,
+                        value: registerForm.firstName,
+                        onChange: (e) =>
+                          setRegisterForm((prev) => ({
+                            ...prev,
+                            firstName: e.target.value
+                          }))
+                      })
+                    ),
+                    React.createElement(
+                      "label",
+                      { className: "vf-field" },
+                      React.createElement("span", null, "Last name"),
+                      React.createElement("input", {
+                        type: "text",
+                        required: true,
+                        value: registerForm.lastName,
+                        onChange: (e) =>
+                          setRegisterForm((prev) => ({
+                            ...prev,
+                            lastName: e.target.value
+                          }))
+                      })
+                    )
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Email"),
+                    React.createElement("input", {
+                      type: "email",
+                      required: true,
+                      value: registerForm.email,
+                      onChange: (e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          email: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: registerForm.password,
+                      onChange: (e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          password: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Confirm password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: registerForm.passwordConfirm,
+                      onChange: (e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          passwordConfirm: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "vf-button",
+                      disabled: authSubmitting
+                    },
+                    authSubmitting ? "Creating account…" : "Create account"
+                  )
+                )
+              : null,
+            authMode === "reset"
+              ? React.createElement(
+                  "form",
+                  { className: "vf-form", onSubmit: handleResetSubmit },
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "First name"),
+                    React.createElement("input", {
+                      type: "text",
+                      required: true,
+                      value: resetForm.firstName,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          firstName: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Last name"),
+                    React.createElement("input", {
+                      type: "text",
+                      required: true,
+                      value: resetForm.lastName,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          lastName: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Email"),
+                    React.createElement("input", {
+                      type: "email",
+                      required: true,
+                      value: resetForm.email,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          email: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "New password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: resetForm.newPassword,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          newPassword: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "vf-button",
+                      disabled: authSubmitting
+                    },
+                    authSubmitting ? "Resetting…" : "Reset password"
+                  )
+                )
+              : null
           )
         )
       )
