@@ -3,13 +3,13 @@ import { createRoot } from "react-dom/client";
 import "./styles.css";
 
 const NAV_TABS = [
-  { id: "home", label: "Home" },
-  { id: "prayers", label: "Prayers" },
-  { id: "saints", label: "Saints" },
-  { id: "ourlady", label: "Our Lady" },
-  { id: "sacraments", label: "Sacraments" },
-  { id: "guides", label: "Guides" },
-  { id: "history", label: "Liturgy & History" }
+  { id: "home", label: "Home", icon: "🏠" },
+  { id: "history", label: "History", icon: "📜" },
+  { id: "prayers", label: "Prayers", icon: "📿" },
+  { id: "saints", label: "Saints", icon: "👼" },
+  { id: "ourlady", label: "Our Lady", icon: "✶" },
+  { id: "sacraments", label: "Sacraments", icon: "🕊️" },
+  { id: "guides", label: "Guides", icon: "🧭" }
 ];
 
 const LANGUAGES = [
@@ -282,6 +282,7 @@ function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("vf_theme") || "light");
   const [language, setLanguage] = useState(() => localStorage.getItem("vf_language") || "en");
   const [season, setSeason] = useState("easter");
+  const [navOpen, setNavOpen] = useState(false);
   const [searchPrayer, setSearchPrayer] = useState("");
   const [searchSaint, setSearchSaint] = useState("");
   const [searchApparition, setSearchApparition] = useState("");
@@ -291,6 +292,10 @@ function App() {
     applyTheme(theme);
     localStorage.setItem("vf_theme", theme);
   }, [theme]);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [currentTab]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-season", season);
@@ -308,81 +313,106 @@ function App() {
   function renderHeader() {
     return (
       <header className="vf-header">
-        <div className="vf-banner">
-          <div className={`vf-banner-mark vf-banner-${season}`}></div>
-        </div>
-        <div className="vf-header-row">
-          <div className="vf-title-block">
-            <span className="vf-logo" aria-hidden>
-              ✣
-            </span>
-            <div>
-              <p className="vf-kicker">Via Fidei</p>
-              <h1>Catholic prayers, saints, sacraments, and guides</h1>
+        <div className={`vf-banner vf-banner-${season}`}>
+          <div className="vf-logo-block">
+            <SacredSymbol season={season} />
+            <div className="vf-logo-text">
+              <span className="vf-logo-wordmark">Via Fidei</span>
+              <span className="vf-logo-sub">Catholic prayers, saints, sacraments, guides</span>
             </div>
           </div>
-          <div className="vf-actions">
-            <select
-              className="vf-select"
-              aria-label="Language"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-            >
-              {LANGUAGES.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.label}
-                </option>
+        </div>
+
+        <div className="vf-nav-row">
+          <button
+            className="vf-menu-toggle"
+            aria-label="Toggle navigation"
+            onClick={() => setNavOpen(!navOpen)}
+          >
+            ☰
+          </button>
+
+          <nav className={`vf-nav ${navOpen ? "vf-nav-open" : ""}`} aria-label="Primary">
+            <ul>
+              {NAV_TABS.map((tab) => (
+                <li key={tab.id}>
+                  <button
+                    className={currentTab === tab.id ? "active" : ""}
+                    onClick={() => setCurrentTab(tab.id)}
+                  >
+                    <span className="vf-nav-icon" aria-hidden>
+                      {tab.icon}
+                    </span>
+                    <span>{tab.label}</span>
+                  </button>
+                </li>
               ))}
-            </select>
-            <div className="vf-toggle">
-              <button
-                className={theme === "light" ? "active" : ""}
-                onClick={() => setTheme("light")}
-                type="button"
-              >
-                Light
-              </button>
-              <button
-                className={theme === "dark" ? "active" : ""}
-                onClick={() => setTheme("dark")}
-                type="button"
-              >
-                Dark
-              </button>
-              <button
-                className={theme === "system" ? "active" : ""}
-                onClick={() => setTheme("system")}
-                type="button"
-              >
-                System
-              </button>
-            </div>
-            <select
-              className="vf-select"
-              aria-label="Seasonal art"
-              value={season}
-              onChange={(e) => setSeason(e.target.value)}
-            >
-              <option value="normal">Ordinary</option>
-              <option value="advent">Advent</option>
-              <option value="easter">Easter</option>
-            </select>
+            </ul>
+          </nav>
+
+          <div className="vf-secondary-actions">
+            <button className="vf-account">Account</button>
+            <button className="vf-gear" aria-label="Settings">
+              ⚙️
+            </button>
           </div>
         </div>
-        <nav className="vf-nav" aria-label="Primary">
-          <ul>
-            {NAV_TABS.map((tab) => (
-              <li key={tab.id}>
-                <button
-                  className={currentTab === tab.id ? "active" : ""}
-                  onClick={() => setCurrentTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+
+        <div className="vf-controls-row">
+          <div className="vf-control-group">
+            <label className="vf-inline-label">
+              <span>Language</span>
+              <select
+                className="vf-select"
+                aria-label="Language"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="vf-inline-label">
+              <span>Season</span>
+              <select
+                className="vf-select"
+                aria-label="Seasonal art"
+                value={season}
+                onChange={(e) => setSeason(e.target.value)}
+              >
+                <option value="normal">Ordinary</option>
+                <option value="advent">Advent</option>
+                <option value="easter">Easter</option>
+              </select>
+            </label>
+          </div>
+          <div className="vf-toggle" role="group" aria-label="Color theme">
+            <button
+              className={theme === "light" ? "active" : ""}
+              onClick={() => setTheme("light")}
+              type="button"
+            >
+              Light
+            </button>
+            <button
+              className={theme === "dark" ? "active" : ""}
+              onClick={() => setTheme("dark")}
+              type="button"
+            >
+              Dark
+            </button>
+            <button
+              className={theme === "system" ? "active" : ""}
+              onClick={() => setTheme("system")}
+              type="button"
+            >
+              System
+            </button>
+          </div>
+        </div>
       </header>
     );
   }
@@ -685,3 +715,74 @@ if (container) {
   const root = createRoot(container);
   root.render(<App />);
 }
+  function SacredSymbol({ season }) {
+    if (season === "advent") {
+      return (
+        <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Holy Family">
+          <defs>
+            <linearGradient id="holyFamilyGlow" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f6d7ae" />
+              <stop offset="100%" stopColor="#a33c3b" />
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="52" fill="url(#holyFamilyGlow)" opacity="0.16" />
+          <path
+            d="M35 82c4-12 10-22 20-29 10 7 17 17 21 29" 
+            fill="none" stroke="#ead6c2" strokeWidth="6" strokeLinecap="round"
+          />
+          <path
+            d="M60 38c0 6-4 10-10 10s-10-4-10-10 4-10 10-10 10 4 10 10Zm28 10c0 5.5-4.5 10-10 10s-10-4.5-10-10 4.5-10 10-10 10 4.5 10 10Z"
+            fill="#f7f1e8"
+          />
+          <path
+            d="M52 48c3 6 8 10 14 10 6 0 11-4 14-10"
+            fill="none" stroke="#f7f1e8" strokeWidth="5" strokeLinecap="round"
+          />
+        </svg>
+      );
+    }
+
+    if (season === "easter") {
+      return (
+        <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Crucifix">
+          <defs>
+            <linearGradient id="crucifixGlow" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f2d98c" />
+              <stop offset="100%" stopColor="#5b7ec5" />
+            </linearGradient>
+            <linearGradient id="crucifixWood" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#d8b980" />
+              <stop offset="100%" stopColor="#7a5a32" />
+            </linearGradient>
+          </defs>
+          <circle cx="60" cy="60" r="54" fill="url(#crucifixGlow)" opacity="0.24" />
+          <rect x="52" y="18" width="16" height="86" rx="7" fill="url(#crucifixWood)" stroke="#674c2c" strokeWidth="1.4" />
+          <rect x="26" y="44" width="68" height="18" rx="9" fill="url(#crucifixWood)" stroke="#674c2c" strokeWidth="1.2" />
+          <path d="M60 28c-3 6-4 14-4 20 0 9 1 17 4 24" stroke="#f7e6bb" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <g fill="#f6efe1" stroke="#d3b775" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M52 52c3-6 6-10 8-10s5 4 8 10c3 6 4 16 4 26-3 3-8 5-12 5s-9-2-12-5c0-10 1-20 4-26Z" />
+            <path d="M60 46c3 0 5-2 5-5s-2-5-5-5-5 2-5 5 2 5 5 5Z" />
+            <path d="M46 52c4 2 9 4 14 4s10-2 14-4" />
+          </g>
+          <path d="M40 44c6 3 12 4 20 4s14-1 20-4" fill="none" stroke="#f4e4b3" strokeWidth="2" />
+        </svg>
+      );
+    }
+
+    return (
+      <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Wooden cross">
+        <defs>
+          <linearGradient id="woodCarve" x1="0" x2="1" y1="0" y2="1">
+            <stop offset="0%" stopColor="#b68455" />
+            <stop offset="100%" stopColor="#5d3d26" />
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="54" fill="#f6eadd" opacity="0.6" />
+        <rect x="50" y="16" width="20" height="88" rx="10" fill="url(#woodCarve)" stroke="#2f1b10" strokeWidth="1.4" />
+        <rect x="23" y="44" width="74" height="20" rx="10" fill="url(#woodCarve)" stroke="#2f1b10" strokeWidth="1.2" />
+        <path d="M36 48c6 8 16 13 24 13s18-5 24-13" fill="none" stroke="#e8d7c0" strokeWidth="3" strokeLinecap="round" />
+        <path d="M60 22c-6 10-6 26 0 38" fill="none" stroke="#d2b28c" strokeWidth="2" strokeLinecap="round" />
+        <path d="M60 46c-8 0-12 2-18 6m36 0c-6-4-10-6-18-6" fill="none" stroke="#e5cba9" strokeWidth="1.6" />
+      </svg>
+    );
+  }

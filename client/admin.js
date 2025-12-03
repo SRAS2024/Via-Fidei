@@ -9,6 +9,16 @@ const SETTINGS_STATES = {
   OPEN: "open"
 };
 
+const ADMIN_NAV = [
+  { id: "home", label: "Home", icon: "🏠" },
+  { id: "history", label: "History", icon: "📜" },
+  { id: "prayers", label: "Prayers", icon: "📿" },
+  { id: "saints", label: "Saints", icon: "👼" },
+  { id: "ourlady", label: "Our Lady", icon: "✶" },
+  { id: "sacraments", label: "Sacraments", icon: "🕊️" },
+  { id: "guides", label: "Guides", icon: "🧭" }
+];
+
 const SUPPORTED_LANGS = [
   { code: "en", label: "English" },
   { code: "es", label: "Español" },
@@ -65,6 +75,7 @@ function AdminShell() {
   );
   const [seasonTheme, setSeasonTheme] = useState("normal");
   const [settingsMenu, setSettingsMenu] = useState(SETTINGS_STATES.CLOSED);
+  const [navOpen, setNavOpen] = useState(false);
 
   const [language, setLanguage] = useState(
     window.localStorage.getItem("vf_language") || "en"
@@ -140,6 +151,100 @@ function AdminShell() {
   function handleLanguageChange(nextLang) {
     setLanguage(nextLang);
     window.localStorage.setItem("vf_language", nextLang);
+  }
+
+  function SacredSymbol({ season }) {
+    if (season === "advent") {
+      return h(
+        "svg",
+        { className: "vf-sacred-mark", viewBox: "0 0 120 120", role: "img", "aria-label": "Holy Family" },
+        h(
+          "defs",
+          null,
+          h(
+            "linearGradient",
+            { id: "adminHolyFamily", x1: "0", x2: "1", y1: "0", y2: "1" },
+            h("stop", { offset: "0%", stopColor: "#f6d7ae" }),
+            h("stop", { offset: "100%", stopColor: "#a33c3b" })
+          )
+        ),
+        h("circle", { cx: 60, cy: 60, r: 52, fill: "url(#adminHolyFamily)", opacity: 0.16 }),
+        h("path", {
+          d: "M35 82c4-12 10-22 20-29 10 7 17 17 21 29",
+          fill: "none",
+          stroke: "#ead6c2",
+          strokeWidth: 6,
+          strokeLinecap: "round"
+        }),
+        h("path", {
+          d: "M60 38c0 6-4 10-10 10s-10-4-10-10 4-10 10-10 10 4 10 10Zm28 10c0 5.5-4.5 10-10 10s-10-4.5-10-10 4.5-10 10-10 10 4.5 10 10Z",
+          fill: "#f7f1e8"
+        }),
+        h("path", {
+          d: "M52 48c3 6 8 10 14 10 6 0 11-4 14-10",
+          fill: "none",
+          stroke: "#f7f1e8",
+          strokeWidth: 5,
+          strokeLinecap: "round"
+        })
+      );
+    }
+
+    if (season === "easter") {
+      return h(
+        "svg",
+        { className: "vf-sacred-mark", viewBox: "0 0 120 120", role: "img", "aria-label": "Crucifix" },
+        h(
+          "defs",
+          null,
+          h(
+            "linearGradient",
+            { id: "adminCrucifix", x1: "0", x2: "1", y1: "0", y2: "1" },
+            h("stop", { offset: "0%", stopColor: "#f2d98c" }),
+            h("stop", { offset: "100%", stopColor: "#5b7ec5" })
+          ),
+          h(
+            "linearGradient",
+            { id: "adminCrucifixWood", x1: "0", x2: "0", y1: "0", y2: "1" },
+            h("stop", { offset: "0%", stopColor: "#d8b980" }),
+            h("stop", { offset: "100%", stopColor: "#7a5a32" })
+          )
+        ),
+        h("circle", { cx: 60, cy: 60, r: 54, fill: "url(#adminCrucifix)", opacity: 0.24 }),
+        h("rect", { x: 52, y: 18, width: 16, height: 86, rx: 7, fill: "url(#adminCrucifixWood)", stroke: "#674c2c", strokeWidth: 1.4 }),
+        h("rect", { x: 26, y: 44, width: 68, height: 18, rx: 9, fill: "url(#adminCrucifixWood)", stroke: "#674c2c", strokeWidth: 1.2 }),
+        h("path", { d: "M60 28c-3 6-4 14-4 20 0 9 1 17 4 24", stroke: "#f7e6bb", strokeWidth: 2, strokeLinecap: "round", fill: "none" }),
+        h(
+          "g",
+          { fill: "#f6efe1", stroke: "#d3b775", strokeWidth: 1.2, strokeLinecap: "round", strokeLinejoin: "round" },
+          h("path", { d: "M52 52c3-6 6-10 8-10s5 4 8 10c3 6 4 16 4 26-3 3-8 5-12 5s-9-2-12-5c0-10 1-20 4-26Z" }),
+          h("path", { d: "M60 46c3 0 5-2 5-5s-2-5-5-5-5 2-5 5 2 5 5 5Z" }),
+          h("path", { d: "M46 52c4 2 9 4 14 4s10-2 14-4" })
+        ),
+        h("path", { d: "M40 44c6 3 12 4 20 4s14-1 20-4", fill: "none", stroke: "#f4e4b3", strokeWidth: 2 })
+      );
+    }
+
+    return h(
+      "svg",
+      { className: "vf-sacred-mark", viewBox: "0 0 120 120", role: "img", "aria-label": "Wooden cross" },
+      h(
+        "defs",
+        null,
+        h(
+          "linearGradient",
+          { id: "adminCross", x1: "0", x2: "1", y1: "0", y2: "1" },
+          h("stop", { offset: "0%", stopColor: "#b68455" }),
+          h("stop", { offset: "100%", stopColor: "#5d3d26" })
+        )
+      ),
+      h("circle", { cx: 60, cy: 60, r: 54, fill: "#f6eadd", opacity: 0.6 }),
+      h("rect", { x: 50, y: 16, width: 20, height: 88, rx: 10, fill: "url(#adminCross)", stroke: "#2f1b10", strokeWidth: 1.4 }),
+      h("rect", { x: 23, y: 44, width: 74, height: 20, rx: 10, fill: "url(#adminCross)", stroke: "#2f1b10", strokeWidth: 1.2 }),
+      h("path", { d: "M36 48c6 8 16 13 24 13s18-5 24-13", fill: "none", stroke: "#e8d7c0", strokeWidth: 3, strokeLinecap: "round" }),
+      h("path", { d: "M60 22c-6 10-6 26 0 38", fill: "none", stroke: "#d2b28c", strokeWidth: 2, strokeLinecap: "round" }),
+      h("path", { d: "M60 46c-8 0-12 2-18 6m36 0c-6-4-10-6-18-6", fill: "none", stroke: "#e5cba9", strokeWidth: 1.6 })
+    );
   }
 
   const loadHome = useCallback(
@@ -366,13 +471,6 @@ function AdminShell() {
 
   function renderHeader() {
     const currentSeason = seasonTheme || "normal";
-    const logoClass =
-      currentSeason === "advent"
-        ? "vf-logo-holy-family"
-        : currentSeason === "easter"
-        ? "vf-logo-crucifix"
-        : "vf-logo-cross";
-
     const settingsMenuOpen = settingsMenu === SETTINGS_STATES.OPEN;
 
     return h(
@@ -380,142 +478,264 @@ function AdminShell() {
       { className: "vf-header" },
       h(
         "div",
-        { className: "vf-header-inner" },
+        { className: "vf-banner vf-banner-" + currentSeason },
         h(
           "div",
-          {
-            className: "vf-header-banner vf-header-banner-" + currentSeason,
-            "aria-hidden": "true"
-          },
-          h("div", { className: "vf-banner-mark" })
-        ),
-        h(
-          "div",
-          { className: "vf-header-title-block" },
+          { className: "vf-logo-block" },
+          h(SacredSymbol, { season: currentSeason }),
           h(
             "div",
-            { className: "vf-title-row" },
-            h("span", { className: logoClass, "aria-hidden": "true" }),
-            h("h1", { className: "vf-site-title" }, "Via Fidei Admin")
-          ),
-          h(
-            "p",
-            { className: "vf-site-subtitle" },
-            "Mission, About, notices, seasonal theme, and home page photos"
+            { className: "vf-logo-text" },
+            h("span", { className: "vf-logo-wordmark" }, "Via Fidei Admin"),
+            h(
+              "span",
+              { className: "vf-logo-sub" },
+              "Live preview for mission, notices, and seasonal theme"
+            )
           )
+        )
+      ),
+      h(
+        "div",
+        { className: "vf-nav-row" },
+        h(
+          "button",
+          {
+            className: "vf-menu-toggle",
+            "aria-label": "Toggle navigation",
+            onClick: () => setNavOpen((open) => !open)
+          },
+          "☰"
         ),
         h(
           "nav",
-          { className: "vf-nav", "aria-label": "Admin" },
+          {
+            className: "vf-nav" + (navOpen ? " vf-nav-open" : ""),
+            "aria-label": "Admin sections"
+          },
           h(
-            "div",
-            { className: "vf-nav-right" },
-            h(
-              "div",
-              { className: "vf-icon-group" },
+            "ul",
+            null,
+            ADMIN_NAV.map((item) =>
               h(
-                "div",
-                { className: "vf-icon-wrapper" },
+                "li",
+                { key: item.id },
                 h(
                   "button",
                   {
-                    type: "button",
-                    className: "vf-icon-button",
-                    "aria-haspopup": "menu",
-                    "aria-expanded": settingsMenuOpen,
-                    "aria-label": "Settings",
-                    onClick: () =>
-                      setSettingsMenu(
-                        settingsMenuOpen
-                          ? SETTINGS_STATES.CLOSED
-                          : SETTINGS_STATES.OPEN
-                      )
+                    className: "",
+                    onClick: () => {
+                      const el = document.getElementById(item.id);
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth" });
+                      }
+                      setNavOpen(false);
+                    }
                   },
-                  h("span", {
-                    className: "vf-icon-gear",
-                    "aria-hidden": "true"
-                  })
-                ),
-                settingsMenuOpen
-                  ? h(
-                      "div",
-                      { className: "vf-menu", role: "menu" },
-                      h(
-                        "div",
-                        { className: "vf-menu-group-label" },
-                        "Theme"
-                      ),
-                      h(
-                        "button",
-                        {
-                          type: "button",
-                          className:
-                            "vf-menu-item" +
-                            (theme === "light" ? " vf-menu-item-active" : ""),
-                          role: "menuitem",
-                          onClick: () => handleThemeChange("light")
-                        },
-                        "Light"
-                      ),
-                      h(
-                        "button",
-                        {
-                          type: "button",
-                          className:
-                            "vf-menu-item" +
-                            (theme === "dark" ? " vf-menu-item-active" : ""),
-                          role: "menuitem",
-                          onClick: () => handleThemeChange("dark")
-                        },
-                        "Dark"
-                      ),
-                      h(
-                        "button",
-                        {
-                          type: "button",
-                          className:
-                            "vf-menu-item" +
-                            (theme === "system" ? " vf-menu-item-active" : ""),
-                          role: "menuitem",
-                          onClick: () => handleThemeChange("system")
-                        },
-                        "System"
-                      ),
-                      h("div", { className: "vf-menu-divider" }),
-                      h(
-                        "div",
-                        { className: "vf-menu-group-label" },
-                        "Language"
-                      ),
-                      h(
-                        "div",
-                        { className: "vf-menu-inline-field" },
-                        h(
-                          "select",
-                          {
-                            value: language,
-                            onChange: (e) =>
-                              handleLanguageChange(e.target.value),
-                            className: "vf-lang-select"
-                          },
-                          SUPPORTED_LANGS.map((lang) =>
-                            h(
-                              "option",
-                              { key: lang.code, value: lang.code },
-                              lang.label
-                            )
-                          )
-                        )
-                      )
-                    )
-                  : null
-              ),
-              h(
-                "span",
-                { className: "vf-admin-pill", "aria-label": "Admin mode" },
-                "Admin"
+                  h("span", { className: "vf-nav-icon", "aria-hidden": true }, item.icon),
+                  h("span", null, item.label)
+                )
               )
             )
+          )
+        ),
+        h(
+          "div",
+          { className: "vf-secondary-actions" },
+          h(
+            "button",
+            { className: "vf-account", type: "button" },
+            "Account"
+          ),
+          h(
+            "div",
+            { className: "vf-icon-wrapper" },
+            h(
+              "button",
+              {
+                type: "button",
+                className: "vf-icon-button vf-gear",
+                "aria-haspopup": "menu",
+                "aria-expanded": settingsMenuOpen,
+                "aria-label": "Settings",
+                onClick: () =>
+                  setSettingsMenu(
+                    settingsMenuOpen
+                      ? SETTINGS_STATES.CLOSED
+                      : SETTINGS_STATES.OPEN
+                  )
+              },
+              "⚙️"
+            ),
+            settingsMenuOpen
+              ? h(
+                  "div",
+                  { className: "vf-menu", role: "menu" },
+                  h(
+                    "div",
+                    { className: "vf-menu-group-label" },
+                    "Theme"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className:
+                        "vf-menu-item" +
+                        (theme === "light" ? " vf-menu-item-active" : ""),
+                      role: "menuitem",
+                      onClick: () => handleThemeChange("light")
+                    },
+                    "Light"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className:
+                        "vf-menu-item" +
+                        (theme === "dark" ? " vf-menu-item-active" : ""),
+                      role: "menuitem",
+                      onClick: () => handleThemeChange("dark")
+                    },
+                    "Dark"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className:
+                        "vf-menu-item" +
+                        (theme === "system" ? " vf-menu-item-active" : ""),
+                      role: "menuitem",
+                      onClick: () => handleThemeChange("system")
+                    },
+                    "System"
+                  ),
+                  h(
+                    "div",
+                    { className: "vf-menu-group-label" },
+                    "Liturgical theme"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className:
+                        "vf-menu-item" +
+                        (seasonTheme === "normal"
+                          ? " vf-menu-item-active"
+                          : ""),
+                      role: "menuitem",
+                      onClick: () => setSeasonTheme("normal")
+                    },
+                    "Ordinary"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className:
+                        "vf-menu-item" +
+                        (seasonTheme === "advent"
+                          ? " vf-menu-item-active"
+                          : ""),
+                      role: "menuitem",
+                      onClick: () => setSeasonTheme("advent")
+                    },
+                    "Advent"
+                  ),
+                  h(
+                    "button",
+                    {
+                      type: "button",
+                      className:
+                        "vf-menu-item" +
+                        (seasonTheme === "easter"
+                          ? " vf-menu-item-active"
+                          : ""),
+                      role: "menuitem",
+                      onClick: () => setSeasonTheme("easter")
+                    },
+                    "Easter"
+                  )
+                )
+              : null
+          )
+        )
+      ),
+      h(
+        "div",
+        { className: "vf-controls-row" },
+        h(
+          "div",
+          { className: "vf-control-group" },
+          h(
+            "label",
+            { className: "vf-inline-label" },
+            h("span", null, "Language"),
+            h(
+              "select",
+              {
+                value: language,
+                className: "vf-select",
+                onChange: (e) => handleLanguageChange(e.target.value)
+              },
+              SUPPORTED_LANGS.map((lang) =>
+                h(
+                  "option",
+                  { key: lang.code, value: lang.code },
+                  lang.label
+                )
+              )
+            )
+          ),
+          h(
+            "label",
+            { className: "vf-inline-label" },
+            h("span", null, "Season"),
+            h(
+              "select",
+              {
+                value: seasonTheme,
+                className: "vf-select",
+                onChange: (e) => setSeasonTheme(e.target.value)
+              },
+              h("option", { value: "normal" }, "Ordinary"),
+              h("option", { value: "advent" }, "Advent"),
+              h("option", { value: "easter" }, "Easter")
+            )
+          )
+        ),
+        h(
+          "div",
+          { className: "vf-toggle", role: "group", "aria-label": "Color theme" },
+          h(
+            "button",
+            {
+              className: theme === "light" ? "active" : "",
+              onClick: () => handleThemeChange("light"),
+              type: "button"
+            },
+            "Light"
+          ),
+          h(
+            "button",
+            {
+              className: theme === "dark" ? "active" : "",
+              onClick: () => handleThemeChange("dark"),
+              type: "button"
+            },
+            "Dark"
+          ),
+          h(
+            "button",
+            {
+              className: theme === "system" ? "active" : "",
+              onClick: () => handleThemeChange("system"),
+              type: "button"
+            },
+            "System"
           )
         )
       )
