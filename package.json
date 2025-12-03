@@ -16,7 +16,7 @@
     "prisma:push": "prisma db push --schema=./prisma.schema",
     "db:seed": "node database/seed.js",
     "postinstall": "npm run prisma:generate",
-    "prestart": "npm run prisma:push"
+    "prestart": "node database/prestart.js"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",

@@ -1,4 +1,4 @@
-// server/layout.routes.js
+// server/layouts.routes.js
 // Global layout data for Via Fidei
 // Navigation, liturgical theme, and optional user summary
 

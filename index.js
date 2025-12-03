@@ -10,14 +10,37 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { PrismaClient } = require("@prisma/client");
 
-const prisma = new PrismaClient();
-
 // Session token standard aligned to value 5000
 // Used as the default token lifetime in seconds unless overridden
 const SESSION_TOKEN_TTL = Number(process.env.SESSION_TOKEN_TTL || 5000);
 
 const PORT = Number(process.env.PORT || 5000);
 const NODE_ENV = process.env.NODE_ENV || "development";
+
+const prismaUrl = process.env.DATABASE_URL;
+let prisma = null;
+
+try {
+  if (!prismaUrl) {
+    console.warn(
+      "[Via Fidei] DATABASE_URL is not set. API routes will respond with 503 until the database URL is configured."
+    );
+  } else {
+    prisma = new PrismaClient({
+      log: [{ emit: "event", level: "query" }, "info", "warn", "error"]
+    });
+
+    prisma.$on("query", (event) => {
+      if (NODE_ENV === "production") return;
+      console.log(`[Via Fidei] Prisma query: ${event.query}`);
+    });
+  }
+} catch (err) {
+  console.error(
+    "[Via Fidei] Failed to initialize Prisma client. API routes will respond with 503 until database connectivity is restored.",
+    err
+  );
+}
 
 // In local dev with Vite, default the client origin to localhost:5173
 // In production, prefer CLIENT_ORIGIN env. If not set, allow any origin without credentials.
@@ -55,6 +78,17 @@ app.use(cookieParser());
 
 // Attach shared services to request for lightweight access in routes
 app.use((req, res, next) => {
+  if (!req.path.startsWith("/api")) {
+    return next();
+  }
+
+  if (!prisma) {
+    return res.status(503).json({
+      status: "unavailable",
+      message: "Database connection not initialized. Set DATABASE_URL and retry."
+    });
+  }
+
   req.prisma = prisma;
   req.sessionConfig = {
     ttlSeconds: SESSION_TOKEN_TTL,
@@ -65,6 +99,15 @@ app.use((req, res, next) => {
 
 // Health check
 app.get("/api/health", async (req, res) => {
+  if (!prisma) {
+    return res.status(503).json({
+      status: "degraded",
+      env: NODE_ENV,
+      db: "uninitialized",
+      message: "Prisma client not available"
+    });
+  }
+
   try {
     await prisma.$queryRaw`SELECT 1`;
     res.json({
@@ -76,7 +119,7 @@ app.get("/api/health", async (req, res) => {
     });
   } catch (error) {
     console.error("[Via Fidei] Health check database error", error);
-    res.status(500).json({
+    res.status(503).json({
       status: "error",
       env: NODE_ENV,
       db: "unreachable",
@@ -87,28 +130,33 @@ app.get("/api/health", async (req, res) => {
 
 // API routers
 // These live in /server and keep the file tree small and clear
-try {
-  app.use("/api/home", require("./server/home.routes"));
-  app.use("/api/layout", require("./server/layout.routes"));
-  app.use("/api/auth", require("./server/auth.routes"));
-  app.use("/api/prayers", require("./server/prayers.routes"));
-  app.use("/api/saints", require("./server/saints.routes"));
-  app.use("/api/guides", require("./server/guides.routes"));
-  app.use("/api/sacraments", require("./server/sacraments.routes"));
-  app.use("/api/history", require("./server/history.routes"));
-  app.use("/api/profile", require("./server/profile.routes"));
-  app.use("/api/admin", require("./server/admin.routes"));
-  app.use("/api/account", require("./server/account.routes"));
-  app.use("/api/journal", require("./server/journal.routes"));
-  app.use("/api/goals", require("./server/goals.routes"));
-} catch (err) {
-  // During early development some route files may not exist yet
-  // The server can still boot so Railway builds are not blocked
-  console.warn(
-    "[Via Fidei] API routes not fully loaded yet. This is expected until all server/*.routes.js files exist.",
-    err && err.message ? `Reason: ${err.message}` : ""
-  );
-}
+const routes = [
+  ["/api/home", "./server/home.routes"],
+  ["/api/layout", "./server/layouts.routes"],
+  ["/api/auth", "./server/auth.routes"],
+  ["/api/prayers", "./server/prayers.routes"],
+  ["/api/saints", "./server/saints.routes"],
+  ["/api/guides", "./server/guides.routes"],
+  ["/api/sacraments", "./server/sacraments.routes"],
+  ["/api/history", "./server/history.routes"],
+  ["/api/profile", "./server/profile.routes"],
+  ["/api/admin", "./server/admin.routes"],
+  ["/api/account", "./server/account.routes"],
+  ["/api/journal", "./server/journal.routes"],
+  ["/api/goals", "./server/goals.routes"]
+];
+
+routes.forEach(([path, modulePath]) => {
+  try {
+    app.use(path, require(modulePath));
+  } catch (err) {
+    console.error(
+      `[Via Fidei] Failed to load router for ${path} from ${modulePath}. The server cannot start without all routes.`,
+      err
+    );
+    process.exit(1);
+  }
+});
 
 // Simple 404 JSON for unknown API paths
 app.use("/api", (req, res) => {

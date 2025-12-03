@@ -63,6 +63,205 @@ const FALLBACK_ABOUT = {
   ]
 };
 
+const FALLBACK_HISTORY = [
+  {
+    id: "history-apostolic",
+    title: "Apostolic Age",
+    summary:
+      "From the Resurrection to the missionary journeys of the Apostles and the birth of the early Church.",
+    body:
+      "Pentecost launches the Church into the world. The Apostles preach, baptize, and form the first Christian communities while enduring persecution with courage and charity."
+  },
+  {
+    id: "history-councils",
+    title: "Councils and Fathers",
+    summary: "The first councils and the teachings of the early Fathers safeguard the Creed.",
+    body:
+      "Guided by the Holy Spirit, bishops gather to profess that Jesus Christ is true God and true man. The Church Fathers hand down the faith with clarity, prayer, and pastoral care."
+  },
+  {
+    id: "history-today",
+    title: "Contemporary Church",
+    summary: "Living the same faith in a global Church that prays and serves in every culture.",
+    body:
+      "Catholics across the world celebrate the same sacraments and profess the same Creed. The modern saints show that holiness is possible in every vocation and place."
+  }
+];
+
+const FALLBACK_SACRAMENTS = [
+  {
+    id: "sacrament-baptism",
+    name: "Baptism",
+    meaning:
+      "The gateway to the Christian life, washing away sin and welcoming us into the family of God.",
+    biblicalFoundation: [
+      { reference: "Matthew 28:19", text: "Go, therefore, and make disciples of all nations, baptizing them" },
+      { reference: "Romans 6:4", text: "We were buried with him through baptism into death so that we might walk in newness of life." }
+    ],
+    preparation: {
+      overview: "Choose godparents, attend a parish preparation session, and set a date with your parish priest.",
+      steps: [
+        "Speak with your parish to schedule Baptism.",
+        "Reflect on the promises you and the godparents will make.",
+        "Plan to attend Mass and celebrate with family afterward."
+      ]
+    },
+    whatToExpect:
+      "Water is poured three times in the name of the Trinity. You will be anointed with sacred chrism and receive a baptismal candle."
+  },
+  {
+    id: "sacrament-eucharist",
+    name: "Eucharist",
+    meaning:
+      "The true Body and Blood of Christ, the source and summit of the Christian life and the heart of every Mass.",
+    biblicalFoundation: [
+      { reference: "Luke 22:19", text: "This is my body, which will be given for you; do this in memory of me." }
+    ],
+    preparation: {
+      overview: "Fast for one hour beforehand and approach with faith, reverence, and a heart free from grave sin."
+    },
+    whatToExpect:
+      "You may receive on the tongue or in the hand. After the priest or minister says ‘The Body of Christ,’ respond ‘Amen.’"
+  },
+  {
+    id: "sacrament-reconciliation",
+    name: "Reconciliation",
+    meaning:
+      "Christ forgives sins through the ministry of the priest, restoring grace and renewing friendship with God and the Church.",
+    biblicalFoundation: [
+      { reference: "John 20:23", text: "Whose sins you forgive are forgiven them." }
+    ],
+    preparation: {
+      overview: "Make an examination of conscience, approach humbly, and be honest and concise in confession."
+    },
+    whatToExpect:
+      "You may go face-to-face or behind a screen. The priest offers counsel, assigns a penance, and prays the words of absolution."
+  }
+];
+
+const FALLBACK_GUIDES = [
+  {
+    id: "guide-rosary",
+    title: "How to Pray the Rosary",
+    description:
+      "Step-by-step guide to the decades, mysteries, and prayers that anchor this beloved Marian devotion.",
+    summary:
+      "Step-by-step guide to the decades, mysteries, and prayers that anchor this beloved Marian devotion.",
+    body:
+      "Begin with the Sign of the Cross and the Apostles’ Creed, then proceed through five decades of the announced mysteries. Let every bead draw you deeper into the life of Christ with Mary." 
+  },
+  {
+    id: "guide-confession",
+    title: "Guide to Confession",
+    description:
+      "Gentle instructions for preparing, confessing with peace, and receiving absolution confidently.",
+    summary:
+      "Gentle instructions for preparing, confessing with peace, and receiving absolution confidently.",
+    body:
+      "Ask the Holy Spirit to illumine your conscience, confess sins clearly and briefly, then pray your penance in gratitude for God’s mercy."
+  },
+  {
+    id: "guide-ocia",
+    title: "OCIA Journey",
+    description: "An overview of the stages for adults entering the Catholic Church.",
+    summary: "An overview of the stages for adults entering the Catholic Church.",
+    body:
+      "From inquiry to mystagogy, accompany candidates with prayer, good sponsors, and parish life so they can embrace the sacraments with joy."
+  }
+];
+
+const FALLBACK_PRAYERS = [
+  {
+    id: "prayer-our-father",
+    title: "Our Father",
+    content:
+      "Our Father, who art in heaven, hallowed be thy name; thy kingdom come; thy will be done on earth as it is in heaven. Give us this day our daily bread; and forgive us our trespasses as we forgive those who trespass against us; and lead us not into temptation, but deliver us from evil. Amen.",
+    categories: ["daily", "lord's prayer"],
+    tags: ["gospel"],
+    source: "built-in"
+  },
+  {
+    id: "prayer-hail-mary",
+    title: "Hail Mary",
+    content:
+      "Hail Mary, full of grace, the Lord is with thee; blessed art thou among women, and blessed is the fruit of thy womb, Jesus. Holy Mary, Mother of God, pray for us sinners, now and at the hour of our death. Amen.",
+    categories: ["marian", "daily"],
+    tags: ["rosary"],
+    source: "built-in"
+  }
+];
+
+const FALLBACK_SAINTS = [
+  {
+    id: "saint-joseph",
+    name: "Saint Joseph",
+    feastDay: "2024-03-19",
+    biography:
+      "Guardian of the Holy Family and patron of the universal Church, Saint Joseph models humble strength, purity, and faithful work.",
+    officialPrayer:
+      "Saint Joseph, foster father of Jesus and spouse of Mary, protect our families and obtain for us a heart like yours, obedient and courageous. Amen.",
+    imageUrl: null,
+    tags: ["holy family", "patron"]
+  },
+  {
+    id: "saint-therese",
+    name: "Saint Thérèse of Lisieux",
+    feastDay: "2024-10-01",
+    biography:
+      "The Little Flower teaches confidence in God’s mercy and finding holiness through the small, hidden acts of daily love.",
+    officialPrayer:
+      "Saint Thérèse, teach us your Little Way of trust and love. Help us offer every moment for Jesus and for souls. Amen.",
+    imageUrl: null,
+    tags: ["little way", "doctor of the church"]
+  }
+];
+
+const FALLBACK_APPARITIONS = [
+  {
+    id: "apparition-lourdes",
+    title: "Our Lady of Lourdes",
+    location: "Lourdes, France",
+    firstYear: "1858",
+    story:
+      "Mary appeared to Saint Bernadette with a message of penance and prayer. The spring at Lourdes remains a place of conversion and healing.",
+    officialPrayer:
+      "Blessed Lady of Lourdes, help us turn our hearts to your Son and receive the healing he desires for us.",
+    imageUrl: null
+  },
+  {
+    id: "apparition-guadalupe",
+    title: "Our Lady of Guadalupe",
+    location: "Tepeyac, Mexico",
+    firstYear: "1531",
+    story:
+      "Mary appeared to Saint Juan Diego as the Mother of the Americas, leaving her image on the tilma as a sign of consolation and hope.",
+    officialPrayer:
+      "Our Lady of Guadalupe, gentle mother, embrace those who seek your Son and lead us to deeper trust in his mercy.",
+    imageUrl: null
+  }
+];
+
+function sortContentList(items) {
+  return (Array.isArray(items) ? [...items] : []).sort((a, b) => {
+    const aOrder = Number.isFinite(a?.displayOrder)
+      ? Number(a.displayOrder)
+      : Number.isFinite(a?.order)
+      ? Number(a.order)
+      : Number.MAX_SAFE_INTEGER;
+    const bOrder = Number.isFinite(b?.displayOrder)
+      ? Number(b.displayOrder)
+      : Number.isFinite(b?.order)
+      ? Number(b.order)
+      : Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+
+    const aTitle = (a?.title || a?.name || "").toString();
+    const bTitle = (b?.title || b?.name || "").toString();
+    return aTitle.localeCompare(bTitle);
+  });
+}
+
 function applyTheme(theme) {
   const html = document.documentElement;
   if (!theme || theme === "system") {
@@ -406,32 +605,38 @@ function AppShell() {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(
+    () => window.localStorage.getItem("vf_theme") || "light"
+  );
   const [seasonTheme, setSeasonTheme] = useState("normal");
 
   const [language, setLanguage] = useState(
-    window.localStorage.getItem("vf_language") || "en"
+    () => window.localStorage.getItem("vf_language") || "en"
   );
 
   // Home content
   const [homeData, setHomeData] = useState(null);
   const [loadingHome, setLoadingHome] = useState(true);
+  const [homeError, setHomeError] = useState("");
 
   // History, Sacraments, Guides
   const [historyItems, setHistoryItems] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
+  const [historyError, setHistoryError] = useState("");
 
   const [sacramentItems, setSacramentItems] = useState([]);
   const [loadingSacraments, setLoadingSacraments] = useState(false);
   const [sacramentsLoaded, setSacramentsLoaded] = useState(false);
   const [sacramentsPage, setSacramentsPage] = useState(1);
+  const [sacramentsError, setSacramentsError] = useState("");
 
   const [guideItems, setGuideItems] = useState([]);
   const [loadingGuides, setLoadingGuides] = useState(false);
   const [guidesLoaded, setGuidesLoaded] = useState(false);
   const [guidesPage, setGuidesPage] = useState(1);
+  const [guidesError, setGuidesError] = useState("");
 
   // Prayers search and library
   const [prayersSearch, setPrayersSearch] = useState("");
@@ -440,6 +645,7 @@ function AppShell() {
   const [prayersList, setPrayersList] = useState([]);
   const [loadingPrayers, setLoadingPrayers] = useState(false);
   const [prayersPage, setPrayersPage] = useState(1);
+  const [prayersError, setPrayersError] = useState("");
 
   // Saints search and library
   const [saintsSearch, setSaintsSearch] = useState("");
@@ -448,6 +654,7 @@ function AppShell() {
   const [saintsList, setSaintsList] = useState([]);
   const [loadingSaints, setLoadingSaints] = useState(false);
   const [saintsPage, setSaintsPage] = useState(1);
+  const [saintsError, setSaintsError] = useState("");
 
   // Our Lady search and library
   const [ourLadySearch, setOurLadySearch] = useState("");
@@ -456,6 +663,7 @@ function AppShell() {
   const [apparitionsList, setApparitionsList] = useState([]);
   const [loadingApparitions, setLoadingApparitions] = useState(false);
   const [ourLadyPage, setOurLadyPage] = useState(1);
+  const [apparitionsError, setApparitionsError] = useState("");
 
   // Fetch current user and settings
   useEffect(() => {
@@ -514,54 +722,92 @@ function AppShell() {
     window.localStorage.setItem("vf_theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    const season = seasonTheme || "normal";
+    document.documentElement.setAttribute("data-season", season);
+  }, [seasonTheme]);
+
   // When language changes, mark language dependent sections as needing reload
   useEffect(() => {
     setHistoryLoaded(false);
     setHistoryItems([]);
     setHistoryPage(1);
+    setHistoryError("");
 
     setSacramentsLoaded(false);
     setSacramentItems([]);
     setSacramentsPage(1);
+    setSacramentsError("");
 
     setGuidesLoaded(false);
     setGuideItems([]);
     setGuidesPage(1);
+    setGuidesError("");
 
     setPrayersList([]);
     setPrayersResults([]);
     setPrayersSuggestions([]);
     setPrayersPage(1);
+    setPrayersError("");
 
     setSaintsList([]);
     setSaintsResults([]);
     setSaintsSuggestions([]);
     setSaintsPage(1);
+    setSaintsError("");
 
     setApparitionsList([]);
     setOurLadyResults([]);
     setOurLadySuggestions([]);
     setOurLadyPage(1);
+    setApparitionsError("");
+    setHomeError("");
   }, [language]);
 
   // Fetch home content
   const loadHome = useCallback(
     async (lang) => {
+      const fallback = {
+        mission: FALLBACK_MISSION,
+        about: FALLBACK_ABOUT,
+        notices: [],
+        collagePhotos: [],
+        liturgicalTheme: "normal"
+      };
       try {
         setLoadingHome(true);
+        setHomeError("");
         const params = new URLSearchParams();
         if (lang) {
           params.set("language", lang);
         }
         const res = await fetch(`/api/home?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Home request failed: ${res.status}`);
+        }
         const data = await res.json();
-        setHomeData(data);
+        const safeHome = {
+          ...fallback,
+          ...(data && typeof data === "object" ? data : {})
+        };
+        safeHome.mission = data?.mission || FALLBACK_MISSION;
+        safeHome.about = data?.about || FALLBACK_ABOUT;
+        safeHome.notices = Array.isArray(data?.notices) ? data.notices : [];
+        safeHome.collagePhotos = Array.isArray(data?.collagePhotos)
+          ? data.collagePhotos
+          : [];
 
-        if (data && data.liturgicalTheme) {
-          setSeasonTheme(data.liturgicalTheme);
+        setHomeData(safeHome);
+
+        if (safeHome && safeHome.liturgicalTheme) {
+          setSeasonTheme(safeHome.liturgicalTheme);
         }
       } catch (err) {
         console.error("Failed to load home content", err);
+        setHomeError(
+          "We could not reach the server, so a curated offline home experience is shown."
+        );
+        setHomeData(fallback);
       } finally {
         setLoadingHome(false);
       }
@@ -578,16 +824,33 @@ function AppShell() {
     async (lang) => {
       try {
         setLoadingHistory(true);
+        setHistoryError("");
         const params = new URLSearchParams();
         if (lang) {
           params.set("language", lang);
         }
         const res = await fetch(`/api/history?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`History request failed: ${res.status}`);
+        }
         const data = await res.json();
-        setHistoryItems(Array.isArray(data.items) ? data.items : []);
+        const normalized = sortContentList(
+          Array.isArray(data.items) ? data.items : []
+        );
+        const nextItems = normalized.length ? normalized : FALLBACK_HISTORY;
+        if (!normalized.length) {
+          setHistoryError(
+            "Showing a curated overview while the live history feed reconnects."
+          );
+        }
+        setHistoryItems(nextItems);
         setHistoryLoaded(true);
       } catch (err) {
         console.error("Failed to load history sections", err);
+        setHistoryItems(FALLBACK_HISTORY);
+        setHistoryError(
+          "History is temporarily offline. A concise overview is shown until the server responds."
+        );
       } finally {
         setLoadingHistory(false);
       }
@@ -600,16 +863,33 @@ function AppShell() {
     async (lang) => {
       try {
         setLoadingSacraments(true);
+        setSacramentsError("");
         const params = new URLSearchParams();
         if (lang) {
           params.set("language", lang);
         }
         const res = await fetch(`/api/sacraments?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Sacraments request failed: ${res.status}`);
+        }
         const data = await res.json();
-        setSacramentItems(Array.isArray(data.items) ? data.items : []);
+        const normalized = sortContentList(
+          Array.isArray(data.items) ? data.items : []
+        );
+        const nextItems = normalized.length ? normalized : FALLBACK_SACRAMENTS;
+        if (!normalized.length) {
+          setSacramentsError(
+            "Using the curated sacrament overview until the live data loads."
+          );
+        }
+        setSacramentItems(nextItems);
         setSacramentsLoaded(true);
       } catch (err) {
         console.error("Failed to load sacraments", err);
+        setSacramentItems(FALLBACK_SACRAMENTS);
+        setSacramentsError(
+          "Sacrament details are shown from the offline library until the connection stabilizes."
+        );
       } finally {
         setLoadingSacraments(false);
       }
@@ -622,16 +902,33 @@ function AppShell() {
     async (lang) => {
       try {
         setLoadingGuides(true);
+        setGuidesError("");
         const params = new URLSearchParams();
         if (lang) {
           params.set("language", lang);
         }
         const res = await fetch(`/api/guides?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Guides request failed: ${res.status}`);
+        }
         const data = await res.json();
-        setGuideItems(Array.isArray(data.items) ? data.items : []);
+        const normalized = sortContentList(
+          Array.isArray(data.items) ? data.items : []
+        );
+        const nextItems = normalized.length ? normalized : FALLBACK_GUIDES;
+        if (!normalized.length) {
+          setGuidesError(
+            "Showing starter guides until the full library finishes loading."
+          );
+        }
+        setGuideItems(nextItems);
         setGuidesLoaded(true);
       } catch (err) {
         console.error("Failed to load guides", err);
+        setGuideItems(FALLBACK_GUIDES);
+        setGuidesError(
+          "Guides are offline, so curated quickstarts are displayed temporarily."
+        );
       } finally {
         setLoadingGuides(false);
       }
@@ -644,16 +941,33 @@ function AppShell() {
     async (lang) => {
       try {
         setLoadingPrayers(true);
+        setPrayersError("");
         const params = new URLSearchParams();
         if (lang) {
           params.set("language", lang);
         }
         params.set("take", "100");
         const res = await fetch(`/api/prayers?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Prayers request failed: ${res.status}`);
+        }
         const data = await res.json();
-        setPrayersList(Array.isArray(data.items) ? data.items : []);
+        const normalized = sortContentList(
+          Array.isArray(data.items) ? data.items : []
+        );
+        const nextItems = normalized.length ? normalized : FALLBACK_PRAYERS;
+        if (!normalized.length) {
+          setPrayersError(
+            "Prayers are shown from the built-in library while the live catalog loads."
+          );
+        }
+        setPrayersList(nextItems);
       } catch (err) {
         console.error("Failed to load prayers library", err);
+        setPrayersList(FALLBACK_PRAYERS);
+        setPrayersError(
+          "Prayers are offline. A core set is available until the connection is restored."
+        );
       } finally {
         setLoadingPrayers(false);
       }
@@ -666,16 +980,33 @@ function AppShell() {
     async (lang) => {
       try {
         setLoadingSaints(true);
+        setSaintsError("");
         const params = new URLSearchParams();
         if (lang) {
           params.set("language", lang);
         }
         params.set("take", "100");
-        const res = await fetch(`/api/saints/saints?${params.toString()}`);
+        const res = await fetch(`/api/saints?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Saints request failed: ${res.status}`);
+        }
         const data = await res.json();
-        setSaintsList(Array.isArray(data.items) ? data.items : []);
+        const normalized = sortContentList(
+          Array.isArray(data.items) ? data.items : []
+        );
+        const nextItems = normalized.length ? normalized : FALLBACK_SAINTS;
+        if (!normalized.length) {
+          setSaintsError(
+            "Showing a featured set of saints while the full library connects."
+          );
+        }
+        setSaintsList(nextItems);
       } catch (err) {
         console.error("Failed to load saints library", err);
+        setSaintsList(FALLBACK_SAINTS);
+        setSaintsError(
+          "Saints are temporarily unavailable; a small featured set is displayed for now."
+        );
       } finally {
         setLoadingSaints(false);
       }
@@ -688,6 +1019,7 @@ function AppShell() {
     async (lang) => {
       try {
         setLoadingApparitions(true);
+        setApparitionsError("");
         const params = new URLSearchParams();
         if (lang) {
           params.set("language", lang);
@@ -696,10 +1028,28 @@ function AppShell() {
         const res = await fetch(
           `/api/saints/apparitions?${params.toString()}`
         );
+        if (!res.ok) {
+          throw new Error(`Apparitions request failed: ${res.status}`);
+        }
         const data = await res.json();
-        setApparitionsList(Array.isArray(data.items) ? data.items : []);
+        const normalized = sortContentList(
+          Array.isArray(data.items) ? data.items : []
+        );
+        const nextItems = normalized.length
+          ? normalized
+          : FALLBACK_APPARITIONS;
+        if (!normalized.length) {
+          setApparitionsError(
+            "Displaying trusted Marian apparitions while reconnecting to the full archive."
+          );
+        }
+        setApparitionsList(nextItems);
       } catch (err) {
         console.error("Failed to load Marian apparitions library", err);
+        setApparitionsList(FALLBACK_APPARITIONS);
+        setApparitionsError(
+          "Our Lady section is offline. Core apparitions are shown until the service responds."
+        );
       } finally {
         setLoadingApparitions(false);
       }
@@ -1343,6 +1693,13 @@ function AppShell() {
       React.createElement(
         "section",
         { className: "vf-section" },
+        homeError
+          ? React.createElement(
+              "div",
+              { className: "vf-inline-alert" },
+              homeError
+            )
+          : null,
         notices.length > 0
           ? React.createElement(
               "div",
@@ -1508,6 +1865,13 @@ function AppShell() {
           React.createElement(
             "div",
             { className: "vf-card-body" },
+            historyError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  historyError
+                )
+              : null,
             loadingHistory && historyItems.length === 0
               ? React.createElement(
                   "p",
@@ -1667,6 +2031,13 @@ function AppShell() {
           React.createElement(
             "div",
             { className: "vf-card-body" },
+            prayersError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  prayersError
+                )
+              : null,
             loadingPrayers && activePrayers.length === 0
               ? React.createElement(
                   "p",
@@ -1832,6 +2203,13 @@ function AppShell() {
           React.createElement(
             "div",
             { className: "vf-card-body" },
+            saintsError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  saintsError
+                )
+              : null,
             loadingSaints && activeSaints.length === 0
               ? React.createElement("p", null, "Loading saints…")
               : null,
@@ -2050,6 +2428,13 @@ function AppShell() {
           React.createElement(
             "div",
             { className: "vf-card-body" },
+            apparitionsError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  apparitionsError
+                )
+              : null,
             loadingApparitions && activeApparitions.length === 0
               ? React.createElement(
                   "p",
@@ -2193,6 +2578,13 @@ function AppShell() {
           React.createElement(
             "div",
             { className: "vf-card-body" },
+            sacramentsError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  sacramentsError
+                )
+              : null,
             loadingSacraments && sacramentItems.length === 0
               ? React.createElement(
                   "p",
@@ -2290,6 +2682,13 @@ function AppShell() {
           React.createElement(
             "div",
             { className: "vf-card-body" },
+            guidesError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  guidesError
+                )
+              : null,
             loadingGuides && guideItems.length === 0
               ? React.createElement("p", null, "Loading guides…")
               : null,
