@@ -742,12 +742,29 @@ function AppShell() {
   useEffect(() => {
     let cancelled = false;
 
+    function applyStoredPreferences() {
+      if (cancelled) return;
+      const storedTheme = window.localStorage.getItem("vf_theme");
+      const storedLang = window.localStorage.getItem("vf_language");
+      if (storedTheme) {
+        setTheme(storedTheme);
+      }
+      if (storedLang) {
+        setLanguage(storedLang);
+      }
+    }
+
     async function loadUser() {
       try {
         setLoadingUser(true);
         const res = await fetch("/api/auth/me", {
           credentials: "include"
         });
+        if (!res.ok) {
+          applyStoredPreferences();
+          return;
+        }
+
         const data = await res.json();
         if (cancelled) return;
 
@@ -764,17 +781,11 @@ function AppShell() {
             );
           }
         } else {
-          const storedTheme = window.localStorage.getItem("vf_theme");
-          const storedLang = window.localStorage.getItem("vf_language");
-          if (storedTheme) {
-            setTheme(storedTheme);
-          }
-          if (storedLang) {
-            setLanguage(storedLang);
-          }
+          applyStoredPreferences();
         }
       } catch (err) {
         console.error("Failed to load current user", err);
+        applyStoredPreferences();
       } finally {
         if (!cancelled) {
           setLoadingUser(false);
