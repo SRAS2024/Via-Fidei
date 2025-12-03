@@ -485,7 +485,8 @@ async function fetchExternalApparitions(language) {
 
 // Lists
 
-router.get("/saints", async (req, res) => {
+// Core saints library
+router.get("/", async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
   const take = Math.min(Number(req.query.take) || 30, 100);
@@ -525,6 +526,7 @@ router.get("/saints", async (req, res) => {
   }
 });
 
+// Marian apparitions library
 router.get("/apparitions", async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
@@ -567,7 +569,8 @@ router.get("/apparitions", async (req, res) => {
 
 // Detail pages
 
-router.get("/saints/:idOrSlug", async (req, res) => {
+// Individual saint detail
+router.get("/:idOrSlug", async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
   const { idOrSlug } = req.params;
@@ -608,6 +611,7 @@ router.get("/saints/:idOrSlug", async (req, res) => {
   }
 });
 
+// Individual apparition detail
 router.get("/apparitions/:idOrSlug", async (req, res) => {
   const prisma = getPrisma(req);
   const language = resolveLanguage(req);
@@ -860,7 +864,7 @@ router.get("/search/local", async (req, res) => {
 
 // Saving saints and apparitions for the current user
 
-router.post("/saints/:saintId/save", requireAuth, async (req, res) => {
+router.post("/:saintId/save", requireAuth, async (req, res) => {
   const prisma = getPrisma(req);
   const userId = req.user.id;
   const { saintId } = req.params;

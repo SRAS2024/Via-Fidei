@@ -63,6 +63,27 @@ const FALLBACK_ABOUT = {
   ]
 };
 
+function sortContentList(items) {
+  return (Array.isArray(items) ? [...items] : []).sort((a, b) => {
+    const aOrder = Number.isFinite(a?.displayOrder)
+      ? Number(a.displayOrder)
+      : Number.isFinite(a?.order)
+      ? Number(a.order)
+      : Number.MAX_SAFE_INTEGER;
+    const bOrder = Number.isFinite(b?.displayOrder)
+      ? Number(b.displayOrder)
+      : Number.isFinite(b?.order)
+      ? Number(b.order)
+      : Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) return aOrder - bOrder;
+
+    const aTitle = (a?.title || a?.name || "").toString();
+    const bTitle = (b?.title || b?.name || "").toString();
+    return aTitle.localeCompare(bTitle);
+  });
+}
+
 function applyTheme(theme) {
   const html = document.documentElement;
   if (!theme || theme === "system") {
@@ -406,11 +427,13 @@ function AppShell() {
   const [user, setUser] = useState(null);
   const [loadingUser, setLoadingUser] = useState(true);
 
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(
+    () => window.localStorage.getItem("vf_theme") || "light"
+  );
   const [seasonTheme, setSeasonTheme] = useState("normal");
 
   const [language, setLanguage] = useState(
-    window.localStorage.getItem("vf_language") || "en"
+    () => window.localStorage.getItem("vf_language") || "en"
   );
 
   // Home content
@@ -514,6 +537,11 @@ function AppShell() {
     window.localStorage.setItem("vf_theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    const season = seasonTheme || "normal";
+    document.documentElement.setAttribute("data-season", season);
+  }, [seasonTheme]);
+
   // When language changes, mark language dependent sections as needing reload
   useEffect(() => {
     setHistoryLoaded(false);
@@ -584,7 +612,7 @@ function AppShell() {
         }
         const res = await fetch(`/api/history?${params.toString()}`);
         const data = await res.json();
-        setHistoryItems(Array.isArray(data.items) ? data.items : []);
+        setHistoryItems(sortContentList(data.items));
         setHistoryLoaded(true);
       } catch (err) {
         console.error("Failed to load history sections", err);
@@ -606,7 +634,7 @@ function AppShell() {
         }
         const res = await fetch(`/api/sacraments?${params.toString()}`);
         const data = await res.json();
-        setSacramentItems(Array.isArray(data.items) ? data.items : []);
+        setSacramentItems(sortContentList(data.items));
         setSacramentsLoaded(true);
       } catch (err) {
         console.error("Failed to load sacraments", err);
@@ -628,7 +656,7 @@ function AppShell() {
         }
         const res = await fetch(`/api/guides?${params.toString()}`);
         const data = await res.json();
-        setGuideItems(Array.isArray(data.items) ? data.items : []);
+        setGuideItems(sortContentList(data.items));
         setGuidesLoaded(true);
       } catch (err) {
         console.error("Failed to load guides", err);
@@ -651,7 +679,7 @@ function AppShell() {
         params.set("take", "100");
         const res = await fetch(`/api/prayers?${params.toString()}`);
         const data = await res.json();
-        setPrayersList(Array.isArray(data.items) ? data.items : []);
+        setPrayersList(sortContentList(data.items));
       } catch (err) {
         console.error("Failed to load prayers library", err);
       } finally {
@@ -671,9 +699,9 @@ function AppShell() {
           params.set("language", lang);
         }
         params.set("take", "100");
-        const res = await fetch(`/api/saints/saints?${params.toString()}`);
+          const res = await fetch(`/api/saints?${params.toString()}`);
         const data = await res.json();
-        setSaintsList(Array.isArray(data.items) ? data.items : []);
+        setSaintsList(sortContentList(data.items));
       } catch (err) {
         console.error("Failed to load saints library", err);
       } finally {
@@ -697,7 +725,7 @@ function AppShell() {
           `/api/saints/apparitions?${params.toString()}`
         );
         const data = await res.json();
-        setApparitionsList(Array.isArray(data.items) ? data.items : []);
+        setApparitionsList(sortContentList(data.items));
       } catch (err) {
         console.error("Failed to load Marian apparitions library", err);
       } finally {

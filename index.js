@@ -89,7 +89,7 @@ app.get("/api/health", async (req, res) => {
 // These live in /server and keep the file tree small and clear
 try {
   app.use("/api/home", require("./server/home.routes"));
-  app.use("/api/layout", require("./server/layout.routes"));
+  app.use("/api/layout", require("./server/layouts.routes"));
   app.use("/api/auth", require("./server/auth.routes"));
   app.use("/api/prayers", require("./server/prayers.routes"));
   app.use("/api/saints", require("./server/saints.routes"));

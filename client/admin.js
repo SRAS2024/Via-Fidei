@@ -94,6 +94,42 @@ function AdminShell() {
     window.localStorage.setItem("vf_theme", theme);
   }, [theme]);
 
+  useEffect(() => {
+    const season = seasonTheme || "normal";
+    document.documentElement.setAttribute("data-season", season);
+  }, [seasonTheme]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function hydrateAdminSession() {
+      try {
+        const res = await fetch("/api/admin/status", {
+          credentials: "include"
+        });
+        const data = await res.json();
+
+        if (cancelled) return;
+
+        if (data?.authenticated) {
+          setAdminAuthenticated(true);
+          window.sessionStorage.setItem("vf_admin_authed", "yes");
+        } else {
+          setAdminAuthenticated(false);
+          window.sessionStorage.removeItem("vf_admin_authed");
+        }
+      } catch (err) {
+        console.error("Admin status check failed", err);
+      }
+    }
+
+    hydrateAdminSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function handleThemeChange(nextTheme) {
     setTheme(nextTheme);
   }

@@ -64,6 +64,23 @@ html[data-theme="dark"] body {
   background: radial-gradient(circle at top, #181824 0, #050509 42%, #050509 100%);
 }
 
+/* Seasonal palettes drive more visible art direction across the page */
+html[data-season="advent"] body {
+  background: radial-gradient(circle at 18% 0, #fbe3e3 0, #f7f1f1 26%, var(--vf-bg) 58%);
+}
+
+html[data-season="easter"] body {
+  background: radial-gradient(circle at 82% 0, #e9f1ff 0, #f6f1e1 28%, var(--vf-bg) 60%);
+}
+
+html[data-theme="dark"][data-season="advent"] body {
+  background: radial-gradient(circle at 18% 0, #30161c 0, #1a1418 30%, #050509 70%);
+}
+
+html[data-theme="dark"][data-season="easter"] body {
+  background: radial-gradient(circle at 82% 0, #182538 0, #1b1922 32%, #050509 72%);
+}
+
 #root {
   min-height: 100vh;
 }
@@ -612,6 +629,14 @@ html[data-theme="dark"] .vf-card {
 
 html[data-theme="dark"] .vf-card-hero {
   border-top-color: rgba(178, 138, 48, 0.4);
+}
+
+html[data-season="advent"] .vf-card-hero {
+  border-top-color: rgba(198, 40, 40, 0.28);
+}
+
+html[data-season="easter"] .vf-card-hero {
+  border-top-color: rgba(30, 102, 255, 0.24);
 }
 
 .vf-card-header {
