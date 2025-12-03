@@ -87,6 +87,11 @@ app.use((req, res, next) => {
     return next();
   }
 
+  // Allow health checks to proceed even when Prisma is not initialized so deployments stay healthy
+  if (req.path === "/api/health") {
+    return next();
+  }
+
   if (!prisma) {
     return res.status(503).json({
       status: "unavailable",
@@ -211,7 +216,9 @@ if (NODE_ENV === "production") {
 // Graceful shutdown for Prisma on process end
 const shutdown = async () => {
   try {
-    await prisma.$disconnect();
+    if (prisma) {
+      await prisma.$disconnect();
+    }
   } catch (err) {
     console.error("[Via Fidei] Error during Prisma disconnect", err);
   } finally {
