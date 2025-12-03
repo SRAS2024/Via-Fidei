@@ -638,6 +638,27 @@ function AppShell() {
   const [guidesPage, setGuidesPage] = useState(1);
   const [guidesError, setGuidesError] = useState("");
 
+  // Auth forms
+  const [authMode, setAuthMode] = useState("login");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [registerForm, setRegisterForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    passwordConfirm: ""
+  });
+  const [resetForm, setResetForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    newPassword: ""
+  });
+  const [authError, setAuthError] = useState("");
+  const [authSuccess, setAuthSuccess] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
   // Prayers search and library
   const [prayersSearch, setPrayersSearch] = useState("");
   const [prayersSuggestions, setPrayersSuggestions] = useState([]);
@@ -1145,6 +1166,90 @@ function AppShell() {
       }).catch((err) => {
         console.error("Failed to save language preference", err);
       });
+    }
+  }
+
+  // Auth actions
+  function resetAuthState() {
+    setAuthError("");
+    setAuthSuccess("");
+    setAuthSubmitting(false);
+  }
+
+  async function handleLoginSubmit(event) {
+    event.preventDefault();
+    resetAuthState();
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Login failed");
+      }
+      setUser(data.user || null);
+      setCurrentTab("profile");
+      setAccountMenu(ACCOUNT_STATES.CLOSED);
+      setAuthSuccess("Welcome back. You are now signed in.");
+    } catch (err) {
+      setAuthError(err.message || "Login failed");
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  async function handleRegisterSubmit(event) {
+    event.preventDefault();
+    resetAuthState();
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(registerForm)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Registration failed");
+      }
+      setUser(data.user || null);
+      setCurrentTab("profile");
+      setAuthSuccess("Account created. You are now signed in.");
+    } catch (err) {
+      setAuthError(err.message || "Registration failed");
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  async function handleResetSubmit(event) {
+    event.preventDefault();
+    resetAuthState();
+    setAuthSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...resetForm,
+          newPassword: resetForm.newPassword
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Password reset failed");
+      }
+      setAuthSuccess("Password reset. You can log in with the new password.");
+      setAuthMode("login");
+    } catch (err) {
+      setAuthError(err.message || "Password reset failed");
+    } finally {
+      setAuthSubmitting(false);
     }
   }
 
@@ -2867,17 +2972,261 @@ function AppShell() {
             React.createElement(
               "h2",
               { className: "vf-card-title" },
-              "Login"
+              authMode === "login"
+                ? "Login"
+                : authMode === "register"
+                ? "Create Account"
+                : "Reset Password"
             )
           ),
           React.createElement(
             "div",
             { className: "vf-card-body" },
             React.createElement(
-              "p",
-              null,
-              "The authentication forms for Create Account, Login, and Reset Password integrate with the Via Fidei account system so that interactive features remain personal and private."
-            )
+              "div",
+              { className: "vf-auth-tabs" },
+              [
+                { id: "login", label: "Login" },
+                { id: "register", label: "Register" },
+                { id: "reset", label: "Reset" }
+              ].map((mode) =>
+                React.createElement(
+                  "button",
+                  {
+                    key: mode.id,
+                    type: "button",
+                    className:
+                      "vf-pill" +
+                      (authMode === mode.id ? " vf-pill-active" : ""),
+                    onClick: () => {
+                      setAuthMode(mode.id);
+                      resetAuthState();
+                    }
+                  },
+                  mode.label
+                )
+              )
+            ),
+            authError
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  authError
+                )
+              : null,
+            authSuccess
+              ? React.createElement(
+                  "p",
+                  { className: "vf-inline-success" },
+                  authSuccess
+                )
+              : null,
+            authMode === "login"
+              ? React.createElement(
+                  "form",
+                  { className: "vf-form", onSubmit: handleLoginSubmit },
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Email"),
+                    React.createElement("input", {
+                      type: "email",
+                      required: true,
+                      value: loginEmail,
+                      onChange: (e) => setLoginEmail(e.target.value)
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: loginPassword,
+                      onChange: (e) => setLoginPassword(e.target.value)
+                    })
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "vf-button",
+                      disabled: authSubmitting
+                    },
+                    authSubmitting ? "Signing in…" : "Login"
+                  )
+                )
+              : null,
+            authMode === "register"
+              ? React.createElement(
+                  "form",
+                  { className: "vf-form", onSubmit: handleRegisterSubmit },
+                  React.createElement(
+                    "div",
+                    { className: "vf-field-grid" },
+                    React.createElement(
+                      "label",
+                      { className: "vf-field" },
+                      React.createElement("span", null, "First name"),
+                      React.createElement("input", {
+                        type: "text",
+                        required: true,
+                        value: registerForm.firstName,
+                        onChange: (e) =>
+                          setRegisterForm((prev) => ({
+                            ...prev,
+                            firstName: e.target.value
+                          }))
+                      })
+                    ),
+                    React.createElement(
+                      "label",
+                      { className: "vf-field" },
+                      React.createElement("span", null, "Last name"),
+                      React.createElement("input", {
+                        type: "text",
+                        required: true,
+                        value: registerForm.lastName,
+                        onChange: (e) =>
+                          setRegisterForm((prev) => ({
+                            ...prev,
+                            lastName: e.target.value
+                          }))
+                      })
+                    )
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Email"),
+                    React.createElement("input", {
+                      type: "email",
+                      required: true,
+                      value: registerForm.email,
+                      onChange: (e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          email: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: registerForm.password,
+                      onChange: (e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          password: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Confirm password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: registerForm.passwordConfirm,
+                      onChange: (e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          passwordConfirm: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "vf-button",
+                      disabled: authSubmitting
+                    },
+                    authSubmitting ? "Creating account…" : "Create account"
+                  )
+                )
+              : null,
+            authMode === "reset"
+              ? React.createElement(
+                  "form",
+                  { className: "vf-form", onSubmit: handleResetSubmit },
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "First name"),
+                    React.createElement("input", {
+                      type: "text",
+                      required: true,
+                      value: resetForm.firstName,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          firstName: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Last name"),
+                    React.createElement("input", {
+                      type: "text",
+                      required: true,
+                      value: resetForm.lastName,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          lastName: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "Email"),
+                    React.createElement("input", {
+                      type: "email",
+                      required: true,
+                      value: resetForm.email,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          email: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "label",
+                    { className: "vf-field" },
+                    React.createElement("span", null, "New password"),
+                    React.createElement("input", {
+                      type: "password",
+                      required: true,
+                      value: resetForm.newPassword,
+                      onChange: (e) =>
+                        setResetForm((prev) => ({
+                          ...prev,
+                          newPassword: e.target.value
+                        }))
+                    })
+                  ),
+                  React.createElement(
+                    "button",
+                    {
+                      type: "submit",
+                      className: "vf-button",
+                      disabled: authSubmitting
+                    },
+                    authSubmitting ? "Resetting…" : "Reset password"
+                  )
+                )
+              : null
           )
         )
       )
