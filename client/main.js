@@ -1202,6 +1202,32 @@ function AppShell() {
       });
       setUser(null);
       setAccountMenu(ACCOUNT_STATES.CLOSED);
+      setProfileOverview(null);
+      setProfileLoading(false);
+      setProfileError("");
+      setProfileNotice("");
+      setAvatarUrl("");
+      setSavedPrayers([]);
+      setLoadingSavedPrayers(false);
+      setSavedPrayersError("");
+      setJournalEntries([]);
+      setJournalView("active");
+      setJournalForm({ title: "", body: "", isFavorite: false });
+      setJournalSubmitting(false);
+      setJournalError("");
+      setGoalForm({
+        title: "",
+        description: "",
+        goalType: "CUSTOM",
+        dueDate: "",
+        checklist: null
+      });
+      setGoals([]);
+      setGoalsError("");
+      setGoalsLoading(false);
+      setMilestones([]);
+      setMilestonesError("");
+      setMilestonesLoading(false);
       setCurrentTab("home");
     } catch (err) {
       console.error("Logout failed", err);
