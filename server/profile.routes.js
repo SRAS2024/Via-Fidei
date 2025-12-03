@@ -264,7 +264,7 @@ router.post("/journal", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "Journal body is required" });
   }
 
-  try:
+  try {
     const entry = await prisma.journalEntry.create({
       data: {
         userId: user.id,
