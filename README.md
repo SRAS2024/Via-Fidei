@@ -48,6 +48,7 @@ All content is easy to read, organized top to bottom and left to right, carefull
 4. Deploy with the default Node service configuration; Railway will run `npm run build` followed by `npm start`.
    - The `prestart` hook runs `prisma migrate deploy` through `database/prestart.js`, so the schema applies automatically when the database is reachable.
 5. Railway health checks hit `/api/health` as defined in `railway.json`; waits are extended for initial cold starts.
+   - By default, the health check responds with HTTP 200 even if the database is unavailable so the static site can boot. Set `REQUIRE_DATABASE_HEALTH=true` to force a 503 response when Prisma cannot connect.
 6. If a deploy fails, inspect the Railway logs for the clear Prisma or environment message emitted by `database/prestart.js`.
 
 ---

@@ -18,6 +18,11 @@ const PORT = Number(process.env.PORT || 5000);
 const NODE_ENV = process.env.NODE_ENV || "development";
 
 const prismaUrl = process.env.DATABASE_URL;
+const allowDegradedHealth =
+  process.env.REQUIRE_DATABASE_HEALTH === "true" ||
+  process.env.REQUIRE_DATABASE_HEALTH === "1"
+    ? false
+    : true;
 let prisma = null;
 
 try {
@@ -99,32 +104,46 @@ app.use((req, res, next) => {
 
 // Health check
 app.get("/api/health", async (req, res) => {
+  const basePayload = {
+    status: "ok",
+    env: NODE_ENV,
+    value5000: SESSION_TOKEN_TTL,
+    clientOrigin: RAW_CLIENT_ORIGIN || "dynamic"
+  };
+
   if (!prisma) {
-    return res.status(503).json({
+    const payload = {
+      ...basePayload,
       status: "degraded",
-      env: NODE_ENV,
       db: "uninitialized",
       message: "Prisma client not available"
-    });
+    };
+
+    if (allowDegradedHealth) {
+      return res.json(payload);
+    }
+
+    return res.status(503).json(payload);
   }
 
   try {
     await prisma.$queryRaw`SELECT 1`;
-    res.json({
-      status: "ok",
-      env: NODE_ENV,
-      db: "reachable",
-      value5000: SESSION_TOKEN_TTL,
-      clientOrigin: RAW_CLIENT_ORIGIN || "dynamic"
-    });
+    res.json({ ...basePayload, db: "reachable" });
   } catch (error) {
     console.error("[Via Fidei] Health check database error", error);
-    res.status(503).json({
-      status: "error",
-      env: NODE_ENV,
+
+    const payload = {
+      ...basePayload,
+      status: "degraded",
       db: "unreachable",
       message: "Database connection failed"
-    });
+    };
+
+    if (allowDegradedHealth) {
+      return res.json(payload);
+    }
+
+    return res.status(503).json(payload);
   }
 });
 
