@@ -683,6 +683,13 @@ function AppShell() {
   const [profileNotice, setProfileNotice] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
+  // Deep detail drawer
+  const [detailView, setDetailView] = useState({
+    open: false,
+    type: null,
+    item: null
+  });
+
   // Auth forms
   const [authMode, setAuthMode] = useState("login");
   const [loginEmail, setLoginEmail] = useState("");
@@ -806,6 +813,10 @@ function AppShell() {
     }
   }, [user]);
 
+  useEffect(() => {
+    setDetailView({ open: false, type: null, item: null });
+  }, [currentTab]);
+
   // When language changes, mark language dependent sections as needing reload
   useEffect(() => {
     setHistoryLoaded(false);
@@ -841,7 +852,20 @@ function AppShell() {
     setOurLadyPage(1);
     setApparitionsError("");
     setHomeError("");
+
+    setDetailView({ open: false, type: null, item: null });
   }, [language]);
+
+  function openDetail(type, item) {
+    if (!item) return;
+    setAccountMenu(ACCOUNT_STATES.CLOSED);
+    setSettingsMenu(SETTINGS_STATES.CLOSED);
+    setDetailView({ open: true, type, item });
+  }
+
+  function closeDetail() {
+    setDetailView({ open: false, type: null, item: null });
+  }
 
   // Fetch home content
   const loadHome = useCallback(
@@ -2455,7 +2479,20 @@ function AppShell() {
                             { className: "vf-history-body" },
                             section.body
                           )
-                        : null
+                        : null,
+                      React.createElement(
+                        "div",
+                        { className: "vf-card-actions" },
+                        React.createElement(
+                          "button",
+                          {
+                            type: "button",
+                            className: "vf-btn vf-btn-ghost",
+                            onClick: () => openDetail("History", section)
+                          },
+                          "Open details"
+                        )
+                      )
                     )
                   )
                 )
@@ -2633,6 +2670,19 @@ function AppShell() {
                           "p",
                           { className: "vf-prayer-body" },
                           p.content
+                        ),
+                        React.createElement(
+                          "div",
+                          { className: "vf-item-actions" },
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-btn vf-btn-ghost",
+                              onClick: () => openDetail("Prayer", p)
+                            },
+                            "Open details"
+                          )
                         ),
                         user
                           ? React.createElement(
@@ -2850,6 +2900,19 @@ function AppShell() {
                               s.biography
                             )
                           : null,
+                        React.createElement(
+                          "div",
+                          { className: "vf-item-actions" },
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-btn vf-btn-ghost",
+                              onClick: () => openDetail("Saint", s)
+                            },
+                            "Open details"
+                          )
+                        ),
                         user
                           ? React.createElement(
                               "div",
@@ -3093,6 +3156,19 @@ function AppShell() {
                               a.story
                             )
                           : null,
+                        React.createElement(
+                          "div",
+                          { className: "vf-item-actions" },
+                          React.createElement(
+                            "button",
+                            {
+                              type: "button",
+                              className: "vf-btn vf-btn-ghost",
+                              onClick: () => openDetail("Our Lady", a)
+                            },
+                            "Open details"
+                          )
+                        ),
                         user
                           ? React.createElement(
                               "div",
@@ -3207,6 +3283,19 @@ function AppShell() {
                             s.meaning
                           )
                         : null,
+                      React.createElement(
+                        "div",
+                        { className: "vf-item-actions" },
+                        React.createElement(
+                          "button",
+                          {
+                            type: "button",
+                            className: "vf-btn vf-btn-ghost",
+                            onClick: () => openDetail("Sacrament", s)
+                          },
+                          "Open details"
+                        )
+                      ),
                       renderSacramentBiblicalFoundation(
                         s.biblicalFoundation
                       ),
@@ -3307,6 +3396,19 @@ function AppShell() {
                             g.summary
                           )
                         : null,
+                      React.createElement(
+                        "div",
+                        { className: "vf-item-actions" },
+                        React.createElement(
+                          "button",
+                          {
+                            type: "button",
+                            className: "vf-btn vf-btn-ghost",
+                            onClick: () => openDetail("Guide", g)
+                          },
+                          "Open details"
+                        )
+                      ),
                       renderGuideBodyContent(g.body),
                       renderGuideChecklist(g.checklistTemplate)
                     )
@@ -4270,6 +4372,126 @@ function AppShell() {
     );
   }
 
+  function renderDetailPanel() {
+    if (!detailView.open || !detailView.item) return null;
+
+    const item = detailView.item;
+    const detailTitle = item.title || item.name || "Detail";
+    const detailLead =
+      item.summary || item.subtitle || item.description || item.meaning || "";
+    const detailBody =
+      item.body || item.content || item.bio || item.story || item.explanation;
+
+    const meta = [];
+    if (item.date) meta.push({ label: "Date", value: item.date });
+    if (item.origin) meta.push({ label: "Origin", value: item.origin });
+    if (item.location) meta.push({ label: "Location", value: item.location });
+    if (item.language) meta.push({ label: "Language", value: item.language });
+    if (item.category) meta.push({ label: "Category", value: item.category });
+    if (Array.isArray(item.categories))
+      meta.push({ label: "Categories", value: item.categories.join(", ") });
+    if (Array.isArray(item.tags))
+      meta.push({ label: "Tags", value: item.tags.join(", ") });
+    if (item.feastDay) meta.push({ label: "Feast day", value: item.feastDay });
+    if (item.birthYear)
+      meta.push({ label: "Born", value: item.birthYear.toString() });
+    if (item.deathYear)
+      meta.push({ label: "Died", value: item.deathYear.toString() });
+    if (item.patronage)
+      meta.push({ label: "Patronage", value: item.patronage });
+    if (item.goalType)
+      meta.push({ label: "Type", value: item.goalType.replace("_", " ") });
+
+    const detailImage = item.imageUrl || item.artwork || item.photoUrl || null;
+
+    const longform = Array.isArray(item.body)
+      ? item.body
+      : detailBody
+      ? [detailBody]
+      : [];
+
+    return React.createElement(
+      "div",
+      { className: "vf-detail-overlay", role: "dialog", "aria-modal": true },
+      React.createElement("div", { className: "vf-detail-panel" },
+        React.createElement(
+          "div",
+          { className: "vf-detail-header" },
+          React.createElement(
+            "div",
+            { className: "vf-detail-title-block" },
+            React.createElement("p", { className: "vf-detail-kicker" }, detailView.type || "Item"),
+            React.createElement("h2", { className: "vf-detail-title" }, detailTitle),
+            detailLead
+              ? React.createElement(
+                  "p",
+                  { className: "vf-detail-lead" },
+                  detailLead
+                )
+              : null
+          ),
+          React.createElement(
+            "button",
+            {
+              type: "button",
+              className: "vf-icon-button vf-detail-close",
+              onClick: closeDetail,
+              "aria-label": "Close detail"
+            },
+            "×"
+          )
+        ),
+        meta.length > 0
+          ? React.createElement(
+              "dl",
+              { className: "vf-detail-meta" },
+              meta.map((entry) =>
+                React.createElement(
+                  React.Fragment,
+                  { key: entry.label },
+                  React.createElement(
+                    "dt",
+                    { className: "vf-detail-term" },
+                    entry.label
+                  ),
+                  React.createElement(
+                    "dd",
+                    { className: "vf-detail-definition" },
+                    entry.value
+                  )
+                )
+              )
+            )
+          : null,
+        detailImage
+          ? React.createElement("div", { className: "vf-detail-hero" },
+              React.createElement("div", { className: "vf-detail-hero-img", style: { backgroundImage: `url(${detailImage})` } }),
+              item.imageCredit
+                ? React.createElement(
+                    "p",
+                    { className: "vf-detail-credit" },
+                    item.imageCredit
+                  )
+                : null
+            )
+          : null,
+        longform.length > 0
+          ? React.createElement(
+              "div",
+              { className: "vf-detail-body" },
+              longform.map((block, idx) =>
+                React.createElement(
+                  "p",
+                  { key: idx, className: "vf-detail-paragraph" },
+                  block
+                )
+              )
+            )
+          : null
+      )
+    );
+  }
+
   function renderCurrentTab() {
     if (currentTab === "home") return renderHome();
     if (currentTab === "history") return renderHistory();
@@ -4288,6 +4510,7 @@ function AppShell() {
     { className: "vf-shell" },
     renderHeader(),
     renderCurrentTab(),
+    renderDetailPanel(),
     React.createElement(
       "footer",
       { className: "vf-footer" },
