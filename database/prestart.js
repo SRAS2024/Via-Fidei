@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 
-const schemaPath = "./prisma.schema";
+const schemaPath = path.join("./prisma", "schema.prisma");
 const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
 const dbUrl = process.env.DATABASE_URL;
 

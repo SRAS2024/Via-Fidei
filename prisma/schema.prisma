@@ -1,4 +1,4 @@
-// prisma.schema
+// prisma/schema.prisma
 // Via Fidei · PostgreSQL data model
 // Content entities are language aware, tagged, and metadata rich.
 

@@ -32,7 +32,7 @@ All content is easy to read, organized top to bottom and left to right, carefull
 **Database**
 
 - PostgreSQL hosted on Railway  
-- Prisma migrations driven from `prisma.schema` at the repo root  
+- Prisma migrations driven from `prisma/schema.prisma`
 
 **Deployment**
 
@@ -383,7 +383,7 @@ Root files (example):
 
 - `package.json`  
 - `index.js`  
-- `prisma.schema`  
+- `prisma/schema.prisma`
 - `vite.config.js`  
 - `railway.json`  
 - `.env.example`  

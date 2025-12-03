@@ -11,9 +11,9 @@
     "build:client": "vite build",
     "build": "npm run build:client",
     "start": "node index.js",
-    "prisma:generate": "prisma generate --schema=./prisma.schema",
-    "prisma:migrate": "prisma migrate deploy --schema=./prisma.schema",
-    "prisma:push": "prisma db push --schema=./prisma.schema",
+    "prisma:generate": "prisma generate --schema=./prisma/schema.prisma",
+    "prisma:migrate": "prisma migrate deploy --schema=./prisma/schema.prisma",
+    "prisma:push": "prisma db push --schema=./prisma/schema.prisma",
     "db:seed": "node database/seed.js",
     "postinstall": "npm run prisma:generate",
     "prestart": "node database/prestart.js"
