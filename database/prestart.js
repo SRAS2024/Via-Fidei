@@ -1,9 +1,12 @@
 // database/prestart.js
 // Ensures Prisma migrations run before server start and surfaces clear errors for Railway deployments
 
+const fs = require("fs");
+const path = require("path");
 const { execSync } = require("child_process");
 
 const schemaPath = "./prisma.schema";
+const migrationsDir = path.join(__dirname, "..", "prisma", "migrations");
 const dbUrl = process.env.DATABASE_URL;
 
 if (!dbUrl) {
@@ -15,6 +18,17 @@ if (!dbUrl) {
 
 try {
   console.log("[Via Fidei] Applying Prisma migrations with migrate deploy...");
+  const hasMigrations =
+    fs.existsSync(migrationsDir) &&
+    fs.readdirSync(migrationsDir).filter((entry) => !entry.startsWith(".")).length > 0;
+
+  if (!hasMigrations) {
+    console.log(
+      "[Via Fidei] No Prisma migrations found (prisma/migrations is missing or empty). Skipping migrate deploy and continuing startup."
+    );
+    process.exit(0);
+  }
+
   execSync(`npx prisma migrate deploy --schema=${schemaPath}`, { stdio: "inherit" });
   console.log("[Via Fidei] Prisma migrations applied successfully.");
 } catch (error) {
