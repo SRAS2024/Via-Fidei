@@ -72,6 +72,9 @@ function AdminShell() {
 
   const [homeData, setHomeData] = useState(null);
   const [loadingHome, setLoadingHome] = useState(true);
+  const [overview, setOverview] = useState(null);
+  const [overviewError, setOverviewError] = useState("");
+  const [loadingOverview, setLoadingOverview] = useState(false);
 
   const [adminAuthenticated, setAdminAuthenticated] = useState(
     () => window.sessionStorage.getItem("vf_admin_authed") === "yes"
@@ -148,6 +151,9 @@ function AdminShell() {
           params.set("language", lang);
         }
         const res = await fetch(`/api/home?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`Home request failed: ${res.status}`);
+        }
         const data = await res.json();
         setHomeData(data);
         if (data && data.liturgicalTheme) {
@@ -155,6 +161,12 @@ function AdminShell() {
         }
       } catch (err) {
         console.error("Failed to load home content", err);
+        setHomeData({
+          mission: FALLBACK_MISSION,
+          about: FALLBACK_ABOUT,
+          notices: [],
+          collagePhotos: []
+        });
       } finally {
         setLoadingHome(false);
       }
@@ -162,9 +174,56 @@ function AdminShell() {
     []
   );
 
+  const loadOverview = useCallback(
+    async (lang) => {
+      if (!adminAuthenticated) return;
+      try {
+        setLoadingOverview(true);
+        setOverviewError("");
+        const params = new URLSearchParams();
+        if (lang) {
+          params.set("language", lang);
+        }
+        const res = await fetch(`/api/admin/overview?${params.toString()}`, {
+          credentials: "include"
+        });
+        if (res.status === 401) {
+          setAdminAuthenticated(false);
+          window.sessionStorage.removeItem("vf_admin_authed");
+          throw new Error("Admin session expired");
+        }
+        if (!res.ok) {
+          throw new Error(`Overview request failed: ${res.status}`);
+        }
+        const data = await res.json();
+        setOverview(data);
+      } catch (err) {
+        console.error("Failed to load admin overview", err);
+        setOverviewError(
+          "Overview counts are unavailable right now. Try refreshing after a moment."
+        );
+      } finally {
+        setLoadingOverview(false);
+      }
+    },
+    [adminAuthenticated]
+  );
+
   useEffect(() => {
     loadHome(language);
   }, [language, loadHome]);
+
+  useEffect(() => {
+    if (!adminAuthenticated) return;
+    loadOverview(language);
+  }, [adminAuthenticated, language, loadOverview]);
+
+  useEffect(() => {
+    if (adminAuthenticated) return;
+    setOverview(null);
+    setOverviewError("");
+    setLoadingOverview(false);
+  }, [adminAuthenticated]);
 
   useEffect(() => {
     if (!adminAuthenticated) return;
@@ -742,6 +801,75 @@ function AdminShell() {
                   },
                   adminSavingCopy ? "Saving…" : "Save home text"
                 )
+              )
+            )
+          )
+        ),
+        // Overview card
+        h(
+          "article",
+          { className: "vf-card vf-admin-card" },
+          h(
+            "header",
+            { className: "vf-card-header" },
+            h("h3", { className: "vf-card-title" }, "Data overview"),
+            h(
+              "p",
+              { className: "vf-card-subtitle" },
+              "Confirm seeds, counts, and language before making edits."
+            )
+          ),
+          h(
+            "div",
+            { className: "vf-card-body" },
+            overviewError
+              ? h(
+                  "p",
+                  { className: "vf-inline-alert" },
+                  overviewError
+                )
+              : null,
+            loadingOverview
+              ? h("p", null, "Loading overview…")
+              : null,
+            overview && overview.counts
+              ? h(
+                  "div",
+                  { className: "vf-admin-stats" },
+                  [
+                    { key: "prayers", label: "Prayers" },
+                    { key: "saints", label: "Saints" },
+                    { key: "apparitions", label: "Our Lady" },
+                    { key: "sacraments", label: "Sacraments" },
+                    { key: "historySections", label: "History" },
+                    { key: "guides", label: "Guides" },
+                    { key: "notices", label: "Notices" }
+                  ].map((stat) =>
+                    h(
+                      "div",
+                      { key: stat.key, className: "vf-admin-stat" },
+                      h("span", { className: "vf-admin-stat-label" }, stat.label),
+                      h(
+                        "strong",
+                        { className: "vf-admin-stat-value" },
+                        overview.counts[stat.key] ?? "—"
+                      )
+                    )
+                  )
+                )
+              : null,
+            h(
+              "div",
+              { className: "vf-form-actions" },
+              h(
+                "button",
+                {
+                  type: "button",
+                  className: "vf-btn vf-btn-outline",
+                  onClick: () => loadOverview(language),
+                  disabled: loadingOverview
+                },
+                loadingOverview ? "Refreshing…" : "Refresh overview"
               )
             )
           )

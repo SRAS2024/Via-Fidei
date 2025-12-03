@@ -661,6 +661,21 @@ html[data-season="easter"] .vf-card-hero {
   color: var(--vf-text-main);
 }
 
+.vf-inline-alert {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: linear-gradient(90deg, rgba(178, 138, 48, 0.12), rgba(30, 102, 255, 0.08));
+  border: 1px solid rgba(178, 138, 48, 0.3);
+  color: var(--vf-text-main);
+  font-weight: 600;
+}
+
+html[data-theme="dark"] .vf-inline-alert {
+  background: linear-gradient(90deg, rgba(178, 138, 48, 0.25), rgba(30, 102, 255, 0.2));
+  border-color: rgba(178, 138, 48, 0.5);
+}
+
 /* Notices */
 
 .vf-notices {
@@ -1226,6 +1241,33 @@ html[data-theme="dark"] .vf-mary-about {
 .vf-admin-grid {
   display: grid;
   gap: 16px;
+}
+
+.vf-admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.vf-admin-stat {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--vf-border-subtle);
+  background: var(--vf-bg-muted);
+  display: grid;
+  gap: 4px;
+}
+
+.vf-admin-stat-label {
+  font-size: 0.8rem;
+  color: var(--vf-text-soft);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vf-admin-stat-value {
+  font-size: 1.2rem;
 }
 
 @media (min-width: 900px) {
