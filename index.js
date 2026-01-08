@@ -10,6 +10,16 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const { PrismaClient } = require("@prisma/client");
 
+/**
+ * @typedef {Object} SessionConfig
+ * @property {number} ttlSeconds - Session TTL in seconds
+ * @property {string} jwtSecret - JWT secret key
+ */
+
+/**
+ * @typedef {import('@prisma/client').PrismaClient} PrismaClient
+ */
+
 const prisma = new PrismaClient();
 
 // Session token standard aligned to value 5000
@@ -54,6 +64,11 @@ app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
 
 // Attach shared services to request for lightweight access in routes
+/**
+ * @param {express.Request & {prisma?: PrismaClient, sessionConfig?: SessionConfig}} req
+ * @param {express.Response} res
+ * @param {express.NextFunction} next
+ */
 app.use((req, res, next) => {
   req.prisma = prisma;
   req.sessionConfig = {
@@ -87,6 +102,9 @@ app.get("/api/health", async (req, res) => {
 
 // API routers
 // These live in /server and keep the file tree small and clear
+/**
+ * @type {Array<[string, string]>}
+ */
 const routes = [
   ["/api/home", "./server/home.routes"],
   ["/api/layout", "./server/layouts.routes"],
@@ -121,6 +139,12 @@ app.use("/api", (req, res) => {
 });
 
 // Central error handler
+/**
+ * @param {Error} err
+ * @param {express.Request} req
+ * @param {express.Response} res
+ * @param {express.NextFunction} next
+ */
 app.use((err, req, res, next) => {
   console.error("[Via Fidei] Unhandled error", err);
   if (res.headersSent) {
@@ -147,6 +171,9 @@ if (NODE_ENV === "production") {
 }
 
 // Graceful shutdown for Prisma on process end
+/**
+ * @returns {Promise<void>}
+ */
 const shutdown = async () => {
   try {
     await prisma.$disconnect();

@@ -4,10 +4,39 @@
 const express = require("express");
 const { requireAuth } = require("./auth.routes");
 
+/**
+ * @typedef {import('@prisma/client').PrismaClient} PrismaClient
+ * @typedef {import('@prisma/client').Prayer} Prayer
+ * @typedef {import('@prisma/client').User} User
+ */
+
+/**
+ * @typedef {express.Request & {prisma?: PrismaClient, user?: User}} AuthRequest
+ */
+
+/**
+ * @typedef {Object} PublicPrayer
+ * @property {string} id
+ * @property {string} language
+ * @property {string} slug
+ * @property {string} title
+ * @property {string} content
+ * @property {string} category
+ * @property {string[]} tags
+ * @property {string | null} source
+ * @property {string | null} sourceUrl
+ * @property {string | null} sourceAttribution
+ * @property {Date | null} updatedAt
+ */
+
 const router = express.Router();
 
 const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
 
+/**
+ * @param {AuthRequest} req
+ * @returns {PrismaClient}
+ */
 function getPrisma(req) {
   if (!req.prisma) {
     throw new Error("Prisma client not attached to request");
@@ -23,8 +52,14 @@ function getPrisma(req) {
  *   3. DEFAULT_LANGUAGE env
  *   4. Accept Language header
  *   5. English
+ * @param {AuthRequest} req
+ * @returns {string}
  */
 function resolveLanguage(req) {
+  /**
+   * @param {any} value
+   * @returns {string | null}
+   */
   const tryLang = (value) => {
     if (!value) return null;
     const lower = String(value).toLowerCase();
@@ -56,6 +91,10 @@ function resolveLanguage(req) {
 }
 
 // Shape prayer for client
+/**
+ * @param {any} p
+ * @returns {PublicPrayer}
+ */
 function publicPrayer(p) {
   return {
     id: p.id,
@@ -74,6 +113,10 @@ function publicPrayer(p) {
 
 // Built in fallback library of classic prayers
 // Used whenever the database is empty for a language
+/**
+ * @param {string} language
+ * @returns {Array<{id: string, language: string, slug: string, title: string, content: string, category: string, tags: string[], source: string, sourceUrl: null, sourceAttribution: string, updatedAt: Date}>}
+ */
 function builtInPrayers(language) {
   const now = new Date();
   const lang = SUPPORTED_LANGS.includes(language) ? language : "en";

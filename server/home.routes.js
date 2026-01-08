@@ -4,10 +4,27 @@
 
 const express = require("express");
 
+/**
+ * @typedef {import('@prisma/client').PrismaClient} PrismaClient
+ * @typedef {import('@prisma/client').User} User
+ * @typedef {import('@prisma/client').Notice} Notice
+ */
+
+/**
+ * @typedef {express.Request & {prisma?: PrismaClient, user?: User}} AuthRequest
+ */
+
 const router = express.Router();
 
+/**
+ * @type {string[]}
+ */
 const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
 
+/**
+ * @param {AuthRequest} req
+ * @returns {PrismaClient}
+ */
 function getPrisma(req) {
   if (!req.prisma) {
     throw new Error("Prisma client not attached to request");
@@ -23,8 +40,14 @@ function getPrisma(req) {
  *   3. DEFAULT_LANGUAGE env
  *   4. Accept Language header
  *   5. English
+ * @param {AuthRequest} req
+ * @returns {string}
  */
 function resolveLanguage(req) {
+  /**
+   * @param {any} value
+   * @returns {string | null}
+   */
   const tryLang = (value) => {
     if (!value) return null;
     const lower = String(value).toLowerCase();
@@ -57,6 +80,10 @@ function resolveLanguage(req) {
   return "en";
 }
 
+/**
+ * @param {any} value
+ * @returns {any}
+ */
 function safeJsonParse(value) {
   if (!value) return null;
   if (typeof value === "object") return value;
@@ -76,6 +103,10 @@ function safeJsonParse(value) {
 // Default mission text used as a safe fallback when the database
 // does not yet have SiteContent for the requested language.
 // This mirrors the FALLBACK_MISSION used in the React client.
+/**
+ * @param {string} language
+ * @returns {{heading: string, subheading: string, body: string[]}}
+ */
 function defaultMission(language) {
   void language;
   return {
@@ -92,6 +123,10 @@ function defaultMission(language) {
 // Default About text used as a safe fallback when the database
 // does not yet have SiteContent for the requested language.
 // This mirrors the FALLBACK_ABOUT used in the React client.
+/**
+ * @param {string} language
+ * @returns {{paragraphs: string[], quickLinks: Array<{label: string, target: string}>}}
+ */
 function defaultAbout(language) {
   void language;
   return {
@@ -110,6 +145,11 @@ function defaultAbout(language) {
   };
 }
 
+/**
+ * @param {any} siteContentEntry
+ * @param {string} language
+ * @returns {{heading: string, subheading: string, body: string[]}}
+ */
 function normalizeMission(siteContentEntry, language) {
   const parsed = safeJsonParse(siteContentEntry && siteContentEntry.content);
 
