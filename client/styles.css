@@ -57,9 +57,10 @@ body {
     var(--vf-bg);
 }
 
-html[data-season="advent"] .vf-shell {
-  background: radial-gradient(circle at 12% 12%, rgba(244, 220, 204, 0.4), transparent 34%),
-    radial-gradient(circle at 80% 6%, rgba(104, 27, 46, 0.4), transparent 36%),
+html[data-season="christmas"] .vf-shell {
+  background: radial-gradient(circle at 12% 12%, rgba(244, 220, 204, 0.35), transparent 34%),
+    radial-gradient(circle at 80% 6%, rgba(139, 21, 56, 0.25), transparent 36%),
+    radial-gradient(circle at 50% 90%, rgba(255, 230, 200, 0.2), transparent 40%),
     var(--vf-bg);
 }
 
@@ -87,69 +88,178 @@ html[data-season="normal"] .vf-shell {
 .vf-banner {
   display: flex;
   justify-content: center;
-  padding: 18px 16px 10px;
+  padding: 24px 16px 18px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+  position: relative;
+  overflow: hidden;
 }
 
+/* Standard Theme - Elegant gray background */
 .vf-banner-normal {
-  background: linear-gradient(180deg, #f3e9db, #fdfbf7);
+  background: linear-gradient(180deg, #6b6b6b 0%, #8a8a8a 40%, #a8a8a8 70%, #c4c4c4 100%);
+  box-shadow: inset 0 -4px 12px rgba(0, 0, 0, 0.15), 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
-.vf-banner-advent {
-  background: linear-gradient(180deg, #6c2c3c, #a8443f 60%, #f6e7dc);
+.vf-banner-normal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(0, 0, 0, 0.1) 0%, transparent 50%);
+  pointer-events: none;
 }
 
+/* Christmas Theme - Rich red with festive elegance */
+.vf-banner-christmas {
+  background: linear-gradient(180deg, #8b1538 0%, #a91b3d 30%, #c4223f 60%, #d42847 100%);
+  box-shadow: inset 0 -4px 16px rgba(0, 0, 0, 0.25), 0 4px 24px rgba(139, 21, 56, 0.3);
+}
+
+.vf-banner-christmas::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(255, 215, 180, 0.2) 0%, transparent 40%),
+    radial-gradient(ellipse at 80% 70%, rgba(255, 200, 150, 0.15) 0%, transparent 40%),
+    radial-gradient(circle at 50% 100%, rgba(0, 0, 0, 0.2) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Easter Theme - Royal blue with golden radiance */
 .vf-banner-easter {
-  background: linear-gradient(180deg, #dfe9ff, #6f8fc2 65%, #e8d6a2);
+  background: linear-gradient(180deg, #1a3a6e 0%, #234b8a 30%, #2d5ca6 60%, #3a6db8 100%);
+  box-shadow: inset 0 -4px 16px rgba(0, 0, 0, 0.3), 0 4px 24px rgba(26, 58, 110, 0.35);
+}
+
+.vf-banner-easter::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 215, 100, 0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 30% 60%, rgba(200, 220, 255, 0.15) 0%, transparent 40%),
+    radial-gradient(ellipse at 70% 80%, rgba(255, 230, 150, 0.1) 0%, transparent 40%);
+  pointer-events: none;
 }
 
 .vf-logo-block {
   display: inline-flex;
   align-items: center;
-  gap: 16px;
-  padding: 14px 20px;
-  background: rgba(255, 255, 255, 0.72);
-  border-radius: 18px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+  gap: 20px;
+  padding: 18px 28px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 html[data-theme="dark"] .vf-logo-block {
-  background: rgba(23, 26, 36, 0.82);
+  background: rgba(23, 26, 36, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Standard theme logo block - subtle warm tint */
+html[data-season="normal"] .vf-logo-block {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 48px rgba(50, 50, 50, 0.2), 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Christmas theme logo block - warm glow on red */
+html[data-season="christmas"] .vf-logo-block {
+  background: rgba(255, 250, 245, 0.95);
+  box-shadow: 0 16px 48px rgba(139, 21, 56, 0.25), 0 4px 16px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(255, 215, 180, 0.4);
+}
+
+/* Easter theme logo block - celestial glow */
+html[data-season="easter"] .vf-logo-block {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 16px 48px rgba(26, 58, 110, 0.25), 0 4px 16px rgba(255, 215, 100, 0.2);
+  border: 1px solid rgba(255, 230, 180, 0.4);
 }
 
 .vf-sacred-mark {
-  width: 76px;
-  height: 76px;
+  width: 88px;
+  height: 88px;
   flex-shrink: 0;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
 }
 
 .vf-logo-text {
   display: grid;
-  gap: 4px;
+  gap: 6px;
 }
 
 .vf-logo-wordmark {
   font-family: var(--vf-serif);
-  font-size: 28px;
-  letter-spacing: 0.01em;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-html[data-season="advent"] .vf-logo-wordmark {
-  color: #e6e7eb;
-}
-
-html[data-season="easter"] .vf-logo-wordmark {
-  color: #f1d27a;
-}
-
+/* Standard theme - elegant dark text */
 html[data-season="normal"] .vf-logo-wordmark {
-  color: #2f2419;
+  color: #2a2017;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+/* Christmas theme - shimmering silver letters */
+html[data-season="christmas"] .vf-logo-wordmark {
+  color: #c0c5cc;
+  background: linear-gradient(180deg, #e8ecf0 0%, #b8bfc8 50%, #a0a8b0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+/* Easter theme - radiant gold lettering */
+html[data-season="easter"] .vf-logo-wordmark {
+  color: #d4a843;
+  background: linear-gradient(180deg, #ffd700 0%, #daa520 40%, #b8860b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
 .vf-logo-sub {
   font-family: var(--vf-sans);
   color: var(--vf-text-muted);
   font-size: 14px;
+  letter-spacing: 0.02em;
+}
+
+/* Standard theme subtitle */
+html[data-season="normal"] .vf-logo-sub {
+  color: #5a4d42;
+}
+
+/* Christmas theme subtitle - soft silver */
+html[data-season="christmas"] .vf-logo-sub {
+  color: #8a9098;
+}
+
+/* Easter theme subtitle - muted gold */
+html[data-season="easter"] .vf-logo-sub {
+  color: #9a8540;
 }
 
 .vf-nav-row {
