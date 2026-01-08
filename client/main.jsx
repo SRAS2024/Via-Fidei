@@ -281,7 +281,7 @@ function App() {
   const [currentTab, setCurrentTab] = useState("home");
   const [theme, setTheme] = useState(() => localStorage.getItem("vf_theme") || "light");
   const [language, setLanguage] = useState(() => localStorage.getItem("vf_language") || "en");
-  const [season, setSeason] = useState("easter");
+  const [season, setSeason] = useState("normal");
   const [navOpen, setNavOpen] = useState(false);
   const [searchPrayer, setSearchPrayer] = useState("");
   const [searchSaint, setSearchSaint] = useState("");
@@ -376,15 +376,15 @@ function App() {
               </select>
             </label>
             <label className="vf-inline-label">
-              <span>Season</span>
+              <span>Theme</span>
               <select
                 className="vf-select"
-                aria-label="Seasonal art"
+                aria-label="Visual theme"
                 value={season}
                 onChange={(e) => setSeason(e.target.value)}
               >
-                <option value="normal">Ordinary</option>
-                <option value="advent">Advent</option>
+                <option value="normal">Standard</option>
+                <option value="christmas">Christmas</option>
                 <option value="easter">Easter</option>
               </select>
             </label>
@@ -716,61 +716,208 @@ if (container) {
   root.render(<App />);
 }
   function SacredSymbol({ season }) {
-    if (season === "advent") {
+    // Christmas Theme - Stunning Holy Family
+    if (season === "christmas") {
       return (
         <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Holy Family">
           <defs>
             <linearGradient id="holyFamilyGlow" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#f6d7ae" />
-              <stop offset="100%" stopColor="#a33c3b" />
+              <stop offset="0%" stopColor="#fff8e8" />
+              <stop offset="50%" stopColor="#ffd700" />
+              <stop offset="100%" stopColor="#b8860b" />
             </linearGradient>
+            <linearGradient id="maryRobe" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#4169e1" />
+              <stop offset="100%" stopColor="#1e3a6e" />
+            </linearGradient>
+            <linearGradient id="josephRobe" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#8b6914" />
+              <stop offset="100%" stopColor="#5d4a0c" />
+            </linearGradient>
+            <radialGradient id="haloGold" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#fff8dc" />
+              <stop offset="60%" stopColor="#ffd700" />
+              <stop offset="100%" stopColor="#daa520" stopOpacity="0.3" />
+            </radialGradient>
+            <radialGradient id="starBurst" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#fffacd" />
+              <stop offset="100%" stopColor="#ffd700" stopOpacity="0" />
+            </radialGradient>
+            <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
           </defs>
-          <circle cx="60" cy="60" r="52" fill="url(#holyFamilyGlow)" opacity="0.16" />
-          <path
-            d="M35 82c4-12 10-22 20-29 10 7 17 17 21 29" 
-            fill="none" stroke="#ead6c2" strokeWidth="6" strokeLinecap="round"
-          />
-          <path
-            d="M60 38c0 6-4 10-10 10s-10-4-10-10 4-10 10-10 10 4 10 10Zm28 10c0 5.5-4.5 10-10 10s-10-4.5-10-10 4.5-10 10-10 10 4.5 10 10Z"
-            fill="#f7f1e8"
-          />
-          <path
-            d="M52 48c3 6 8 10 14 10 6 0 11-4 14-10"
-            fill="none" stroke="#f7f1e8" strokeWidth="5" strokeLinecap="round"
-          />
+          {/* Background warm glow */}
+          <circle cx="60" cy="60" r="56" fill="url(#holyFamilyGlow)" opacity="0.15" />
+          {/* Bethlehem Star */}
+          <circle cx="60" cy="15" r="8" fill="url(#starBurst)" filter="url(#softGlow)" />
+          <path d="M60 8 L62 13 L67 13 L63 17 L65 22 L60 19 L55 22 L57 17 L53 13 L58 13 Z"
+                fill="#fffacd" filter="url(#softGlow)" />
+          {/* Joseph - left figure */}
+          <ellipse cx="35" cy="32" rx="10" ry="11" fill="#f5deb3" /> {/* Head */}
+          <path d="M35 22 Q42 18 38 28 Q35 32 32 28 Q28 18 35 22" fill="#8b4513" /> {/* Hair/beard */}
+          <circle cx="35" cy="18" r="6" fill="url(#haloGold)" opacity="0.5" /> {/* Halo */}
+          <path d="M22 95 Q25 55 35 43 Q45 55 48 95 Z" fill="url(#josephRobe)" /> {/* Robe */}
+          <path d="M28 60 Q35 65 42 60" fill="none" stroke="#6b4c0a" strokeWidth="2" /> {/* Robe detail */}
+          {/* Mary - right figure */}
+          <ellipse cx="75" cy="35" rx="9" ry="10" fill="#faebd7" /> {/* Head */}
+          <path d="M66 30 Q75 20 84 30 Q84 38 75 42 Q66 38 66 30" fill="#4169e1" /> {/* Veil */}
+          <circle cx="75" cy="22" r="7" fill="url(#haloGold)" opacity="0.6" /> {/* Halo */}
+          <path d="M62 95 Q65 55 75 45 Q85 55 88 95 Z" fill="url(#maryRobe)" /> {/* Robe */}
+          <path d="M68 65 Q75 70 82 65" fill="none" stroke="#1e3a6e" strokeWidth="2" /> {/* Robe detail */}
+          {/* Baby Jesus in manger - center */}
+          <ellipse cx="55" cy="78" rx="18" ry="8" fill="#deb887" /> {/* Manger */}
+          <path d="M37 78 L40 85 L70 85 L73 78" fill="#8b7355" /> {/* Manger base */}
+          <ellipse cx="55" cy="72" rx="12" ry="6" fill="#fffff0" /> {/* Swaddling */}
+          <circle cx="55" cy="68" r="5" fill="#faebd7" /> {/* Baby head */}
+          <circle cx="55" cy="62" r="8" fill="url(#haloGold)" opacity="0.7" /> {/* Baby halo */}
+          {/* Hay details */}
+          <path d="M38 76 Q42 72 46 76 M64 76 Q68 72 72 76" stroke="#daa520" strokeWidth="1.5" fill="none" />
         </svg>
       );
     }
 
+    // Easter Theme - Silver Crucifix with Golden Radiance
     if (season === "easter") {
       return (
-        <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Crucifix">
+        <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Silver Crucifix">
           <defs>
-            <linearGradient id="crucifixGlow" x1="0" x2="1" y1="0" y2="1">
-              <stop offset="0%" stopColor="#f2d98c" />
-              <stop offset="100%" stopColor="#5b7ec5" />
+            <linearGradient id="silverMetal" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="#f0f0f5" />
+              <stop offset="25%" stopColor="#d8d8e0" />
+              <stop offset="50%" stopColor="#c0c0c8" />
+              <stop offset="75%" stopColor="#a8a8b0" />
+              <stop offset="100%" stopColor="#909098" />
             </linearGradient>
+            <linearGradient id="silverShine" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="50%" stopColor="#e8e8f0" />
+              <stop offset="100%" stopColor="#c8c8d0" />
+            </linearGradient>
+            <linearGradient id="goldRadiance" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0%" stopColor="#fff8dc" />
+              <stop offset="50%" stopColor="#ffd700" />
+              <stop offset="100%" stopColor="#daa520" />
+            </linearGradient>
+            <radialGradient id="divineLight" cx="50%" cy="35%" r="60%">
+              <stop offset="0%" stopColor="#fff8e1" stopOpacity="0.9" />
+              <stop offset="40%" stopColor="#ffd54f" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#ffb300" stopOpacity="0" />
+            </radialGradient>
+            <filter id="crucifixGlow" x="-30%" y="-30%" width="160%" height="160%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <filter id="innerShadow" x="-10%" y="-10%" width="120%" height="120%">
+              <feOffset dx="1" dy="1" />
+              <feGaussianBlur stdDeviation="1" result="shadow" />
+              <feComposite in="SourceGraphic" in2="shadow" operator="over" />
+            </filter>
           </defs>
-          <circle cx="60" cy="60" r="52" fill="url(#crucifixGlow)" opacity="0.2" />
-          <rect x="54" y="20" width="12" height="80" rx="6" fill="#f7f1e8" />
-          <rect x="30" y="46" width="60" height="12" rx="6" fill="#f7f1e8" />
-          <circle cx="60" cy="46" r="10" fill="#d7b45c" />
+          {/* Divine radiance background */}
+          <circle cx="60" cy="52" r="50" fill="url(#divineLight)" />
+          {/* Rays of light */}
+          <g opacity="0.3" stroke="#ffd700" strokeWidth="1.5">
+            <line x1="60" y1="10" x2="60" y2="2" />
+            <line x1="85" y1="20" x2="92" y2="13" />
+            <line x1="100" y1="45" x2="108" y2="45" />
+            <line x1="85" y1="70" x2="92" y2="77" />
+            <line x1="35" y1="20" x2="28" y2="13" />
+            <line x1="20" y1="45" x2="12" y2="45" />
+            <line x1="35" y1="70" x2="28" y2="77" />
+          </g>
+          {/* Main crucifix - vertical beam */}
+          <rect x="52" y="15" width="16" height="90" rx="3" fill="url(#silverMetal)" filter="url(#innerShadow)" />
+          {/* Vertical beam highlight */}
+          <rect x="54" y="17" width="4" height="86" rx="2" fill="url(#silverShine)" opacity="0.6" />
+          {/* Horizontal beam */}
+          <rect x="25" y="38" width="70" height="14" rx="3" fill="url(#silverMetal)" filter="url(#innerShadow)" />
+          {/* Horizontal beam highlight */}
+          <rect x="27" y="40" width="66" height="4" rx="2" fill="url(#silverShine)" opacity="0.6" />
+          {/* INRI plaque */}
+          <rect x="48" y="20" width="24" height="10" rx="2" fill="url(#goldRadiance)" />
+          <text x="60" y="28" textAnchor="middle" fontSize="7" fontFamily="serif" fontWeight="bold" fill="#5d4e0c">INRI</text>
+          {/* Decorative finials */}
+          <circle cx="60" cy="12" r="5" fill="url(#silverMetal)" />
+          <circle cx="60" cy="12" r="3" fill="url(#goldRadiance)" />
+          <circle cx="22" cy="45" r="4" fill="url(#silverMetal)" />
+          <circle cx="98" cy="45" r="4" fill="url(#silverMetal)" />
+          <circle cx="60" cy="108" r="4" fill="url(#silverMetal)" />
+          {/* Center medallion */}
+          <circle cx="60" cy="45" r="10" fill="url(#goldRadiance)" filter="url(#crucifixGlow)" />
+          <circle cx="60" cy="45" r="6" fill="#fff8dc" />
         </svg>
       );
     }
 
+    // Standard Theme - Beautiful Wooden Cross with detailed wood grain
     return (
-      <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Wooden cross">
+      <svg className="vf-sacred-mark" viewBox="0 0 120 120" role="img" aria-label="Wooden Cross">
         <defs>
-          <linearGradient id="woodCarve" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#9b6c3d" />
-            <stop offset="100%" stopColor="#54361f" />
+          <linearGradient id="woodGrain1" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="#a67c52" />
+            <stop offset="20%" stopColor="#8b6914" />
+            <stop offset="40%" stopColor="#9a7b4f" />
+            <stop offset="60%" stopColor="#7a5c30" />
+            <stop offset="80%" stopColor="#8d6e40" />
+            <stop offset="100%" stopColor="#6b4423" />
           </linearGradient>
+          <linearGradient id="woodGrain2" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="#9a7b4f" />
+            <stop offset="25%" stopColor="#7a5c30" />
+            <stop offset="50%" stopColor="#8d6e40" />
+            <stop offset="75%" stopColor="#6b4423" />
+            <stop offset="100%" stopColor="#8b6914" />
+          </linearGradient>
+          <linearGradient id="woodHighlight" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor="#c4a574" stopOpacity="0.5" />
+            <stop offset="50%" stopColor="#dbb896" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#c4a574" stopOpacity="0" />
+          </linearGradient>
+          <pattern id="grainPattern" patternUnits="userSpaceOnUse" width="4" height="8">
+            <path d="M0 0 Q2 4 0 8 M4 0 Q2 4 4 8" stroke="#5d4a30" strokeWidth="0.5" fill="none" opacity="0.3" />
+          </pattern>
+          <filter id="woodShadow" x="-10%" y="-10%" width="120%" height="120%">
+            <feDropShadow dx="2" dy="3" stdDeviation="3" floodOpacity="0.25" />
+          </filter>
+          <radialGradient id="grayBg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#b0b0b0" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#808080" stopOpacity="0.15" />
+          </radialGradient>
         </defs>
-        <circle cx="60" cy="60" r="52" fill="#f3e9db" opacity="0.4" />
-        <rect x="50" y="18" width="20" height="84" rx="8" fill="url(#woodCarve)" />
-        <rect x="26" y="46" width="68" height="18" rx="9" fill="url(#woodCarve)" />
-        <path d="M44 46c6 6 14 9 24 9" stroke="#d8c3a5" strokeWidth="4" fill="none" />
+        {/* Subtle gray background circle */}
+        <circle cx="60" cy="60" r="54" fill="url(#grayBg)" />
+        {/* Main vertical beam */}
+        <rect x="48" y="12" width="24" height="96" rx="4" fill="url(#woodGrain1)" filter="url(#woodShadow)" />
+        {/* Wood grain texture overlay on vertical */}
+        <rect x="48" y="12" width="24" height="96" rx="4" fill="url(#grainPattern)" />
+        {/* Vertical beam highlight */}
+        <rect x="50" y="14" width="6" height="92" rx="3" fill="url(#woodHighlight)" />
+        {/* Main horizontal beam */}
+        <rect x="18" y="36" width="84" height="22" rx="4" fill="url(#woodGrain2)" filter="url(#woodShadow)" />
+        {/* Wood grain texture overlay on horizontal */}
+        <rect x="18" y="36" width="84" height="22" rx="4" fill="url(#grainPattern)" />
+        {/* Horizontal beam highlight */}
+        <rect x="20" y="38" width="80" height="5" rx="2" fill="url(#woodHighlight)" />
+        {/* Center joint detail */}
+        <circle cx="60" cy="47" r="8" fill="none" stroke="#5d4a30" strokeWidth="1.5" opacity="0.4" />
+        {/* Nail holes - subtle details */}
+        <circle cx="60" cy="47" r="2" fill="#3d2a1a" />
+        <circle cx="26" cy="47" r="1.5" fill="#3d2a1a" opacity="0.7" />
+        <circle cx="94" cy="47" r="1.5" fill="#3d2a1a" opacity="0.7" />
+        {/* Wood edge details */}
+        <path d="M48 15 Q46 60 48 105" stroke="#5d4a30" strokeWidth="1" fill="none" opacity="0.3" />
+        <path d="M72 15 Q74 60 72 105" stroke="#5d4a30" strokeWidth="1" fill="none" opacity="0.3" />
+        {/* Subtle wood knots */}
+        <ellipse cx="55" cy="75" rx="3" ry="4" fill="#6b4423" opacity="0.4" />
+        <ellipse cx="65" cy="28" rx="2" ry="3" fill="#6b4423" opacity="0.3" />
       </svg>
     );
   }
