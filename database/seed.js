@@ -5,10 +5,20 @@
 
 const { PrismaClient } = require("@prisma/client");
 
+/**
+ * @typedef {import('@prisma/client').PrismaClient} PrismaClient
+ */
+
 const prisma = new PrismaClient();
 
+/**
+ * @type {string[]}
+ */
 const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
 
+/**
+ * @returns {Promise<void>}
+ */
 async function seedSiteContent() {
   const language = process.env.DEFAULT_LANGUAGE || "en";
 
@@ -84,6 +94,9 @@ async function seedSiteContent() {
   });
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 async function seedPrayers() {
   const language = "en";
 
@@ -250,6 +263,9 @@ async function seedPrayers() {
   });
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 async function seedSaintsAndApparitions() {
   const language = "en";
 
@@ -398,9 +414,17 @@ async function seedSaintsAndApparitions() {
   });
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 async function seedSacraments() {
   const language = "en";
 
+  /**
+   * @param {string} slug
+   * @param {number} orderIndex
+   * @returns {{language: string, slug: string, orderIndex: number, tags: string[], source: string, sourceUrl: null, sourceAttribution: string, isActive: boolean}}
+   */
   const base = (slug, orderIndex) => ({
     language,
     slug,
@@ -524,6 +548,9 @@ async function seedSacraments() {
   });
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 async function seedHistory() {
   const language = "en";
 
@@ -758,6 +785,9 @@ async function seedHistory() {
   });
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 async function seedGuides() {
   const language = "en";
 
@@ -952,6 +982,9 @@ async function seedGuides() {
   });
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 async function main() {
   console.log("Seeding Via Fidei database");
 

@@ -4,10 +4,35 @@
 const express = require("express");
 const { requireAuth } = require("./auth.routes");
 
+/**
+ * @typedef {import('@prisma/client').PrismaClient} PrismaClient
+ * @typedef {import('@prisma/client').User} User
+ * @typedef {import('@prisma/client').JournalEntry} JournalEntry
+ */
+
+/**
+ * @typedef {express.Request & {prisma?: PrismaClient, user?: User}} AuthRequest
+ */
+
+/**
+ * @typedef {Object} PublicJournalEntry
+ * @property {string} id
+ * @property {string} title
+ * @property {string} body
+ * @property {boolean} isFavorite
+ * @property {boolean} isArchived
+ * @property {Date} createdAt
+ * @property {Date} updatedAt
+ */
+
 const router = express.Router();
 
 const SUPPORTED_LANGS = ["en", "es", "pt", "fr", "it", "de", "pl", "ru", "uk"];
 
+/**
+ * @param {AuthRequest} req
+ * @returns {PrismaClient}
+ */
 function getPrisma(req) {
   if (!req.prisma) {
     throw new Error("Prisma client not attached to request");
@@ -15,6 +40,10 @@ function getPrisma(req) {
   return req.prisma;
 }
 
+/**
+ * @param {any} value
+ * @returns {string | null}
+ */
 function normalizeTheme(value) {
   if (!value) return null;
   const v = String(value).toLowerCase();
@@ -22,6 +51,10 @@ function normalizeTheme(value) {
   return null;
 }
 
+/**
+ * @param {any} value
+ * @returns {string | null}
+ */
 function normalizeLanguage(value) {
   if (!value) return null;
   const v = String(value).toLowerCase();
@@ -30,6 +63,11 @@ function normalizeLanguage(value) {
 }
 
 // Small helper for status update on overdue goals
+/**
+ * @param {PrismaClient} prisma
+ * @param {string} userId
+ * @returns {Promise<void>}
+ */
 async function refreshGoalStatuses(prisma, userId) {
   const now = new Date();
   await prisma.goal.updateMany({
@@ -44,6 +82,10 @@ async function refreshGoalStatuses(prisma, userId) {
 }
 
 // Shape user for client
+/**
+ * @param {User} u
+ * @returns {{id: string, firstName: string, lastName: string, email: string, themePreference: string | null, languageOverride: string | null, profilePictureUrl: string | null, createdAt: Date, updatedAt: Date}}
+ */
 function publicUser(u) {
   return {
     id: u.id,
@@ -58,6 +100,10 @@ function publicUser(u) {
   };
 }
 
+/**
+ * @param {JournalEntry} e
+ * @returns {PublicJournalEntry}
+ */
 function publicJournalEntry(e) {
   return {
     id: e.id,

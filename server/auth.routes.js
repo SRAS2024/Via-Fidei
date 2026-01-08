@@ -5,6 +5,34 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
+/**
+ * @typedef {import('@prisma/client').PrismaClient} PrismaClient
+ * @typedef {import('@prisma/client').User} User
+ */
+
+/**
+ * @typedef {Object} SessionConfig
+ * @property {number} ttlSeconds
+ * @property {string} jwtSecret
+ */
+
+/**
+ * @typedef {Object} PublicUser
+ * @property {string} id
+ * @property {string | null} firstName
+ * @property {string | null} lastName
+ * @property {string} email
+ * @property {string | null} themePreference
+ * @property {string | null} languageOverride
+ * @property {string | null} profilePictureUrl
+ * @property {Date} createdAt
+ * @property {Date} updatedAt
+ */
+
+/**
+ * @typedef {express.Request & {prisma?: PrismaClient, sessionConfig?: SessionConfig, user?: User}} AuthRequest
+ */
+
 const router = express.Router();
 
 const SESSION_COOKIE_NAME = "vf_session";
@@ -13,6 +41,10 @@ const MAX_PASSWORD_LENGTH = 72;
 
 // Helpers
 
+/**
+ * @param {AuthRequest} req
+ * @returns {PrismaClient}
+ */
 function getPrisma(req) {
   if (!req.prisma) {
     throw new Error("Prisma client not attached to request");
@@ -20,6 +52,10 @@ function getPrisma(req) {
   return req.prisma;
 }
 
+/**
+ * @param {AuthRequest} req
+ * @returns {string}
+ */
 function getJwtSecret(req) {
   return (
     req.sessionConfig?.jwtSecret ||
@@ -28,6 +64,10 @@ function getJwtSecret(req) {
   );
 }
 
+/**
+ * @param {AuthRequest} req
+ * @returns {number}
+ */
 function getSessionTtlSeconds(req) {
   const fromReq = req.sessionConfig?.ttlSeconds;
   if (typeof fromReq === "number" && Number.isFinite(fromReq) && fromReq > 0) {
@@ -37,6 +77,9 @@ function getSessionTtlSeconds(req) {
   return Number.isFinite(fromEnv) && fromEnv > 0 ? fromEnv : 5000;
 }
 
+/**
+ * @returns {{httpOnly: boolean, sameSite: string, secure: boolean, path: string}}
+ */
 function buildCookieOptions() {
   const isProduction = (process.env.NODE_ENV || "development") === "production";
   return {
@@ -47,6 +90,12 @@ function buildCookieOptions() {
   };
 }
 
+/**
+ * @param {express.Response} res
+ * @param {AuthRequest} req
+ * @param {string} userId
+ * @returns {void}
+ */
 function issueSession(res, req, userId) {
   const secret = getJwtSecret(req);
   const ttl = getSessionTtlSeconds(req);
@@ -67,6 +116,10 @@ function issueSession(res, req, userId) {
   });
 }
 
+/**
+ * @param {express.Response} res
+ * @returns {void}
+ */
 function clearSession(res) {
   res.clearCookie(SESSION_COOKIE_NAME, {
     ...buildCookieOptions(),
@@ -76,6 +129,12 @@ function clearSession(res) {
 
 // Middleware for protected routes
 
+/**
+ * @param {AuthRequest} req
+ * @param {express.Response} res
+ * @param {express.NextFunction} next
+ * @returns {Promise<void>}
+ */
 async function requireAuth(req, res, next) {
   const prisma = getPrisma(req);
   const token = req.cookies?.[SESSION_COOKIE_NAME];
@@ -104,6 +163,10 @@ async function requireAuth(req, res, next) {
   }
 }
 
+/**
+ * @param {User | null} user
+ * @returns {PublicUser | null}
+ */
 function toPublicUser(user) {
   if (!user) return null;
   return {
@@ -119,6 +182,10 @@ function toPublicUser(user) {
   };
 }
 
+/**
+ * @param {string} password
+ * @returns {string | null}
+ */
 function validateNewPassword(password) {
   const pwd = String(password || "");
   if (pwd.length < MIN_PASSWORD_LENGTH) {
@@ -130,6 +197,11 @@ function validateNewPassword(password) {
   return null;
 }
 
+/**
+ * @param {any} value
+ * @param {number} maxLen
+ * @returns {string | null}
+ */
 function sanitizeName(value, maxLen) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -137,6 +209,10 @@ function sanitizeName(value, maxLen) {
   return trimmed.slice(0, maxLen);
 }
 
+/**
+ * @param {any} value
+ * @returns {string | null}
+ */
 function sanitizeEmail(value) {
   if (typeof value !== "string") return null;
   const trimmed = value.trim().toLowerCase();
